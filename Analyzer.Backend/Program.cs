@@ -1,12 +1,11 @@
+using Analyzer.Backend;
 using Analyzer.Backend.Okx;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.Configure<OkxConfiguration>(builder.Configuration.GetSection(nameof(OkxConfiguration)));
-builder.Services.AddSingleton<OkxClient>();
-WebApplication app = builder.Build();
+builder.Services.AddScoped<OkxWsClient>();
+builder.Services.AddHostedService<OkxMarketWorker>();
 
-OkxClient client = app.Services.GetService<OkxClient>()!;
-await client.ConnectAsync(ChannelType.Private);
-app.Run();
+IHost host = builder.Build();
+host.Run();

@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Analyzer.Backend.Okx.Messages;
 
-public record OkxSocketLoginResponse : OkxEventResponse
+public record OkxSocketLoginResponse : OkxSocketEventResponse
 {
     [JsonPropertyName("msg")]
     public string? Message { get; init; }

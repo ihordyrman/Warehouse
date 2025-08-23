@@ -9,11 +9,12 @@ using Microsoft.Extensions.Options;
 
 namespace Analyzer.Backend.Okx;
 
-public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxClient> logger) : IDisposable
+public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxWsClient> logger) : IDisposable
 {
     private readonly CancellationTokenSource cancellationTokenSource = new();
     private readonly ClientWebSocket webSocket = new();
     private Task? heartBeat;
+    private readonly byte[] ping = "ping"u8.ToArray();
 
     public event Action OnLoginSuccess;
 
@@ -30,7 +31,8 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
             {
                 new
                 {
-                    channel, instId
+                    channel,
+                    instId
                 }
             }
         };
@@ -87,26 +89,27 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
         logger.LogDebug("Message sent");
     }
 
-    public async Task ConnectAsync(ChannelType channelType = ChannelType.Public)
+    public async Task ConnectAsync(OkxChannelType okxChannelType)
     {
         try
         {
-            string url = GetWebSocketUrl(channelType);
+            string url = GetConnectionUrl(okxChannelType);
             await webSocket.ConnectAsync(new Uri(url), cancellationTokenSource.Token);
 
-            heartBeat = LaunchHeartBeat();
             logger.LogInformation("Connected to {Url}", url);
-            _ = Task.Run(async () => await ListenForMessages());
+            _ = Task.Run(async () => await ListenForMessages(), cancellationTokenSource.Token);
 
-            if (channelType == ChannelType.Private)
+            if (okxChannelType == OkxChannelType.Private)
             {
                 await LoginAsync();
             }
+
+            heartBeat ??= LaunchHeartBeat();
+            OnLoginSuccess?.Invoke();
         }
         catch (Exception ex)
         {
             logger.LogError("Connection error: {Message}", ex.Message);
-            throw;
         }
     }
 
@@ -119,6 +122,8 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
             await periodicTimer.WaitForNextTickAsync(cancellationTokenSource.Token);
         }
 
+        return;
+
         async Task SendHeartBeatAsync()
         {
             if (webSocket.State != WebSocketState.Open)
@@ -127,10 +132,9 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
                 return;
             }
 
-            byte[] bytes = "ping"u8.ToArray();
-            var buffer = new ArraySegment<byte>(bytes);
-
+            var buffer = new ArraySegment<byte>(ping);
             await webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationTokenSource.Token);
+
             logger.LogInformation("Sent ping message");
         }
     }
@@ -139,7 +143,7 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
     {
         var buffer = new ArraySegment<byte>(new byte[4096]);
 
-        while (webSocket.State == WebSocketState.Open)
+        while (webSocket.State == WebSocketState.Open && !cancellationTokenSource.IsCancellationRequested)
         {
             try
             {
@@ -147,7 +151,7 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    string message = Encoding.UTF8.GetString(buffer.Array, 0, result.Count);
+                    string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
                     HandleMessage(message);
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
@@ -162,12 +166,14 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
         }
     }
 
-    private string GetWebSocketUrl(ChannelType channelType)
-        => channelType switch
+    private string GetConnectionUrl(OkxChannelType okxChannelType)
+        => okxChannelType switch
         {
-            ChannelType.Public => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PUBLIC_WS_URL : SocketEndpoints.PUBLIC_WS_URL,
-            ChannelType.Private => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PRIVATE_WS_URL : SocketEndpoints.PRIVATE_WS_URL,
-            ChannelType.Business => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_BUSINESS_WS_URL : SocketEndpoints.BUSINESS_WS_URL,
+            OkxChannelType.Public => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PUBLIC_WS_URL : SocketEndpoints.PUBLIC_WS_URL,
+            OkxChannelType.Private => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PRIVATE_WS_URL : SocketEndpoints.PRIVATE_WS_URL,
+            OkxChannelType.Business => okxConfiguration.Value.IsDemo ?
+                SocketEndpoints.DEMO_BUSINESS_WS_URL :
+                SocketEndpoints.BUSINESS_WS_URL,
             _ => SocketEndpoints.DEMO_PUBLIC_WS_URL
         };
 
@@ -175,25 +181,42 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
     {
         if (message == "pong")
         {
+            logger.LogDebug("Ping response received");
             return;
         }
 
         try
         {
-            logger.LogDebug("Received: {Message}", message);
-            OkxEventResponse? eventResponse = JsonSerializer.Deserialize<OkxEventResponse>(message);
-            switch (eventResponse!.Event)
-            {
-                case OkxEvent.Login:
-                    logger.LogInformation("Logged in successfully.");
-                    break;
-                case OkxEvent.Error:
-                    logger.LogError("Something bad happened.");
-                    break;
-                default:
-                    logger.LogInformation("Unknown message type");
-                    break;
-            }
+            logger.LogInformation("Received: {Message}", message);
+
+            OkxSocketSubscriptionResponse response = JsonSerializer.Deserialize<OkxSocketSubscriptionResponse>(message)!;
+
+            // switch (eventResponse!.Event)
+            // {
+            //     case OkxEvent.Login:
+            //         logger.LogInformation("Logged in successfully.");
+            //         break;
+            //     case OkxEvent.Error:
+            //         logger.LogError("Something bad happened.");
+            //         break;
+            //     case OkxEvent.Subscribe:
+            //         break;
+            //     case OkxEvent.Unsubscribe:
+            //         break;
+            //     case OkxEvent.Order:
+            //         break;
+            //     case OkxEvent.Trade:
+            //         break;
+            //     case OkxEvent.Balance:
+            //         break;
+            //     case OkxEvent.Position:
+            //         break;
+            //     case null:
+            //         break;
+            //     default:
+            //         logger.LogInformation("Unknown message type");
+            //         break;
+            // }
         }
         catch (Exception ex)
         {
@@ -201,7 +224,7 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
         }
     }
 
-    internal static class SocketEndpoints
+    private static class SocketEndpoints
     {
         internal const string PUBLIC_WS_URL = "wss://ws.okx.com:8443/ws/v5/public";
         internal const string PRIVATE_WS_URL = "wss://ws.okx.com:8443/ws/v5/private";
@@ -212,14 +235,14 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
         internal const string DEMO_BUSINESS_WS_URL = "wss://wspap.okx.com:8443/ws/v5/business";
     }
 
-    internal static class SocketOperations
+    private static class SocketOperations
     {
         internal const string Login = "login";
-        internal const string Subscribe = "Subscribe";
+        internal const string Subscribe = "subscribe";
         internal const string Unsubscribe = "unsubscribe";
     }
 
-    internal static class InstrumentType
+    private static class InstrumentType
     {
         internal const string Spot = "SPOT";
         internal const string Margin = "MARGIN";
@@ -236,11 +259,4 @@ public class OkxClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxC
         webSocket.Dispose();
         heartBeat?.Dispose();
     }
-}
-
-public enum ChannelType
-{
-    Public,
-    Private,
-    Business
 }
