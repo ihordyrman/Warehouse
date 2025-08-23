@@ -1,17 +1,12 @@
-var builder = WebApplication.CreateBuilder(args);
+using Analyzer.Backend.Okx;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.Configure<OkxConfiguration>(builder.Configuration.GetSection(nameof(OkxConfiguration)));
+builder.Services.AddSingleton<OkxClient>();
+WebApplication app = builder.Build();
 
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-app.MapGet("/hello", () => { return "world"; })
-    .WithName("Get Hello World");
-
+OkxClient client = app.Services.GetService<OkxClient>()!;
+await client.ConnectAsync(ChannelType.Private);
 app.Run();
