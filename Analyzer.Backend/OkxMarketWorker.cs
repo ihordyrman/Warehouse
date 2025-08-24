@@ -5,6 +5,7 @@ namespace Analyzer.Backend;
 
 public class OkxMarketWorker(
     OkxRawMessageProcessor messageProcessor,
+    OkxMarketDataProcessor marketDataProcessor,
     ILogger<OkxMarketWorker> logger,
     IServiceScopeFactory serviceScopeFactory) : BackgroundService
 {
@@ -14,6 +15,14 @@ public class OkxMarketWorker(
         OkxWsClient okxWsClient = scopeFactory.ServiceProvider.GetService<OkxWsClient>()!;
         await okxWsClient.ConnectAsync(OkxChannelType.Public);
         await okxWsClient.SubscribeToChannelAsync("books", "OKB-USDT");
-        await messageProcessor.StartProcessingAsync(stoppingToken);
+        _ = messageProcessor.StartProcessingAsync(stoppingToken);
+        _ = marketDataProcessor.StartProcessingAsync(stoppingToken);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            await Task.Delay(1000, stoppingToken);
+        }
+
+        logger.LogInformation("Markets processing is stopped");
     }
 }

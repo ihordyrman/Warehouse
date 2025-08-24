@@ -10,5 +10,6 @@ public record OkxSocketSubscriptionResponse
     [JsonPropertyName("action")]
     public OkxAction? Action { get; init; }
 
+    [JsonPropertyName("data")]
     public OkxSocketBookData[]? Data { get; init; }
 }

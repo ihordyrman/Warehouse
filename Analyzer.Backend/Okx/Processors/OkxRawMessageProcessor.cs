@@ -2,14 +2,17 @@
 using System.Text.Json;
 using System.Threading.Channels;
 using Analyzer.Backend.Okx.Messages;
+using Analyzer.Backend.Okx.Models;
 
 namespace Analyzer.Backend.Okx.Processors;
 
 public class OkxRawMessageProcessor(
     [FromKeyedServices(OkxChannelNames.RawMessages)] Channel<string> messageChannel,
+    [FromKeyedServices(OkxChannelNames.MarketData)] Channel<MarketData> marketDataChannel,
     ILogger<OkxRawMessageProcessor> logger)
 {
     private readonly ChannelReader<string> messageReader = messageChannel.Reader;
+    private readonly ChannelWriter<MarketData> marketDataWriter = marketDataChannel.Writer;
     private readonly StringBuilder stringBuilder = new();
     private readonly JsonSerializerOptions serializerOptions = new()
     {
@@ -38,9 +41,14 @@ public class OkxRawMessageProcessor(
                     }
                 }
 
-                if (response is not null)
+                if (response?.Data?.Length > 0)
                 {
-                    logger.LogInformation("Received subscription response: {Message}", response);
+                    var marketData = new MarketData(
+                        response.Arguments!.Channel!,
+                        response.Arguments.InstrumentId!,
+                        response.Data[0].Asks!,
+                        response.Data[0].Bids!);
+                    await marketDataWriter.WriteAsync(marketData, cancellationToken);
                     continue;
                 }
 
