@@ -4,9 +4,9 @@ namespace Analyzer.Backend.Okx.Messages;
 
 public record OkxSocketSubscriptionResponse
 {
-    [JsonPropertyName("args")]
+    [JsonPropertyName("arg")]
     public OkxSocketSubscriptionArgs? Arguments { get; init; }
 
     [JsonPropertyName("action")]
-    public string? Action { get; set; }
+    public string? Action { get; init; }
 }

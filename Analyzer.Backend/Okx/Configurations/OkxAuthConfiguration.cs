@@ -1,6 +1,6 @@
-﻿namespace Analyzer.Backend.Okx;
+﻿namespace Analyzer.Backend.Okx.Configurations;
 
-public class OkxConfiguration
+public class OkxAuthConfiguration
 {
     public string ApiKey { get; init; } = string.Empty;
 

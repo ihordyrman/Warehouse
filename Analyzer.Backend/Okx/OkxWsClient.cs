@@ -2,25 +2,49 @@ using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Analyzer.Backend.Okx.Messages;
+using System.Threading.Channels;
+using Analyzer.Backend.Okx.Configurations;
+using Analyzer.Backend.Okx.Constants;
 using Microsoft.Extensions.Options;
-
-// ReSharper disable InconsistentNaming
 
 namespace Analyzer.Backend.Okx;
 
-public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<OkxWsClient> logger) : IDisposable
+public class OkxWsClient : IDisposable
 {
     private readonly CancellationTokenSource cancellationTokenSource = new();
-    private readonly ClientWebSocket webSocket = new();
-    private Task? heartBeat;
+    private readonly ILogger<OkxWsClient> logger;
+    private readonly OkxAuthConfiguration okxAuthConfiguration;
     private readonly byte[] ping = "ping"u8.ToArray();
+    private readonly JsonSerializerOptions serializerOptions = new()
+    {
+        TypeInfoResolver = OkxJsonContext.Default
+    };
+    private readonly ClientWebSocket webSocket = new();
 
-    public event Action OnLoginSuccess;
+    private readonly ChannelWriter<string> writer;
+    private Task? heartBeat;
 
-    public event Action<string> OnError;
+    public OkxWsClient(IOptions<OkxAuthConfiguration> okxAuthConfiguration, ILogger<OkxWsClient> logger)
+    {
+        this.logger = logger;
+        this.okxAuthConfiguration = okxAuthConfiguration.Value;
+        var options = new BoundedChannelOptions(1000)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = false,
+            SingleWriter = true
+        };
 
-    public event Action<object> OnDataReceived;
+        writer = Channel.CreateBounded<string>(options).Writer;
+    }
+
+    public void Dispose()
+    {
+        cancellationTokenSource.Cancel();
+        cancellationTokenSource.Dispose();
+        webSocket.Dispose();
+        heartBeat?.Dispose();
+    }
 
     public async Task SubscribeToChannelAsync(string channel, string instId)
     {
@@ -43,7 +67,7 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
     private string GenerateSignature(string timestamp)
     {
         byte[] sign = Encoding.UTF8.GetBytes($"{timestamp}GET/users/self/verify");
-        byte[] secretKey = Encoding.UTF8.GetBytes(okxConfiguration.Value.SecretKey);
+        byte[] secretKey = Encoding.UTF8.GetBytes(okxAuthConfiguration.SecretKey);
 
         using var hmac = new HMACSHA256(secretKey);
         byte[] hash = hmac.ComputeHash(sign);
@@ -62,8 +86,8 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
             {
                 new
                 {
-                    apiKey = okxConfiguration.Value.ApiKey,
-                    passphrase = okxConfiguration.Value.Passphrase,
+                    apiKey = okxAuthConfiguration.ApiKey,
+                    passphrase = okxAuthConfiguration.Passphrase,
                     timestamp,
                     sign
                 }
@@ -102,10 +126,11 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
             if (okxChannelType == OkxChannelType.Private)
             {
                 await LoginAsync();
+
+                // OnLoginSuccess?.Invoke();
             }
 
             heartBeat ??= LaunchHeartBeat();
-            OnLoginSuccess?.Invoke();
         }
         catch (Exception ex)
         {
@@ -152,7 +177,7 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
-                    HandleMessage(message);
+                    await HandleMessage(message);
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -169,15 +194,13 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
     private string GetConnectionUrl(OkxChannelType okxChannelType)
         => okxChannelType switch
         {
-            OkxChannelType.Public => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PUBLIC_WS_URL : SocketEndpoints.PUBLIC_WS_URL,
-            OkxChannelType.Private => okxConfiguration.Value.IsDemo ? SocketEndpoints.DEMO_PRIVATE_WS_URL : SocketEndpoints.PRIVATE_WS_URL,
-            OkxChannelType.Business => okxConfiguration.Value.IsDemo ?
-                SocketEndpoints.DEMO_BUSINESS_WS_URL :
-                SocketEndpoints.BUSINESS_WS_URL,
+            OkxChannelType.Public => okxAuthConfiguration.IsDemo ? SocketEndpoints.DEMO_PUBLIC_WS_URL : SocketEndpoints.PUBLIC_WS_URL,
+            OkxChannelType.Private => okxAuthConfiguration.IsDemo ? SocketEndpoints.DEMO_PRIVATE_WS_URL : SocketEndpoints.PRIVATE_WS_URL,
+            OkxChannelType.Business => okxAuthConfiguration.IsDemo ? SocketEndpoints.DEMO_BUSINESS_WS_URL : SocketEndpoints.BUSINESS_WS_URL,
             _ => SocketEndpoints.DEMO_PUBLIC_WS_URL
         };
 
-    private void HandleMessage(string message)
+    private async Task HandleMessage(string message)
     {
         if (message == "pong")
         {
@@ -188,75 +211,11 @@ public class OkxWsClient(IOptions<OkxConfiguration> okxConfiguration, ILogger<Ok
         try
         {
             logger.LogInformation("Received: {Message}", message);
-
-            OkxSocketSubscriptionResponse response = JsonSerializer.Deserialize<OkxSocketSubscriptionResponse>(message)!;
-
-            // switch (eventResponse!.Event)
-            // {
-            //     case OkxEvent.Login:
-            //         logger.LogInformation("Logged in successfully.");
-            //         break;
-            //     case OkxEvent.Error:
-            //         logger.LogError("Something bad happened.");
-            //         break;
-            //     case OkxEvent.Subscribe:
-            //         break;
-            //     case OkxEvent.Unsubscribe:
-            //         break;
-            //     case OkxEvent.Order:
-            //         break;
-            //     case OkxEvent.Trade:
-            //         break;
-            //     case OkxEvent.Balance:
-            //         break;
-            //     case OkxEvent.Position:
-            //         break;
-            //     case null:
-            //         break;
-            //     default:
-            //         logger.LogInformation("Unknown message type");
-            //         break;
-            // }
+            await writer.WriteAsync(message, cancellationTokenSource.Token);
         }
         catch (Exception ex)
         {
-            logger.LogError("Error parsing message: {Message}", ex.Message);
+            logger.LogError("Error processing message: {Message}", ex.Message);
         }
-    }
-
-    private static class SocketEndpoints
-    {
-        internal const string PUBLIC_WS_URL = "wss://ws.okx.com:8443/ws/v5/public";
-        internal const string PRIVATE_WS_URL = "wss://ws.okx.com:8443/ws/v5/private";
-        internal const string BUSINESS_WS_URL = "wss://ws.okx.com:8443/ws/v5/business";
-
-        internal const string DEMO_PUBLIC_WS_URL = "wss://wspap.okx.com:8443/ws/v5/public";
-        internal const string DEMO_PRIVATE_WS_URL = "wss://wspap.okx.com:8443/ws/v5/private";
-        internal const string DEMO_BUSINESS_WS_URL = "wss://wspap.okx.com:8443/ws/v5/business";
-    }
-
-    private static class SocketOperations
-    {
-        internal const string Login = "login";
-        internal const string Subscribe = "subscribe";
-        internal const string Unsubscribe = "unsubscribe";
-    }
-
-    private static class InstrumentType
-    {
-        internal const string Spot = "SPOT";
-        internal const string Margin = "MARGIN";
-        internal const string Swap = "SWAP";
-        internal const string Futures = "FUTURES";
-        internal const string Option = "OPTION";
-        internal const string Any = "ANY";
-    }
-
-    public void Dispose()
-    {
-        cancellationTokenSource.Cancel();
-        cancellationTokenSource.Dispose();
-        webSocket.Dispose();
-        heartBeat?.Dispose();
     }
 }
