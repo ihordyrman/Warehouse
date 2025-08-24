@@ -8,5 +8,7 @@ public record OkxSocketSubscriptionResponse
     public OkxSocketSubscriptionArgs? Arguments { get; init; }
 
     [JsonPropertyName("action")]
-    public string? Action { get; init; }
+    public OkxAction? Action { get; init; }
+
+    public OkxSocketBookData[]? Data { get; init; }
 }

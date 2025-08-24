@@ -8,4 +8,5 @@ namespace Analyzer.Backend.Okx;
 [JsonSerializable(typeof(OkxSocketSubscriptionResponse))]
 [JsonSerializable(typeof(OkxSocketEventResponse))]
 [JsonSerializable(typeof(OkxSocketLoginResponse))]
+[JsonSerializable(typeof(OkxSocketBookData))]
 internal partial class OkxJsonContext : JsonSerializerContext;

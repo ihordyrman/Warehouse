@@ -5,38 +5,23 @@ using System.Text.Json;
 using System.Threading.Channels;
 using Analyzer.Backend.Okx.Configurations;
 using Analyzer.Backend.Okx.Constants;
+using Analyzer.Backend.Okx.Processors;
 using Microsoft.Extensions.Options;
 
 namespace Analyzer.Backend.Okx;
 
-public class OkxWsClient : IDisposable
+public class OkxWsClient(
+    [FromKeyedServices(OkxChannelNames.RawMessages)] Channel<string> messageChannel,
+    IOptions<OkxAuthConfiguration> okxAuthConfiguration,
+    ILogger<OkxWsClient> logger) : IDisposable
 {
     private readonly CancellationTokenSource cancellationTokenSource = new();
-    private readonly ILogger<OkxWsClient> logger;
-    private readonly OkxAuthConfiguration okxAuthConfiguration;
+    private readonly OkxAuthConfiguration okxAuthConfiguration = okxAuthConfiguration.Value;
     private readonly byte[] ping = "ping"u8.ToArray();
-    private readonly JsonSerializerOptions serializerOptions = new()
-    {
-        TypeInfoResolver = OkxJsonContext.Default
-    };
     private readonly ClientWebSocket webSocket = new();
 
-    private readonly ChannelWriter<string> writer;
+    private readonly ChannelWriter<string> writer = messageChannel.Writer;
     private Task? heartBeat;
-
-    public OkxWsClient(IOptions<OkxAuthConfiguration> okxAuthConfiguration, ILogger<OkxWsClient> logger)
-    {
-        this.logger = logger;
-        this.okxAuthConfiguration = okxAuthConfiguration.Value;
-        var options = new BoundedChannelOptions(1000)
-        {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = false,
-            SingleWriter = true
-        };
-
-        writer = Channel.CreateBounded<string>(options).Writer;
-    }
 
     public void Dispose()
     {
@@ -78,7 +63,6 @@ public class OkxWsClient : IDisposable
     {
         string timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
         string sign = GenerateSignature(timestamp);
-
         var loginRequest = new
         {
             op = SocketOperations.Login,
@@ -126,8 +110,6 @@ public class OkxWsClient : IDisposable
             if (okxChannelType == OkxChannelType.Private)
             {
                 await LoginAsync();
-
-                // OnLoginSuccess?.Invoke();
             }
 
             heartBeat ??= LaunchHeartBeat();
@@ -210,7 +192,6 @@ public class OkxWsClient : IDisposable
 
         try
         {
-            logger.LogInformation("Received: {Message}", message);
             await writer.WriteAsync(message, cancellationTokenSource.Token);
         }
         catch (Exception ex)
