@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
@@ -143,43 +144,96 @@ internal sealed class OkxWsClient(
 
     private async Task ListenForMessages()
     {
-        var buffer = new ArraySegment<byte>(new byte[4096]);
-        var messageBuilder = new StringBuilder();
+        ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+        var buffer = new ArraySegment<byte>(pool.Rent(4096));
+        var chunks = new List<(byte[] array, int length)>();
+        int totalChunksCount = 0;
 
-        while (webSocket.State == WebSocketState.Open && !cancellationTokenSource.IsCancellationRequested)
+        try
         {
-            try
+            while (webSocket.State == WebSocketState.Open && !cancellationTokenSource.IsCancellationRequested)
             {
-                WebSocketReceiveResult result = await webSocket.ReceiveAsync(buffer, cancellationTokenSource.Token);
+                try
+                {
+                    WebSocketReceiveResult result = await webSocket.ReceiveAsync(buffer, cancellationTokenSource.Token);
 
-                if (result.MessageType == WebSocketMessageType.Text)
-                {
-                    await ProcessTextMessage(result);
+                    if (result.MessageType == WebSocketMessageType.Text)
+                    {
+                        await ProcessTextMessage(result);
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", cancellationTokenSource.Token);
+                        logger.LogWarning("Socket Connection closed.");
+                        break;
+                    }
                 }
-                else if (result.MessageType == WebSocketMessageType.Close)
+                catch (Exception ex)
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", cancellationTokenSource.Token);
-                    logger.LogWarning("Socket Connection closed.");
-                    break;
+                    logger.LogError("Error receiving message: {Message}", ex.Message);
                 }
             }
-            catch (Exception ex)
+        }
+        finally
+        {
+            pool.Return(buffer.Array!);
+            foreach ((byte[] array, int _) in chunks)
             {
-                logger.LogError("Error receiving message: {Message}", ex.Message);
+                pool.Return(array);
             }
         }
 
         async Task ProcessTextMessage(WebSocketReceiveResult result)
         {
-            string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
-            messageBuilder.Append(message);
+            if (!result.EndOfMessage)
+            {
+                byte[] chunkArray = pool.Rent(result.Count);
+                Array.Copy(buffer.Array!, buffer.Offset, chunkArray, 0, result.Count);
+
+                chunks.Add((chunkArray, result.Count));
+                totalChunksCount += result.Count;
+            }
 
             if (result.EndOfMessage)
             {
-                string completeMessage = messageBuilder.ToString();
-                messageBuilder.Clear();
-                await HandleMessage(completeMessage);
+                if (chunks.Count > 0)
+                {
+                    byte[] finalChunk = pool.Rent(result.Count);
+                    Array.Copy(buffer.Array!, buffer.Offset, finalChunk, 0, result.Count);
+                    chunks.Add((finalChunk, result.Count));
+                    totalChunksCount += result.Count;
+
+                    string completeMessage = Encoding.UTF8.GetString(GetCompleteMessage());
+                    await HandleMessage(completeMessage);
+
+                    foreach ((byte[] array, int _) in chunks)
+                    {
+                        pool.Return(array);
+                    }
+
+                    chunks.Clear();
+                    totalChunksCount = 0;
+                }
+                else
+                {
+                    string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
+                    await HandleMessage(message);
+                }
             }
+        }
+
+        byte[] GetCompleteMessage()
+        {
+            byte[] result = new byte[totalChunksCount];
+            int position = 0;
+
+            foreach ((byte[] chunkArray, int length) in chunks)
+            {
+                Array.Copy(chunkArray, 0, result, position, length);
+                position += length;
+            }
+
+            return result;
         }
     }
 
