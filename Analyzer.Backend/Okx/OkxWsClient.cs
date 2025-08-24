@@ -10,26 +10,22 @@ using Microsoft.Extensions.Options;
 
 namespace Analyzer.Backend.Okx;
 
-public class OkxWsClient(
+internal sealed class OkxWsClient(
     [FromKeyedServices(OkxChannelNames.RawMessages)] Channel<string> messageChannel,
     IOptions<OkxAuthConfiguration> okxAuthConfiguration,
     ILogger<OkxWsClient> logger) : IDisposable
 {
-    private readonly CancellationTokenSource cancellationTokenSource = new();
-    private readonly OkxAuthConfiguration okxAuthConfiguration = okxAuthConfiguration.Value;
     private readonly byte[] ping = "ping"u8.ToArray();
-    private readonly ClientWebSocket webSocket = new();
-
+    private readonly CancellationTokenSource cancellationTokenSource = new();
     private readonly ChannelWriter<string> writer = messageChannel.Writer;
-    private Task? heartBeat;
+    private readonly ClientWebSocket webSocket = new();
+    private readonly OkxAuthConfiguration okxAuthConfiguration = okxAuthConfiguration.Value;
+    private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(10));
 
-    public void Dispose()
-    {
-        cancellationTokenSource.Cancel();
-        cancellationTokenSource.Dispose();
-        webSocket.Dispose();
-        heartBeat?.Dispose();
-    }
+    private Task? heartBeatTask;
+    private Task? listenTask;
+    private bool disposed;
+    private bool disposing;
 
     public async Task SubscribeToChannelAsync(string channel, string instId)
     {
@@ -105,14 +101,14 @@ public class OkxWsClient(
             await webSocket.ConnectAsync(new Uri(url), cancellationTokenSource.Token);
 
             logger.LogInformation("Connected to {Url}", url);
-            _ = Task.Run(async () => await ListenForMessages(), cancellationTokenSource.Token);
+            listenTask = Task.Run(async () => await ListenForMessages(), cancellationTokenSource.Token);
 
             if (okxChannelType == OkxChannelType.Private)
             {
                 await LoginAsync();
             }
 
-            heartBeat ??= LaunchHeartBeat();
+            heartBeatTask ??= LaunchHeartBeat();
         }
         catch (Exception ex)
         {
@@ -122,11 +118,10 @@ public class OkxWsClient(
 
     private async Task LaunchHeartBeat()
     {
-        PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(10));
         while (!cancellationTokenSource.IsCancellationRequested)
         {
-            await SendHeartBeatAsync();
             await periodicTimer.WaitForNextTickAsync(cancellationTokenSource.Token);
+            await SendHeartBeatAsync();
         }
 
         return;
@@ -198,5 +193,55 @@ public class OkxWsClient(
         {
             logger.LogError("Error processing message: {Message}", ex.Message);
         }
+    }
+
+    public void Dispose() => Cleanup();
+
+    private void Cleanup()
+    {
+        if (disposed || disposing)
+        {
+            return;
+        }
+
+        disposing = true;
+        cancellationTokenSource.Cancel();
+
+        if (webSocket.State == WebSocketState.Open)
+        {
+            try
+            {
+                webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disposing", CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("Error closing WebSocket: {Message}", ex.Message);
+            }
+        }
+
+        try
+        {
+            Task?[] tasks = [heartBeatTask, listenTask];
+            Task.WaitAll(tasks.Where(task => task != null).ToArray()!, TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Error waiting for tasks to complete: {Message}", ex.Message);
+        }
+
+        try
+        {
+            writer.Complete();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Error completing channel writer: {Message}", ex.Message);
+        }
+
+        periodicTimer.Dispose();
+        cancellationTokenSource.Dispose();
+        webSocket.Dispose();
+
+        disposed = true;
     }
 }
