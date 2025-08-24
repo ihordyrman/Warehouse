@@ -137,13 +137,14 @@ internal sealed class OkxWsClient(
             var buffer = new ArraySegment<byte>(ping);
             await webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationTokenSource.Token);
 
-            logger.LogInformation("Sent ping message");
+            logger.LogDebug("Ping message was sent");
         }
     }
 
     private async Task ListenForMessages()
     {
         var buffer = new ArraySegment<byte>(new byte[4096]);
+        var messageBuilder = new StringBuilder();
 
         while (webSocket.State == WebSocketState.Open && !cancellationTokenSource.IsCancellationRequested)
         {
@@ -153,17 +154,31 @@ internal sealed class OkxWsClient(
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
-                    await HandleMessage(message);
+                    await ProcessTextMessage(result);
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", cancellationTokenSource.Token);
+                    logger.LogWarning("Socket Connection closed.");
+                    break;
                 }
             }
             catch (Exception ex)
             {
                 logger.LogError("Error receiving message: {Message}", ex.Message);
+            }
+        }
+
+        async Task ProcessTextMessage(WebSocketReceiveResult result)
+        {
+            string message = Encoding.UTF8.GetString(buffer.Array!, 0, result.Count);
+            messageBuilder.Append(message);
+
+            if (result.EndOfMessage)
+            {
+                string completeMessage = messageBuilder.ToString();
+                messageBuilder.Clear();
+                await HandleMessage(completeMessage);
             }
         }
     }
