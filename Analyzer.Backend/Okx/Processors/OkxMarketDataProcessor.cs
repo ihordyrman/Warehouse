@@ -8,7 +8,8 @@ namespace Analyzer.Backend.Okx.Processors;
 public class OkxMarketDataProcessor(
     [FromKeyedServices(OkxChannelNames.MarketData)] Channel<MarketData> marketDataChannel,
     ILogger<OkxMarketDataProcessor> logger,
-    OkxWebSocketService okxWebSocketService) : BackgroundService
+    OkxWebSocketService okxWebSocketService,
+    OkxHttpService okxHttpService) : BackgroundService
 {
     private readonly ChannelReader<MarketData> marketDataReader = marketDataChannel.Reader;
     private readonly Dictionary<MarketDataKey, MarketDataCache> cache = [];

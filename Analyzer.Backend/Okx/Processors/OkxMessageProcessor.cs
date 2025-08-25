@@ -1,7 +1,8 @@
 ﻿using Analyzer.Backend.Okx.Handlers;
-using Analyzer.Backend.Okx.Messages;
+using Analyzer.Backend.Okx.Messages.Socket;
+using Analyzer.Backend.Okx.Services;
 
-namespace Analyzer.Backend.Okx.Services;
+namespace Analyzer.Backend.Okx.Processors;
 
 public class OkxMessageProcessor(
     OkxWebSocketService webSocketService,

@@ -27,9 +27,9 @@ public class OkxAuthService
         };
     }
 
-    private static string GenerateSignature(string timestamp, string secretKey)
+    public static string GenerateSignature(string timestamp, string secretKey, string method = "GET", string path = "/users/self/verify")
     {
-        byte[] sign = Encoding.UTF8.GetBytes($"{timestamp}GET/users/self/verify");
+        byte[] sign = Encoding.UTF8.GetBytes($"{timestamp}{method}{path}");
         byte[] key = Encoding.UTF8.GetBytes(secretKey);
 
         using var hmac = new HMACSHA256(key);

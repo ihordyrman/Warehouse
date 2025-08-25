@@ -5,6 +5,7 @@ using Analyzer.Backend.Core;
 using Analyzer.Backend.Okx.Configurations;
 using Analyzer.Backend.Okx.Constants;
 using Analyzer.Backend.Okx.Messages;
+using Analyzer.Backend.Okx.Messages.Socket;
 using Microsoft.Extensions.Options;
 using WebSocketError = Analyzer.Backend.Core.WebSocketError;
 

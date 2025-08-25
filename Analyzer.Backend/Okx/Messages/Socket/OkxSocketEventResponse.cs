@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Analyzer.Backend.Okx.Messages;
+namespace Analyzer.Backend.Okx.Messages.Socket;
 
 public record OkxSocketEventResponse
 {

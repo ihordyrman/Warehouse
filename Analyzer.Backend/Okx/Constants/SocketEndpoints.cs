@@ -1,6 +1,8 @@
 ﻿namespace Analyzer.Backend.Okx.Constants;
 
 // ReSharper disable InconsistentNaming
+
+// https://www.okx.com/docs-v5/en/#overview-account-mode
 internal static class SocketEndpoints
 {
     internal const string PUBLIC_WS_URL = "wss://ws.okx.com:8443/ws/v5/public";

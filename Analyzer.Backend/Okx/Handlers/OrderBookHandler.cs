@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Analyzer.Backend.Okx.Constants;
 using Analyzer.Backend.Okx.Messages;
+using Analyzer.Backend.Okx.Messages.Socket;
 using Analyzer.Backend.Okx.Models;
 
 namespace Analyzer.Backend.Okx.Handlers;

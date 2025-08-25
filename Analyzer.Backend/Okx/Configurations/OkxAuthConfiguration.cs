@@ -2,6 +2,8 @@
 
 public class OkxAuthConfiguration
 {
+    public string Url { get; init; } = string.Empty;
+
     public string ApiKey { get; init; } = string.Empty;
 
     public string Passphrase { get; init; } = string.Empty;

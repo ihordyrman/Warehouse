@@ -1,11 +1,8 @@
 ﻿<Solution>
-    <Folder Name="/Solution items/">
-        <File Path="README.md" />
-        <File Path=".gitignore" />
-        <File Path=".editorconfig" />
-    </Folder>
-    <Folder Name="/Solution items/infra/">
-        <File Path="infra\docker-compose.yaml" />
-    </Folder>
-    <Project Path="Analyzer.Backend\Analyzer.Backend.csproj" Type="Classic C#" />
+  <Folder Name="/Solution items/">
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="Analyzer.Backend\Analyzer.Backend.csproj" Type="Classic C#" />
 </Solution>

@@ -1,20 +1,20 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Analyzer.Backend.Okx.Messages;
+namespace Analyzer.Backend.Okx.Messages.Socket;
 
-public record OkxSocketSubscriptionData
+public record OkxSocketBookData
 {
     [JsonPropertyName("asks")]
-    public List<List<string>> Asks { get; init; } = [];
+    public string[][]? Asks { get; init; }
 
     [JsonPropertyName("bids")]
-    public List<List<string>> Bids { get; init; } = [];
+    public string[][]? Bids { get; init; }
 
     [JsonPropertyName("ts")]
-    public string Timestamp { get; init; } = string.Empty;
+    public string? Timestamp { get; init; }
 
     [JsonPropertyName("checksum")]
-    public long Checksum { get; init; }
+    public long? Checksum { get; init; }
 
     [JsonPropertyName("seqId")]
     public long SequenceId { get; init; }
