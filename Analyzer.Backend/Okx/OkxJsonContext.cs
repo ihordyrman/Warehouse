@@ -3,9 +3,9 @@ using Analyzer.Backend.Okx.Messages;
 
 namespace Analyzer.Backend.Okx;
 
-[JsonSerializable(typeof(OkxSocketSubscriptionArgs))]
+[JsonSerializable(typeof(OkxSocketArgs))]
 [JsonSerializable(typeof(OkxSocketSubscriptionData))]
-[JsonSerializable(typeof(OkxSocketSubscriptionResponse))]
+[JsonSerializable(typeof(OkxSocketResponse))]
 [JsonSerializable(typeof(OkxSocketEventResponse))]
 [JsonSerializable(typeof(OkxSocketLoginResponse))]
 [JsonSerializable(typeof(OkxSocketBookData))]

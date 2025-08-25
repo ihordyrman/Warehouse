@@ -2,10 +2,10 @@
 
 namespace Analyzer.Backend.Okx.Messages;
 
-public record OkxSocketSubscriptionResponse : OkxSocketEventResponse
+public record OkxSocketResponse : OkxSocketEventResponse
 {
     [JsonPropertyName("arg")]
-    public OkxSocketSubscriptionArgs? Arguments { get; init; }
+    public OkxSocketArgs? Arguments { get; init; }
 
     [JsonPropertyName("action")]
     public OkxAction? Action { get; init; }

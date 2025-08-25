@@ -1,16 +1,29 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
+using Analyzer.Backend.Okx.Constants;
 using Analyzer.Backend.Okx.Models;
+using Analyzer.Backend.Okx.Services;
 
 namespace Analyzer.Backend.Okx.Processors;
 
 public class OkxMarketDataProcessor(
     [FromKeyedServices(OkxChannelNames.MarketData)] Channel<MarketData> marketDataChannel,
-    ILogger<OkxMarketDataProcessor> logger)
+    ILogger<OkxMarketDataProcessor> logger,
+    OkxWebSocketService okxWebSocketService) : BackgroundService
 {
     private readonly ChannelReader<MarketData> marketDataReader = marketDataChannel.Reader;
     private readonly Dictionary<MarketDataKey, MarketDataCache> cache = [];
 
-    public async Task StartProcessingAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await okxWebSocketService.ConnectAsync(OkxChannelType.Public, stoppingToken);
+        await okxWebSocketService.SubscribeAsync("books", "OKB-USDT", stoppingToken);
+
+        await ProcessMarketDataAsync(stoppingToken);
+
+        logger.LogInformation("Markets processing is stopped");
+    }
+
+    private async Task ProcessMarketDataAsync(CancellationToken cancellationToken)
     {
         await foreach (MarketData marketData in marketDataReader.ReadAllAsync(cancellationToken))
         {
@@ -34,7 +47,7 @@ public class OkxMarketDataProcessor(
         }
     }
 
-    private void UpdateCache(MarketDataCache cache, MarketData marketData)
+    private void UpdateCache(MarketDataCache dataCache, MarketData marketData)
     {
         foreach (string[] ask in marketData.Asks)
         {
@@ -45,11 +58,11 @@ public class OkxMarketDataProcessor(
             {
                 if (size == 0)
                 {
-                    cache.Asks.Remove(price);
+                    dataCache.Asks.Remove(price);
                 }
                 else
                 {
-                    cache.Asks[price] = (size, orderCount);
+                    dataCache.Asks[price] = (size, orderCount);
                 }
             }
         }
@@ -63,11 +76,11 @@ public class OkxMarketDataProcessor(
             {
                 if (size == 0)
                 {
-                    cache.Bids.Remove(price);
+                    dataCache.Bids.Remove(price);
                 }
                 else
                 {
-                    cache.Bids[price] = (size, orderCount);
+                    dataCache.Bids[price] = (size, orderCount);
                 }
             }
         }

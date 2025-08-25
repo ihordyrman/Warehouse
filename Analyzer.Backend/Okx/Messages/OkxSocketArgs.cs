@@ -2,7 +2,7 @@
 
 namespace Analyzer.Backend.Okx.Messages;
 
-public record OkxSocketSubscriptionArgs
+public record OkxSocketArgs
 {
     [JsonPropertyName("channel")]
     public string? Channel { get; init; }
