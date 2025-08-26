@@ -11,5 +11,5 @@ public record OkxHttpResponse<T>
     public string Message { get; init; } = string.Empty;
 
     [JsonPropertyName("data")]
-    public T[]? Data { get; init; }
+    public T? Data { get; init; }
 }
