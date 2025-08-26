@@ -25,7 +25,7 @@ public class OkxHttpService(
         return response ?? [];
     }
 
-    public async Task<List<OkxFundingBalance>[]> GetFundingBalanceAsync(string? currency = null)
+    public async Task<OkxFundingBalance[]> GetFundingBalanceAsync(string? currency = null)
     {
         const string endpoint = "/api/v5/asset/balances";
         var parameters = new Dictionary<string, string>();
@@ -35,11 +35,11 @@ public class OkxHttpService(
             parameters["ccy"] = currency;
         }
 
-        List<OkxFundingBalance>[] response = await SendRequestAsync<List<OkxFundingBalance>>("GET", endpoint, parameters) ?? [];
+        OkxFundingBalance[] response = await SendRequestAsync<OkxFundingBalance>("GET", endpoint, parameters) ?? [];
         return response;
     }
 
-    public async Task<List<OkxOrder>[]> GetPendingOrdersAsync(string? instType = null, string? instId = null)
+    public async Task<OkxOrder[]> GetPendingOrdersAsync(string? instType = null, string? instId = null)
     {
         const string endpoint = "/api/v5/trade/orders-pending";
         var parameters = new Dictionary<string, string>();
@@ -54,33 +54,27 @@ public class OkxHttpService(
             parameters["instId"] = instId;
         }
 
-        List<OkxOrder>[] response = await SendRequestAsync<List<OkxOrder>>("GET", endpoint, parameters) ?? [];
+        OkxOrder[] response = await SendRequestAsync<OkxOrder>("GET", endpoint, parameters) ?? [];
         return response;
     }
 
-    public async Task<List<OkxOrder>[]> GetBuyOrdersAsync(string? instId = null)
+    public async Task<OkxOrder[]> GetBuyOrdersAsync(string? instId = null)
     {
-        List<OkxOrder>[] orders = await GetPendingOrdersAsync(InstrumentType.Spot, instId);
-        foreach (List<OkxOrder> list in orders)
-        {
-            list.RemoveAll(x => x.Side == OkxOrderSide.Buy);
-        }
+        OkxOrder[] orders = await GetPendingOrdersAsync(InstrumentType.Spot, instId);
+        orders = orders.Where(x => x.Side == OkxOrderSide.Buy).ToArray();
 
         return orders;
     }
 
-    public async Task<List<OkxOrder>[]> GetSellOrdersAsync(string? instId = null)
+    public async Task<OkxOrder[]> GetSellOrdersAsync(string? instId = null)
     {
-        List<OkxOrder>[] orders = await GetPendingOrdersAsync(InstrumentType.Spot, instId);
-        foreach (List<OkxOrder> list in orders)
-        {
-            list.RemoveAll(x => x.Side == OkxOrderSide.Sell);
-        }
+        OkxOrder[] orders = await GetPendingOrdersAsync(InstrumentType.Spot, instId);
+        orders = orders.Where(x => x.Side == OkxOrderSide.Sell).ToArray();
 
         return orders;
     }
 
-    public async Task<List<OkxOrder>[]> GetOrderHistoryAsync(string? instType = null, string? instId = null, int limit = 100)
+    public async Task<OkxOrder[]> GetOrderHistoryAsync(string? instType = null, string? instId = null, int limit = 100)
     {
         const string endpoint = "/api/v5/trade/orders-history";
         var parameters = new Dictionary<string, string>
@@ -98,11 +92,11 @@ public class OkxHttpService(
             parameters["instId"] = instId;
         }
 
-        List<OkxOrder>[] response = await SendRequestAsync<List<OkxOrder>>("GET", endpoint, parameters) ?? [];
+        OkxOrder[] response = await SendRequestAsync<OkxOrder>("GET", endpoint, parameters) ?? [];
         return response;
     }
 
-    public async Task<List<OkxTicker>[]?> GetTickerAsync(string instId)
+    public async Task<OkxTicker[]> GetTickerAsync(string instId)
     {
         const string endpoint = "/api/v5/market/ticker";
         var parameters = new Dictionary<string, string>
@@ -110,11 +104,11 @@ public class OkxHttpService(
             ["instId"] = instId
         };
 
-        List<OkxTicker>[] response = await SendRequestAsync<List<OkxTicker>>("GET", endpoint, parameters) ?? [];
+        OkxTicker[] response = await SendRequestAsync<OkxTicker>("GET", endpoint, parameters) ?? [];
         return response;
     }
 
-    public async Task<List<OkxTicker>[]> GetAllTickersAsync(string instType = "SPOT")
+    public async Task<OkxTicker[]> GetAllTickersAsync(string instType = "SPOT")
     {
         const string endpoint = "/api/v5/market/tickers";
         var parameters = new Dictionary<string, string>
@@ -122,11 +116,11 @@ public class OkxHttpService(
             ["instType"] = instType
         };
 
-        List<OkxTicker>[] response = await SendRequestAsync<List<OkxTicker>>("GET", endpoint, parameters) ?? [];
+        OkxTicker[] response = await SendRequestAsync<OkxTicker>("GET", endpoint, parameters) ?? [];
         return response;
     }
 
-    public async Task<OkxOrderBook?> GetOrderBookAsync(string instId, int depth = 20)
+    public async Task<OkxOrderBook[]> GetOrderBookAsync(string instId, int depth = 20)
     {
         const string endpoint = "/api/v5/market/books";
         var parameters = new Dictionary<string, string>
@@ -135,8 +129,8 @@ public class OkxHttpService(
             ["sz"] = depth.ToString()
         };
 
-        List<OkxOrderBook>[]? response = await SendRequestAsync<List<OkxOrderBook>>("GET", endpoint, parameters);
-        return null;
+        OkxOrderBook[] response = await SendRequestAsync<OkxOrderBook>("GET", endpoint, parameters) ?? [];
+        return response;
     }
 
     private async Task<T[]?> SendRequestAsync<T>(string method, string endpoint, Dictionary<string, string>? parameters = null)
