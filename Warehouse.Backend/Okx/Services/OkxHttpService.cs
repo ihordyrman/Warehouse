@@ -3,13 +3,13 @@ using System.Text.Json;
 using System.Web;
 using Microsoft.Extensions.Options;
 using Warehouse.Backend.Core;
-using Warehouse.Backend.Okx.Configurations;
+using Warehouse.Backend.Core.Entities;
 using Warehouse.Backend.Okx.Messages.Http;
 
 namespace Warehouse.Backend.Okx.Services;
 
 public class OkxHttpService(
-    IOptions<OkxAuthConfiguration> okxAuthConfiguration,
+    IOptions<MarketCredentials> okxAuthConfiguration,
     ILogger<OkxHttpService> logger,
     IHttpClientFactory httpClientFactory)
 {

@@ -1,12 +1,12 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using Warehouse.Backend.Okx.Configurations;
+using Warehouse.Backend.Core.Entities;
 
 namespace Warehouse.Backend.Okx.Services;
 
 public class OkxAuthService
 {
-    public static object CreateAuthRequest(OkxAuthConfiguration config)
+    public static object CreateAuthRequest(MarketCredentials config)
     {
         string timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
         string sign = GenerateSignature(timestamp, config.SecretKey);

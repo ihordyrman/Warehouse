@@ -1,20 +1,20 @@
 ﻿using System.Threading.Channels;
 using Polly;
 using Warehouse.Backend.Core;
-using Warehouse.Backend.Okx.Configurations;
+using Warehouse.Backend.Core.Entities;
 using Warehouse.Backend.Okx.Constants;
 using Warehouse.Backend.Okx.Handlers;
 using Warehouse.Backend.Okx.Models;
 using Warehouse.Backend.Okx.Processors;
 using Warehouse.Backend.Okx.Services;
 
-namespace Warehouse.Backend.Extensions;
+namespace Warehouse.Backend.Okx.Extensions;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddOkxSupport(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<OkxAuthConfiguration>(configuration.GetSection(nameof(OkxAuthConfiguration)));
+        services.Configure<MarketCredentials>(configuration.GetSection(nameof(MarketCredentials)));
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<OkxHeartbeatService>();
         services.AddSingleton<OkxWebSocketService>();
@@ -37,12 +37,12 @@ public static class DependencyInjection
 
         services.AddSingleton<IOkxMessageHandler, OrderBookHandler>();
 
-        OkxAuthConfiguration config = configuration.GetSection(nameof(OkxAuthConfiguration)).Get<OkxAuthConfiguration>()!;
+        MarketCredentials config = configuration.GetSection(nameof(MarketCredentials)).Get<MarketCredentials>()!;
         services.AddHttpClient(
                 "Okx",
                 client =>
                 {
-                    client.BaseAddress = new Uri(config.Url);
+                    client.BaseAddress = Urls.GetMarketUrl(Market.Okx);
                     client.Timeout = TimeSpan.FromSeconds(30);
                     client.DefaultRequestHeaders.Add("User-Agent", "Analyzer/1.0");
                     client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", config.ApiKey);

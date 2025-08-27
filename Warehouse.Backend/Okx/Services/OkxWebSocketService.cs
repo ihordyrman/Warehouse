@@ -4,7 +4,7 @@ using System.Threading.Channels;
 using Warehouse.Backend.Okx.Messages;
 using Microsoft.Extensions.Options;
 using Warehouse.Backend.Core;
-using Warehouse.Backend.Okx.Configurations;
+using Warehouse.Backend.Core.Entities;
 using Warehouse.Backend.Okx.Constants;
 using Warehouse.Backend.Okx.Messages.Socket;
 using Core_WebSocketError = Warehouse.Backend.Core.WebSocketError;
@@ -16,7 +16,7 @@ public class OkxWebSocketService : IDisposable
 {
     private readonly IWebSocketClient webSocketClient;
     private readonly OkxHeartbeatService heartbeatService;
-    private readonly IOptions<OkxAuthConfiguration> config;
+    private readonly IOptions<MarketCredentials> config;
     private readonly ILogger<OkxWebSocketService> logger;
     private readonly Channel<OkxSocketResponse> messageChannel;
     private readonly JsonSerializerOptions serializerOptions;
@@ -26,7 +26,7 @@ public class OkxWebSocketService : IDisposable
     public OkxWebSocketService(
         IWebSocketClient webSocketClient,
         OkxHeartbeatService heartbeatService,
-        IOptions<OkxAuthConfiguration> config,
+        IOptions<MarketCredentials> config,
         ILogger<OkxWebSocketService> logger)
     {
         this.webSocketClient = webSocketClient;
