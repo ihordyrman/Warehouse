@@ -136,7 +136,7 @@ public class OkxHttpService(
             {
                 string errorContent = await httpResponse.Content.ReadAsStringAsync();
                 logger.LogError("HTTP request failed: {StatusCode} - {Content}", httpResponse.StatusCode, errorContent);
-                return Result<T>.Failure(httpResponse.StatusCode.ToString(), "HTTP request failed");
+                return Result<T>.Failure("HTTP request failed", httpResponse.StatusCode);
             }
 
             string jsonString = await httpResponse.Content.ReadAsStringAsync();
@@ -146,7 +146,7 @@ public class OkxHttpService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making authenticated request to {Endpoint}", endpoint);
-            return Result<T>.Failure("", $"Error making authenticated request to {endpoint}");
+            return Result<T>.Failure(new Error($"Error making authenticated request to {endpoint}"));
         }
 
         string BuildRequestPath()
