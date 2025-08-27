@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Folder Name="/Solution items/">
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
+</Solution>

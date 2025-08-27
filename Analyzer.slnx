@@ -1,8 +1,0 @@
-﻿<Solution>
-  <Folder Name="/Solution items/">
-    <File Path="README.md" />
-    <File Path=".gitignore" />
-    <File Path=".editorconfig" />
-  </Folder>
-  <Project Path="Analyzer.Backend\Analyzer.Backend.csproj" Type="Classic C#" />
-</Solution>
