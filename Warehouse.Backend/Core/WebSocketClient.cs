@@ -7,12 +7,12 @@ namespace Warehouse.Backend.Core;
 
 internal sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSocketClient
 {
-    private readonly ClientWebSocket webSocket = new();
     private readonly ArrayPool<byte> arrayPool = ArrayPool<byte>.Shared;
     private readonly SemaphoreSlim sendSemaphore = new(1, 1);
+    private readonly ClientWebSocket webSocket = new();
+    private bool disposed;
     private CancellationTokenSource? listenCts;
     private Task? listenTask;
-    private bool disposed;
 
     public WebSocketState State => webSocket.State;
 
@@ -85,6 +85,29 @@ internal sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSoc
     {
         byte[] bytes = Encoding.UTF8.GetBytes(message);
         await SendAsync(bytes, WebSocketMessageType.Text, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+
+        try
+        {
+            DisconnectAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error during dispose");
+        }
+
+        listenCts?.Dispose();
+        webSocket.Dispose();
+        sendSemaphore.Dispose();
     }
 
     private async Task SendAsync(byte[] data, WebSocketMessageType messageType, CancellationToken cancellationToken)
@@ -207,28 +230,5 @@ internal sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSoc
         await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", cancellationToken);
         StateChanged?.Invoke(this, WebSocketState.Closed);
         logger.LogInformation("WebSocket connection closed");
-    }
-
-    public void Dispose()
-    {
-        if (disposed)
-        {
-            return;
-        }
-
-        disposed = true;
-
-        try
-        {
-            DisconnectAsync().GetAwaiter().GetResult();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Error during dispose");
-        }
-
-        listenCts?.Dispose();
-        webSocket.Dispose();
-        sendSemaphore.Dispose();
     }
 }

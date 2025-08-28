@@ -10,57 +10,47 @@ sequenceDiagram
     participant OKX as OKX Exchange
     participant DB as Database
     participant Hub as SignalR Hub
-
-    UI->>API: Start Trading (OKX, BTC/USDT)
-    API->>Orch: StartWorkerAsync("OKX", config)
-    Orch->>Worker: Create & Start Worker
-
-    Worker->>Adapter: ConnectAsync(credentials)
-    Adapter->>WS: Connect to wss://ws.okx.com
-    WS->>OKX: Authenticate
-    OKX->>WS: Auth Success
-
-    Worker->>Adapter: Subscribe("BTC-USDT")
-    Adapter->>OKX: Subscribe to channels
+    UI ->> API: Start Trading (OKX, BTC/USDT)
+    API ->> Orch: StartWorkerAsync("OKX", config)
+    Orch ->> Worker: Create & Start Worker
+    Worker ->> Adapter: ConnectAsync(credentials)
+    Adapter ->> WS: Connect to wss://ws.okx.com
+    WS ->> OKX: Authenticate
+    OKX ->> WS: Auth Success
+    Worker ->> Adapter: Subscribe("BTC-USDT")
+    Adapter ->> OKX: Subscribe to channels
 
     loop Market Data Stream
-        OKX->>WS: Market Data Event
-        WS->>Adapter: Parse Message
-        Adapter->>Worker: Emit MarketData
-
-        Worker->>Pipeline: ExecuteAsync(context)
-
+        OKX ->> WS: Market Data Event
+        WS ->> Adapter: Parse Message
+        Adapter ->> Worker: Emit MarketData
+        Worker ->> Pipeline: ExecuteAsync(context)
         Note over Pipeline: Step 1: Data Validation
-        Pipeline->>Pipeline: Validate Data Quality
-
+        Pipeline ->> Pipeline: Validate Data Quality
         Note over Pipeline: Step 2: Risk Management
-        Pipeline->>DB: Get Current Positions
-        Pipeline->>Pipeline: Check Risk Limits
-
+        Pipeline ->> DB: Get Current Positions
+        Pipeline ->> Pipeline: Check Risk Limits
         Note over Pipeline: Step 3: Signal Generation
-        Pipeline->>Strategy: AnalyzeAsync(context)
-        Strategy->>DB: Get Historical Data
-        Strategy->>Strategy: Calculate Indicators
-        Strategy->>Pipeline: Return Signal (Buy/Sell/NoAction)
+        Pipeline ->> Strategy: AnalyzeAsync(context)
+        Strategy ->> DB: Get Historical Data
+        Strategy ->> Strategy: Calculate Indicators
+        Strategy ->> Pipeline: Return Signal (Buy/Sell/NoAction)
 
         alt Signal = Buy/Sell
             Note over Pipeline: Step 4: Order Preparation
-            Pipeline->>Pipeline: Calculate Size, Price
-
+            Pipeline ->> Pipeline: Calculate Size, Price
             Note over Pipeline: Step 5: Pre-Execution
-            Pipeline->>DB: Check Balance
-            Pipeline->>Pipeline: Final Validation
-
+            Pipeline ->> DB: Check Balance
+            Pipeline ->> Pipeline: Final Validation
             Note over Pipeline: Step 6: Execution
-            Pipeline->>Adapter: PlaceOrderAsync(order)
-            Adapter->>OKX: POST /api/v5/trade/order
-            OKX->>Adapter: Order Response
-
-            Adapter->>Pipeline: Order Result
-            Pipeline->>DB: Save Order
-            Pipeline->>Hub: Broadcast Update
-            Hub->>UI: Real-time Update
+            Pipeline ->> Adapter: PlaceOrderAsync(order)
+            Adapter ->> OKX: POST /api/v5/trade/order
+            OKX ->> Adapter: Order Response
+            Adapter ->> Pipeline: Order Result
+            Pipeline ->> DB: Save Order
+            Pipeline ->> Hub: Broadcast Update
+            Hub ->> UI: Real-time Update
         else Signal = NoAction
-            Pipeline->>Worker: Continue
+            Pipeline ->> Worker: Continue
         end
     end

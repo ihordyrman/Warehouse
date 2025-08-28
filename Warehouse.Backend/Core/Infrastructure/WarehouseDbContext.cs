@@ -11,19 +11,20 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 {
     private readonly IDataProtector protector = dataProtection.CreateProtector("Warehouse.Credentials");
 
-    public DbSet<MarketCredentials> ExchangeCredentials { get; set; }
+    public DbSet<Market> Markets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
-        modelBuilder.Entity<MarketCredentials>(entity =>
+        modelBuilder.Entity<Market>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Exchange).IsRequired();
-            entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(200).HasConversion(encryptedConverter);
-            entity.Property(e => e.SecretKey).IsRequired().HasMaxLength(200).HasConversion(encryptedConverter);
-            entity.Property(e => e.Passphrase).HasMaxLength(200).HasConversion(encryptedConverter);
-            entity.HasIndex(e => e.Exchange).IsUnique();
+            entity.Property(e => e.Id).ValueGeneratedOnAdd().IsRequired();
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
+            entity.Property(e => e.SecretKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
+            entity.Property(e => e.Passphrase).HasMaxLength(500).HasConversion(encryptedConverter);
+            entity.HasIndex(e => e.Type).IsUnique();
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

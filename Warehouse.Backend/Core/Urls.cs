@@ -2,12 +2,14 @@ using Warehouse.Backend.Core.Entities;
 
 namespace Warehouse.Backend.Core;
 
+using static MarketType;
+
 public static class Urls
 {
-    public static Uri GetMarketUrl(Market market)
-        => market switch
+    public static Uri GetMarketUrl(MarketType marketType)
+        => marketType switch
         {
-            Market.Okx => new Uri("https://www.okx.com/"),
-            _ => throw new ArgumentOutOfRangeException(nameof(market), market, null)
+            Okx => new Uri("https://www.okx.com/"),
+            _ => throw new ArgumentOutOfRangeException(nameof(marketType), marketType, null)
         };
 }

@@ -1,51 +1,37 @@
 graph TB
     Start([Worker Started]) --> Init[Initialize OKX Worker]
     Init --> Connect[Connect to OKX]
-
     Connect --> Auth[Authenticate with API Keys]
     Auth --> WS[Open WebSocket Connection]
     WS --> HTTP[Initialize HTTP Client]
-
     HTTP --> Subscribe[Subscribe to Market Data]
     Subscribe --> Stream[Start Data Stream]
-
     Stream --> MarketData{New Market Data}
     MarketData --> Cache[Update Market Cache]
     Cache --> Context[Build Pipeline Context]
-
     Context --> Pipeline[Enter Trading Pipeline]
-
     Pipeline --> Step1[1. Data Validation]
     Step1 --> Valid{Valid Data?}
     Valid -->|No| Skip[Skip Processing]
     Valid -->|Yes| Step2[2. Risk Management Check]
-
     Step2 --> Risk{Within Risk Limits?}
     Risk -->|No| Stop[Stop Processing]
     Risk -->|Yes| Step3[3. Signal Generation]
-
     Step3 --> Strategy[Execute Strategy Analysis]
     Strategy --> Signal{Trading Signal}
-
     Signal -->|No Action| Wait[Wait for Next Data]
     Signal -->|Buy/Sell| Step4[4. Order Preparation]
-
     Step4 --> OrderCalc[Calculate Order Parameters]
     OrderCalc --> Step5[5. Pre-Execution Validation]
-
     Step5 --> Final{Final Check}
     Final -->|Fail| Abort[Abort Order]
     Final -->|Pass| Step6[6. Order Execution]
-
     Step6 --> Send[Send Order to OKX]
     Send --> Response{Order Response}
-
     Response -->|Success| Success[Update Database]
     Response -->|Failure| Retry{Retry?}
-
     Retry -->|Yes| Send
     Retry -->|No| Failed[Log Failure]
-
     Success --> Notify[Notify Frontend]
     Failed --> Notify
     Abort --> Notify
@@ -54,9 +40,8 @@ graph TB
     Wait --> MarketData
     Notify --> Monitor[Monitor Position]
     Monitor --> MarketData
-
-    style Start fill:#e1f5fe
-    style Pipeline fill:#fff3e0
-    style Signal fill:#f3e5f5
-    style Step6 fill:#e8f5e9
-    style Notify fill:#fce4ecYet another pet project
+    style Start fill: #e1f5fe
+    style Pipeline fill: #fff3e0
+    style Signal fill: #f3e5f5
+    style Step6 fill: #e8f5e9
+    style Notify fill: #fce4ec
