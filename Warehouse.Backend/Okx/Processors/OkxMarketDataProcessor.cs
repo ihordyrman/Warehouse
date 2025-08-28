@@ -1,6 +1,6 @@
 using System.Threading.Channels;
+using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Okx.Constants;
-using Warehouse.Backend.Okx.Models;
 using Warehouse.Backend.Okx.Services;
 
 namespace Warehouse.Backend.Okx.Processors;

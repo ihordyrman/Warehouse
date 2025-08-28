@@ -2,9 +2,9 @@
 using Polly;
 using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Entities;
+using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Okx.Constants;
 using Warehouse.Backend.Okx.Handlers;
-using Warehouse.Backend.Okx.Models;
 using Warehouse.Backend.Okx.Processors;
 using Warehouse.Backend.Okx.Services;
 

@@ -1,8 +1,8 @@
 ﻿using System.Threading.Channels;
+using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Okx.Constants;
 using Warehouse.Backend.Okx.Messages;
 using Warehouse.Backend.Okx.Messages.Socket;
-using Warehouse.Backend.Okx.Models;
 
 namespace Warehouse.Backend.Okx.Handlers;
 
