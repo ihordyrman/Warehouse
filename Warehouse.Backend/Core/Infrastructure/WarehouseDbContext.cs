@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Warehouse.Backend.Core.Entities;
+using Warehouse.Backend.Core.Domain;
 
 namespace Warehouse.Backend.Core.Infrastructure;
 
@@ -11,12 +11,12 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 {
     private readonly IDataProtector protector = dataProtection.CreateProtector("Warehouse.Credentials");
 
-    public DbSet<Market> Markets { get; set; }
+    public DbSet<MarketCredentials> Markets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
-        modelBuilder.Entity<Market>(entity =>
+        modelBuilder.Entity<MarketCredentials>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd().IsRequired();

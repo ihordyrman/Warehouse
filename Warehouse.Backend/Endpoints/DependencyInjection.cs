@@ -1,0 +1,66 @@
+﻿using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.RateLimiting;
+using Scalar.AspNetCore;
+
+namespace Warehouse.Backend.Endpoints;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApi(this IServiceCollection services, IHostEnvironment env)
+    {
+        services.AddOpenApi();
+        services.AddRateLimiter(options =>
+        {
+            options.AddTokenBucketLimiter(
+                "MarketApiPolicy",
+                config =>
+                {
+                    config.TokenLimit = 50;
+                    config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    config.QueueLimit = 50;
+                    config.ReplenishmentPeriod = TimeSpan.FromMinutes(1);
+                    config.TokensPerPeriod = 50;
+                    config.AutoReplenishment = true;
+                });
+
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = 429;
+
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+                {
+                    await context.HttpContext.Response.WriteAsync(
+                        $"Too many requests. Please try again after {retryAfter.TotalMinutes} minute(s).",
+                        token);
+                }
+                else
+                {
+                    await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", token);
+                }
+            };
+        });
+
+        services.AddHttpLogging(o =>
+        {
+            if (env.IsDevelopment())
+            {
+                o.CombineLogs = true;
+                o.LoggingFields = HttpLoggingFields.ResponseBody | HttpLoggingFields.ResponseHeaders;
+            }
+        });
+
+        return services;
+    }
+
+    public static IApplicationBuilder AddApi(this WebApplication app)
+    {
+        app.UseHttpLogging();
+        app.UseRateLimiter();
+        app.MapScalarApiReference();
+        app.MapOpenApi();
+        app.MapMarketEndpoints();
+
+        return app;
+    }
+}

@@ -1,6 +1,6 @@
 using Warehouse.Backend.Core;
-using Warehouse.Backend.Features.Endpoints;
-using Warehouse.Backend.Features.Okx;
+using Warehouse.Backend.Endpoints;
+using Warehouse.Backend.Markets.Okx;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

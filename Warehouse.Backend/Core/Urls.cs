@@ -1,4 +1,4 @@
-using Warehouse.Backend.Core.Entities;
+using Warehouse.Backend.Core.Domain;
 
 namespace Warehouse.Backend.Core;
 
