@@ -12,24 +12,17 @@ namespace Warehouse.Backend.Markets.Okx.Services;
 
 public class OkxWebSocketService : IDisposable
 {
-    private readonly IOptions<MarketCredentials> config;
     private readonly OkxHeartbeatService heartbeatService;
     private readonly ILogger<OkxWebSocketService> logger;
     private readonly Channel<OkxSocketResponse> messageChannel;
     private readonly JsonSerializerOptions serializerOptions;
     private readonly IWebSocketClient webSocketClient;
-    private OkxChannelType? currentChannelType;
     private bool disposed;
 
-    public OkxWebSocketService(
-        IWebSocketClient webSocketClient,
-        OkxHeartbeatService heartbeatService,
-        IOptions<MarketCredentials> config,
-        ILogger<OkxWebSocketService> logger)
+    public OkxWebSocketService(IWebSocketClient webSocketClient, OkxHeartbeatService heartbeatService, ILogger<OkxWebSocketService> logger)
     {
         this.webSocketClient = webSocketClient;
         this.heartbeatService = heartbeatService;
-        this.config = config;
         this.logger = logger;
         messageChannel = Channel.CreateUnbounded<OkxSocketResponse>();
         serializerOptions = new JsonSerializerOptions
@@ -62,17 +55,18 @@ public class OkxWebSocketService : IDisposable
         messageChannel.Writer.TryComplete();
     }
 
-    public async Task ConnectAsync(OkxChannelType channelType, CancellationToken cancellationToken = default)
+    public async Task ConnectAsync(
+        MarketCredentials credentials,
+        OkxChannelType channelType = OkxChannelType.Public,
+        CancellationToken cancellationToken = default)
     {
-        Uri uri = GetConnectionUri(channelType);
+        Uri uri = GetConnectionUri(credentials.IsDemo, channelType);
         await webSocketClient.ConnectAsync(uri, cancellationToken);
         IsConnected = true;
 
-        currentChannelType = channelType;
-
         if (channelType == OkxChannelType.Private)
         {
-            await AuthenticateAsync(cancellationToken);
+            await AuthenticateAsync(credentials, cancellationToken);
         }
 
         heartbeatService.Start(webSocketClient);
@@ -112,16 +106,16 @@ public class OkxWebSocketService : IDisposable
     public IAsyncEnumerable<OkxSocketResponse> GetMessagesAsync(CancellationToken cancellationToken = default)
         => messageChannel.Reader.ReadAllAsync(cancellationToken);
 
-    private async Task AuthenticateAsync(CancellationToken cancellationToken)
+    private async Task AuthenticateAsync(MarketCredentials credentials, CancellationToken cancellationToken)
     {
-        object authRequest = OkxAuthService.CreateAuthRequest(config.Value);
+        object authRequest = OkxAuthService.CreateAuthRequest(credentials);
         await webSocketClient.SendAsync(authRequest, cancellationToken);
         logger.LogInformation("Authentication request sent");
     }
 
-    private Uri GetConnectionUri(OkxChannelType channelType)
+    private Uri GetConnectionUri(bool isDemo, OkxChannelType channelType)
     {
-        string baseUrl = (config.Value.IsDemo, channelType) switch
+        string baseUrl = (isDemo, channelType) switch
         {
             (true, OkxChannelType.Public) => SocketEndpoints.DEMO_PUBLIC_WS_URL,
             (true, OkxChannelType.Private) => SocketEndpoints.DEMO_PRIVATE_WS_URL,

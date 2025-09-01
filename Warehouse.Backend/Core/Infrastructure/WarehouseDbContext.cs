@@ -11,20 +11,30 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 {
     private readonly IDataProtector protector = dataProtection.CreateProtector("Warehouse.Credentials");
 
-    public DbSet<MarketCredentials> Markets { get; set; }
+    public DbSet<MarketCredentials> MarketCredentials { get; set; }
+
+    public DbSet<MarketDetails> MarketDetails { get; set; }
+
+    public DbSet<WorkerDetails> WorkerDetails { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
         modelBuilder.Entity<MarketCredentials>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).ValueGeneratedOnAdd().IsRequired();
-            entity.Property(e => e.Type).IsRequired();
-            entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
-            entity.Property(e => e.SecretKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
-            entity.Property(e => e.Passphrase).HasMaxLength(500).HasConversion(encryptedConverter);
-            entity.HasIndex(e => e.Type).IsUnique();
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
+            entity.Property(x => x.ApiKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
+            entity.Property(x => x.SecretKey).IsRequired().HasMaxLength(500).HasConversion(encryptedConverter);
+            entity.Property(x => x.Passphrase).HasMaxLength(500).HasConversion(encryptedConverter);
+        });
+
+        modelBuilder.Entity<MarketDetails>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Type).IsRequired();
+            entity.HasIndex(x => x.Type).IsUnique();
+            entity.HasMany(x => x.Credentials).WithOne(e => e.MarketDetails).HasForeignKey(e => e.MarketId).IsRequired();
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

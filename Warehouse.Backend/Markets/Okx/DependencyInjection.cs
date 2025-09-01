@@ -38,7 +38,6 @@ public static class DependencyInjection
 
         services.AddSingleton<IOkxMessageHandler, OrderBookHandler>();
 
-        MarketCredentials config = configuration.GetSection(nameof(MarketCredentials)).Get<MarketCredentials>()!;
         services.AddHttpClient(
                 "Okx",
                 client =>
@@ -46,8 +45,6 @@ public static class DependencyInjection
                     client.BaseAddress = Urls.GetMarketUrl(MarketType.Okx);
                     client.Timeout = TimeSpan.FromSeconds(30);
                     client.DefaultRequestHeaders.Add("User-Agent", "Analyzer/1.0");
-                    client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", config.ApiKey);
-                    client.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", config.Passphrase);
                 })
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {

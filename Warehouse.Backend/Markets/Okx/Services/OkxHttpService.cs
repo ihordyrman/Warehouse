@@ -1,9 +1,11 @@
 ﻿using System.Collections.Specialized;
+using System.Net;
 using System.Text.Json;
 using System.Web;
 using Microsoft.Extensions.Options;
 using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Domain;
+using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Messages.Http;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
@@ -13,15 +15,14 @@ public class OkxHttpService(
     ILogger<OkxHttpService> logger,
     IHttpClientFactory httpClientFactory)
 {
+    private MarketCredentials? Credentials { get; set; }
+
     private readonly JsonSerializerOptions serializerOptions = new()
     {
         TypeInfoResolver = OkxJsonContext.Default
     };
 
-    public void Configure(MarketCredentials credentials)
-    {
-        // todo: remove DI injection of httpclientfactory and move creation here
-    }
+    public void Configure(MarketCredentials credentials) => Credentials = credentials;
 
     public async Task<Result<OkxBalanceDetail[]>> GetBalanceAsync()
     {
@@ -97,7 +98,7 @@ public class OkxHttpService(
         return response;
     }
 
-    public async Task<Result<OkxTicker[]>> GetAllTickersAsync(string instType = "SPOT")
+    public async Task<Result<OkxTicker[]>> GetAllTickersAsync(string instType = InstrumentType.Spot)
     {
         const string endpoint = "/api/v5/market/tickers";
         var parameters = new Dictionary<string, string>
@@ -124,6 +125,11 @@ public class OkxHttpService(
 
     private async Task<Result<T>> SendRequestAsync<T>(string method, string endpoint, Dictionary<string, string>? parameters = null)
     {
+        if (Credentials is null)
+        {
+            return Result<T>.Failure(new Error("Credentials are not found"));
+        }
+
         using HttpClient httpClient = httpClientFactory.CreateClient("Okx");
 
         string requestPath = BuildRequestPath();
@@ -132,6 +138,8 @@ public class OkxHttpService(
 
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature);
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp);
+        httpClient.DefaultRequestHeaders.Add("OK-ACCESS-KEY", Credentials.ApiKey);
+        httpClient.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", Credentials.Passphrase);
 
         try
         {

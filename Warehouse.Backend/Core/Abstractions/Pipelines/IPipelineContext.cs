@@ -1,5 +1,3 @@
 ﻿namespace Warehouse.Backend.Core.Abstractions.Pipelines;
 
-public interface IPipelineContext
-{
-}
+public interface IPipelineContext;

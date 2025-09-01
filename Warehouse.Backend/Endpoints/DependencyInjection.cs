@@ -59,7 +59,7 @@ public static class DependencyInjection
         app.UseRateLimiter();
         app.MapScalarApiReference();
         app.MapOpenApi();
-        app.MapMarketEndpoints();
+        app.MapMarketCredentialsEndpoints();
 
         return app;
     }
