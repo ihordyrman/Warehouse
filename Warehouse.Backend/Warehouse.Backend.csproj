@@ -33,6 +33,7 @@
 
     <ItemGroup>
         <Folder Include="Markets\" />
+        <Folder Include="Migrations\" />
     </ItemGroup>
 
 </Project>

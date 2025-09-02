@@ -34,7 +34,9 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasMany(x => x.Credentials).WithOne(e => e.MarketDetails).HasForeignKey(e => e.MarketId).IsRequired();
+            entity.HasOne<MarketCredentials>(x => x.Credentials)
+                .WithOne(x => x.MarketDetails)
+                .HasForeignKey<MarketCredentials>(x => x.MarketId);
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

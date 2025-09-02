@@ -1,0 +1,113 @@
+﻿### MarketDetails API Tests
+### Base URL
+@baseUrl = http://localhost:5080
+@contentType = application/json
+
+@okxMarketType = 0
+
+#######################
+### GET ALL MARKET DETAILS
+#######################
+
+### Get all market details
+GET {{baseUrl}}/market
+Accept: {{contentType}}
+
+###
+
+#######################
+### GET SPECIFIC MARKET DETAILS
+#######################
+
+### Get market details by ID (existing)
+GET {{baseUrl}}/market/1
+Accept: {{contentType}}
+
+###
+
+### Get market details by ID (non-existing)
+GET {{baseUrl}}/market/999
+Accept: {{contentType}}
+
+###
+
+#######################
+### CREATE MARKET DETAILS
+#######################
+
+### Create OKX market details
+POST {{baseUrl}}/market
+Content-Type: {{contentType}}
+
+{
+  "type": {{okxMarketType}}
+}
+
+###
+
+
+### Create duplicate market details (should fail)
+POST {{baseUrl}}/market
+Content-Type: {{contentType}}
+
+{
+  "type": {{okxMarketType}}
+}
+
+###
+
+### Create market details with invalid type (should fail)
+POST {{baseUrl}}/market
+Content-Type: {{contentType}}
+
+{
+  "type": 999
+}
+
+###
+
+#######################
+### UPDATE MARKET DETAILS
+#######################
+
+### Update market details (valid)
+PUT {{baseUrl}}/market/1
+Content-Type: {{contentType}}
+
+{
+  "id": 1,
+  "type": {{okxMarketType}}
+}
+
+###
+
+### Update market details with ID mismatch (should fail)
+PUT {{baseUrl}}/market/1
+Content-Type: {{contentType}}
+
+{
+  "id": 2,
+  "type": {{okxMarketType}}
+}
+
+###
+
+### Update non-existing market details (should fail)
+PUT {{baseUrl}}/market/999
+Content-Type: {{contentType}}
+
+{
+  "id": 999,
+  "type": {{okxMarketType}}
+}
+
+###
+
+### Update to duplicate market type (should fail)
+PUT {{baseUrl}}/market/2
+Content-Type: {{contentType}}
+
+{
+  "id": 2,
+  "type": {{okxMarketType}}
+}
