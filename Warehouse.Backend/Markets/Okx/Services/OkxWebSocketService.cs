@@ -1,7 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
-using Microsoft.Extensions.Options;
 using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Markets.Okx.Constants;

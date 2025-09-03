@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
+using Warehouse.Backend.Core.Models;
+using Warehouse.Backend.Endpoints.Validation;
 
 namespace Warehouse.Backend.Endpoints;
 
@@ -41,6 +43,7 @@ public static class MarketCredentialsEndpoints
                     ILoggerFactory loggerFactory,
                     int id) =>
                 {
+                    ValidationHelper.ValidateAndThrow(marketCredentialsDto);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         return TypedResults.BadRequest("Market not found");
@@ -81,6 +84,7 @@ public static class MarketCredentialsEndpoints
                     UpdateMarketCredentialsDto marketCredentialsDto,
                     ILoggerFactory loggerFactory) =>
                 {
+                    ValidationHelper.ValidateAndThrow(marketCredentialsDto);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         return TypedResults.BadRequest("Market not found");

@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
+using Warehouse.Backend.Core.Models;
+using Warehouse.Backend.Endpoints.Validation;
 
 namespace Warehouse.Backend.Endpoints;
 
@@ -55,6 +57,7 @@ public static class MarketDetailsEndpoints
                     CreateMarketDetailsDto marketDetailsDto,
                     ILoggerFactory loggerFactory) =>
                 {
+                    ValidationHelper.ValidateAndThrow(marketDetailsDto);
                     bool duplicateExists = await db.MarketDetails.AnyAsync(x => x.Type == marketDetailsDto.Type);
                     if (duplicateExists)
                     {
@@ -90,6 +93,7 @@ public static class MarketDetailsEndpoints
                     MarketDetailsDto marketDetailsDto,
                     ILoggerFactory loggerFactory) =>
                 {
+                    ValidationHelper.ValidateAndThrow(marketDetailsDto);
                     if (id != marketDetailsDto.Id)
                     {
                         return TypedResults.BadRequest("ID mismatch");

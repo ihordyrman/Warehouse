@@ -1,5 +1,4 @@
 ﻿using System.Collections.Specialized;
-using System.Net;
 using System.Text.Json;
 using System.Web;
 using Microsoft.Extensions.Options;
@@ -15,12 +14,12 @@ public class OkxHttpService(
     ILogger<OkxHttpService> logger,
     IHttpClientFactory httpClientFactory)
 {
-    private MarketCredentials? Credentials { get; set; }
-
     private readonly JsonSerializerOptions serializerOptions = new()
     {
         TypeInfoResolver = OkxJsonContext.Default
     };
+
+    private MarketCredentials? Credentials { get; set; }
 
     public void Configure(MarketCredentials credentials) => Credentials = credentials;
 

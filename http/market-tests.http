@@ -46,12 +46,12 @@ Content-Type: {{contentType}}
 ###
 
 
-### Create duplicate market details (should fail)
+### Create incorrect market type (should fail)
 POST {{baseUrl}}/market
 Content-Type: {{contentType}}
 
 {
-  "type": {{okxMarketType}}
+  "type": 5
 }
 
 ###
