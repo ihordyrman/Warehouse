@@ -1,12 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.Backend.Core.Application.Workers;
+using Warehouse.Backend.Core.Abstractions.Workers;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Markets.Okx;
 
-namespace Warehouse.Backend.Core.Abstractions.Workers;
+namespace Warehouse.Backend.Core.Application.Workers;
 
 public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<WorkerOrchestrator> logger) : BackgroundService
 {
