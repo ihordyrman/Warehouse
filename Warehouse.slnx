@@ -1,17 +1,13 @@
 ﻿<Solution>
-    <Folder Name="/Solution items/">
-        <File Path="README.md" />
-        <File Path=".gitignore" />
-        <File Path=".editorconfig" />
-    </Folder>
-    <Folder Name="/Solution items/architecture/">
-        <File Path="architecture\detailed-flow.mmd" />
-        <File Path="architecture\high-level.md" />
-        <File Path="architecture\trading-flow.mmd" />
-    </Folder>
-    <Folder Name="/Solution items/http/">
-        <File Path="http\market-credentials-tests.http" />
-        <File Path="http\market-tests.http" />
-    </Folder>
-    <Project Path="Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
+  <Folder Name="/Solution items/">
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/Solution items/architecture/">
+    <File Path="architecture\detailed-flow.mmd" />
+    <File Path="architecture\high-level.md" />
+    <File Path="architecture\trading-flow.mmd" />
+  </Folder>
+  <Project Path="Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
 </Solution>
