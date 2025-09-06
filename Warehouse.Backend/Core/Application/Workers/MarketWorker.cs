@@ -5,11 +5,11 @@ using Warehouse.Backend.Core.Models;
 
 namespace Warehouse.Backend.Core.Application.Workers;
 
-public class MarketWorker(IMarketAdapter adapter, WorkerDetails details) : IMarketWorker
+public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configuration) : IMarketWorker
 {
-    public int WorkerId { get; } = details.Id;
+    public int WorkerId { get; } = configuration.WorkerId;
 
-    public MarketType MarketType { get; } = details.Type;
+    public MarketType MarketType { get; } = configuration.Type;
 
     public bool IsConnected { get; private set; }
 
@@ -18,7 +18,7 @@ public class MarketWorker(IMarketAdapter adapter, WorkerDetails details) : IMark
         await adapter.ConnectAsync(ct);
         IsConnected = true;
 
-        IMarketDataSubscription marketData = await adapter.SubscribeToMarketDataAsync(details.Symbol, ct);
+        IMarketDataSubscription marketData = await adapter.SubscribeToMarketDataAsync(configuration.Symbol, ct);
         await foreach (MarketData cw in marketData)
         {
             // here will be an implementation with pipelines

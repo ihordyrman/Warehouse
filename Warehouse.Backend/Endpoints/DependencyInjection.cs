@@ -62,9 +62,9 @@ public static class DependencyInjection
         app.MapScalarApiReference();
         app.MapOpenApi();
         app.UseMiddleware<ValidationExceptionMiddleware>();
-        app.MapMarketDetailsEndpoints();
+        app.MapMarketEndpoints();
         app.MapMarketCredentialsEndpoints();
-        app.MapWorkerDetailsEndpoints();
+        app.MapWorkerEndpoints();
 
         return app;
     }

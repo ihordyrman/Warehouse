@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Endpoints.Validation;
 
 namespace Warehouse.Backend.Core.Models;
 
@@ -36,7 +35,7 @@ public class CreateMarketCredentialsDto : BaseMarketCredentialsDto;
 
 public class UpdateMarketCredentialsDto : BaseMarketCredentialsDto;
 
-public static class MarketMappingExtensions
+public static class MarketCredentialsMappingExtensions
 {
     public static MarketCredentials AsEntity(this CreateMarketCredentialsDto credentialsDto, int marketId)
         => new()

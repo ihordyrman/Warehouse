@@ -4,7 +4,7 @@ namespace Warehouse.Backend.Core.Models;
 
 using System.ComponentModel.DataAnnotations;
 
-public class CreateWorkerDetailsDto
+public class CreateWorkerDto
 {
     public bool Enabled { get; set; } = false;
 
@@ -18,7 +18,7 @@ public class CreateWorkerDetailsDto
     public string Symbol { get; set; } = string.Empty;
 }
 
-public class UpdateWorkerDetailsDto
+public class UpdateWorkerDto
 {
     public bool? Enabled { get; set; }
 
@@ -30,7 +30,7 @@ public class UpdateWorkerDetailsDto
     public string? Symbol { get; set; }
 }
 
-public class WorkerDetailsDto
+public class WorkerDto
 {
     public int Id { get; set; }
 
@@ -41,9 +41,9 @@ public class WorkerDetailsDto
     public string Symbol { get; set; } = string.Empty;
 }
 
-public static class WorkerDetailsMappingExtensions
+public static class WorkerMappingExtensions
 {
-    public static WorkerDetailsDto AsDto(this WorkerDetails entity)
+    public static WorkerDto AsDto(this WorkerDetails entity)
         => new()
         {
             Id = entity.Id,
@@ -52,7 +52,7 @@ public static class WorkerDetailsMappingExtensions
             Symbol = entity.Symbol
         };
 
-    public static WorkerDetails AsEntity(this CreateWorkerDetailsDto dto)
+    public static WorkerDetails AsEntity(this CreateWorkerDto dto)
         => new()
         {
             Enabled = dto.Enabled,
@@ -60,7 +60,7 @@ public static class WorkerDetailsMappingExtensions
             Symbol = dto.Symbol.ToUpperInvariant()
         };
 
-    public static void UpdateFrom(this WorkerDetails entity, UpdateWorkerDetailsDto dto)
+    public static void UpdateFrom(this WorkerDetails entity, UpdateWorkerDto dto)
     {
         if (dto.Enabled.HasValue)
         {

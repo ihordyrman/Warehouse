@@ -7,11 +7,11 @@ using Warehouse.Backend.Markets.Okx.Services;
 
 namespace Warehouse.Backend.Markets.Okx;
 
-public class MarketAdapter(
+public class OkxMarketAdapter(
     OkxWebSocketService wsService,
     OkxHttpService httpService,
     WarehouseDbContext dbContext,
-    ILogger<MarketAdapter> logger) : IMarketAdapter
+    ILogger<OkxMarketAdapter> logger) : IMarketAdapter
 {
     public static MarketType Type => MarketType.Okx;
 

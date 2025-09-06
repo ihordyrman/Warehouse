@@ -8,9 +8,9 @@ using Warehouse.Backend.Endpoints.Validation;
 
 namespace Warehouse.Backend.Endpoints;
 
-public static class WorkerDetailsEndpoints
+public static class WorkerEndpoints
 {
-    public static RouteGroupBuilder MapWorkerDetailsEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapWorkerEndpoints(this IEndpointRouteBuilder routes)
     {
         RouteGroupBuilder group = routes.MapGroup("/worker");
         group.WithTags("workers");
@@ -22,11 +22,11 @@ public static class WorkerDetailsEndpoints
                     => TypedResults.Ok(await db.WorkerDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync()))
             .WithName("GetAllWorkers")
             .WithSummary("Get all worker configurations")
-            .Produces<List<WorkerDetailsDto>>();
+            .Produces<List<WorkerDto>>();
 
         group.MapGet(
                 "/{id:int}",
-                async Task<Results<Ok<WorkerDetailsDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<WorkerDto>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
                     WorkerDetails? worker = await db.WorkerDetails.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
                     return worker switch
@@ -37,12 +37,12 @@ public static class WorkerDetailsEndpoints
                 })
             .WithName("GetWorkerById")
             .WithSummary("Get a worker by its ID")
-            .Produces<WorkerDetailsDto>()
+            .Produces<WorkerDto>()
             .Produces(404);
 
         group.MapGet(
                 "/by-market/{marketType}",
-                async Task<Results<Ok<List<WorkerDetailsDto>>, BadRequest<ValidationProblemDetails>>> (WarehouseDbContext db, string marketType) =>
+                async Task<Results<Ok<List<WorkerDto>>, BadRequest<ValidationProblemDetails>>> (WarehouseDbContext db, string marketType) =>
                 {
                     if (!Enum.TryParse(marketType, true, out MarketType type))
                     {
@@ -54,7 +54,7 @@ public static class WorkerDetailsEndpoints
                 })
             .WithName("GetWorkersByMarketType")
             .WithSummary("Get all workers for a specific market type")
-            .Produces<List<WorkerDetailsDto>>()
+            .Produces<List<WorkerDto>>()
             .Produces<string>(400);
 
         group.MapGet(
@@ -63,13 +63,13 @@ public static class WorkerDetailsEndpoints
                     await db.WorkerDetails.AsNoTracking().Where(x => x.Enabled).Select(x => x.AsDto()).ToListAsync()))
             .WithName("GetEnabledWorkers")
             .WithSummary("Get all enabled workers")
-            .Produces<List<WorkerDetailsDto>>();
+            .Produces<List<WorkerDto>>();
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<WorkerDetailsDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
+                async Task<Results<Created<WorkerDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
-                    CreateWorkerDetailsDto dto,
+                    CreateWorkerDto dto,
                     ILoggerFactory loggerFactory) =>
                 {
                     ValidationHelper.ValidateAndThrow(dto);
@@ -99,15 +99,15 @@ public static class WorkerDetailsEndpoints
                 })
             .WithName("CreateWorker")
             .WithSummary("Create a new worker configuration")
-            .Produces<WorkerDetailsDto>(201)
+            .Produces<WorkerDto>(201)
             .ProducesValidationProblem();
 
         group.MapPut(
                 "/{id:int}",
-                async Task<Results<Ok<WorkerDetailsDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
+                async Task<Results<Ok<WorkerDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
                     int id,
-                    UpdateWorkerDetailsDto dto,
+                    UpdateWorkerDto dto,
                     ILoggerFactory loggerFactory) =>
                 {
                     ValidationHelper.ValidateAndThrow(dto);
@@ -147,7 +147,7 @@ public static class WorkerDetailsEndpoints
                 })
             .WithName("UpdateWorker")
             .WithSummary("Update an existing worker configuration")
-            .Produces<WorkerDetailsDto>()
+            .Produces<WorkerDto>()
             .Produces(404)
             .ProducesValidationProblem();
 
