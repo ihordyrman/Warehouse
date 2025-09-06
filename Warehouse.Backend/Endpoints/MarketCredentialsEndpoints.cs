@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
@@ -13,7 +14,7 @@ public static class MarketCredentialsEndpoints
     {
         RouteGroupBuilder group = routes.MapGroup("/market/{id:int}/credential");
         group.WithTags("market-credentials");
-        group.RequireRateLimiting("MarketApiPolicy");
+        group.RequireRateLimiting("ApiPolicy");
 
         group.MapGet(
                 "/",
@@ -37,7 +38,7 @@ public static class MarketCredentialsEndpoints
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<MarketCredentialsDto>, BadRequest<string>>> (
+                async Task<Results<Created<MarketCredentialsDto>, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
                     CreateMarketCredentialsDto marketCredentialsDto,
                     ILoggerFactory loggerFactory,
@@ -46,12 +47,12 @@ public static class MarketCredentialsEndpoints
                     ValidationHelper.ValidateAndThrow(marketCredentialsDto);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
-                        return TypedResults.BadRequest("Market not found");
+                        throw new ValidationException("Market not found");
                     }
 
                     if (await db.MarketCredentials.AnyAsync(x => x.MarketId == id))
                     {
-                        return TypedResults.BadRequest("Credentials already exist for this market");
+                        throw new ValidationException("Credentials already exist for this market");
                     }
 
                     MarketCredentials marketCredentials = marketCredentialsDto.AsEntity(id);
@@ -66,7 +67,7 @@ public static class MarketCredentialsEndpoints
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketCredentialsAPI.Create");
                         logger.LogError(ex, "Failed to create market credentials for MarketId: {MarketId}", id);
-                        return TypedResults.BadRequest("Failed to create market credentials");
+                        throw new ValidationException("Failed to create market credentials");
                     }
 
                     return TypedResults.Created($"/market/{id}/credential", marketCredentials.AsDto());
@@ -78,7 +79,7 @@ public static class MarketCredentialsEndpoints
 
         group.MapPut(
                 "/",
-                async Task<Results<Ok, NotFound, BadRequest<string>>> (
+                async Task<Results<Ok, NotFound, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
                     int id,
                     UpdateMarketCredentialsDto marketCredentialsDto,
@@ -87,7 +88,7 @@ public static class MarketCredentialsEndpoints
                     ValidationHelper.ValidateAndThrow(marketCredentialsDto);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
-                        return TypedResults.BadRequest("Market not found");
+                        throw new ValidationException("Market not found");
                     }
 
                     if (!await db.MarketCredentials.AnyAsync(x => x.MarketId == id))
@@ -109,7 +110,7 @@ public static class MarketCredentialsEndpoints
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketCredentialsAPI.Update");
                         logger.LogError(ex, "Failed to update market credentials for MarketId: {MarketId}", id);
-                        return TypedResults.BadRequest("Failed to update market credentials");
+                        return TypedResults.BadRequest();
                     }
                 })
             .WithName("UpdateMarketCredential")
@@ -120,11 +121,11 @@ public static class MarketCredentialsEndpoints
 
         group.MapDelete(
                 "/",
-                async Task<Results<NotFound, Ok, BadRequest<string>>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
+                async Task<Results<NotFound, Ok, BadRequest>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
                 {
                     try
                     {
-                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id) // Use MarketId since it's one-to-one
+                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id)
                             .ExecuteDeleteAsync();
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }
@@ -132,7 +133,7 @@ public static class MarketCredentialsEndpoints
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketCredentialsAPI.Delete");
                         logger.LogError(ex, "Failed to delete market credentials for MarketId: {MarketId}", id);
-                        return TypedResults.BadRequest("Failed to delete market credentials. It may be in use.");
+                        return TypedResults.BadRequest();
                     }
                 })
             .WithName("DeleteMarketCredential")

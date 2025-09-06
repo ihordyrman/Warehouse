@@ -7,7 +7,7 @@ namespace Warehouse.Backend.Core.Application.Workers;
 
 public class MarketWorker(IMarketAdapter adapter, WorkerDetails details) : IMarketWorker
 {
-    public int WorkerId { get; } = details.WorkerId;
+    public int WorkerId { get; } = details.Id;
 
     public MarketType MarketType { get; } = details.Type;
 

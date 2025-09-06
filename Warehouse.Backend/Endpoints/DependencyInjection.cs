@@ -14,7 +14,7 @@ public static class DependencyInjection
         services.AddRateLimiter(options =>
         {
             options.AddTokenBucketLimiter(
-                "MarketApiPolicy",
+                "ApiPolicy",
                 config =>
                 {
                     config.TokenLimit = 50;
@@ -42,12 +42,12 @@ public static class DependencyInjection
             };
         });
 
-        services.AddHttpLogging(o =>
+        services.AddHttpLogging(x =>
         {
             if (env.IsDevelopment())
             {
-                o.CombineLogs = true;
-                o.LoggingFields = HttpLoggingFields.ResponseBody | HttpLoggingFields.ResponseHeaders;
+                x.CombineLogs = true;
+                x.LoggingFields = HttpLoggingFields.ResponseBody | HttpLoggingFields.ResponseHeaders;
             }
         });
 
@@ -64,6 +64,7 @@ public static class DependencyInjection
         app.UseMiddleware<ValidationExceptionMiddleware>();
         app.MapMarketDetailsEndpoints();
         app.MapMarketCredentialsEndpoints();
+        app.MapWorkerDetailsEndpoints();
 
         return app;
     }

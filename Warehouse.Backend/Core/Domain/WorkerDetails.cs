@@ -4,8 +4,6 @@ public class WorkerDetails : AuditEntity
 {
     public int Id { get; set; }
 
-    public int WorkerId { get; set; }
-
     public bool Enabled { get; set; }
 
     public MarketType Type { get; set; }

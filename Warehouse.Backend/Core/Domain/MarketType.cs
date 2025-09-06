@@ -2,5 +2,6 @@ namespace Warehouse.Backend.Core.Domain;
 
 public enum MarketType
 {
-    Okx
+    Okx,
+    Test = 666
 }

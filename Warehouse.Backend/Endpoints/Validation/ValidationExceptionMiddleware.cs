@@ -22,10 +22,10 @@ public class ValidationExceptionMiddleware(RequestDelegate next, ILogger<Validat
         context.Response.StatusCode = 400;
         context.Response.ContentType = "application/json";
 
-        var errors = ex.ValidationResults.GroupBy(vr => vr.MemberNames.FirstOrDefault() ?? "")
+        var errors = ex.ValidationResults.GroupBy(x => x.MemberNames.FirstOrDefault() ?? "")
             .ToDictionary(
-                g => string.IsNullOrEmpty(g.Key) ? "General" : g.Key,
-                g => g.Select(vr => vr.ErrorMessage ?? "Invalid value").ToArray());
+                x => string.IsNullOrEmpty(x.Key) ? "General" : x.Key,
+                x => x.Select(y => y.ErrorMessage ?? "Invalid value").ToArray());
 
         var validationProblemDetails = new ValidationProblemDetails(errors)
         {

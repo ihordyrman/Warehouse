@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
@@ -13,55 +14,49 @@ public static class MarketDetailsEndpoints
     {
         RouteGroupBuilder group = routes.MapGroup("/market");
         group.WithTags("market");
-        group.RequireRateLimiting("MarketApiPolicy");
+        group.RequireRateLimiting("ApiPolicy");
 
         group.MapGet(
                 "/",
                 async (WarehouseDbContext db) =>
                 {
-                    List<MarketDetailsWithCredentialsDto> marketsWithCredentials = await db.MarketDetails.AsNoTracking()
-                        .Include(x => x.Credentials)
-                        .ThenInclude(x => x.MarketDetails)
-                        .Select(x => x.AsDtoWithCredentials())
+                    List<MarketDetailsDto> marketsWithCredentials = await db.MarketDetails.AsNoTracking()
+                        .Select(x => x.AsDto())
                         .ToListAsync();
                     return TypedResults.Ok(marketsWithCredentials);
                 })
             .WithName("GetAllMarketDetails")
             .WithSummary("Get all market details")
             .Produces<List<MarketDetailsDto>>()
-            .Produces<List<MarketDetailsWithCredentialsDto>>();
+            .Produces<List<MarketDetailsDto>>();
 
         group.MapGet(
                 "/{id:int}",
-                async Task<Results<Ok<MarketDetailsWithCredentialsDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<MarketDetailsDto>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
-                    MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials)
-                        .ThenInclude(x => x.MarketDetails)
-                        .FirstOrDefaultAsync(x => x.Id == id);
-
+                    MarketDetails? market = await db.MarketDetails.FirstOrDefaultAsync(x => x.Id == id);
                     return market switch
                     {
                         null => TypedResults.NotFound(),
-                        _ => TypedResults.Ok(market.AsDtoWithCredentials())
+                        _ => TypedResults.Ok(market.AsDto())
                     };
                 })
             .WithName("GetMarketDetails")
             .WithSummary("Get market details by ID")
-            .Produces<MarketDetailsWithCredentialsDto>()
+            .Produces<MarketDetailsDto>()
             .Produces(404);
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<MarketDetailsDto>, BadRequest<string>>> (
+                async Task<Results<Created<MarketDetailsDto>, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
                     CreateMarketDetailsDto marketDetailsDto,
                     ILoggerFactory loggerFactory) =>
                 {
                     ValidationHelper.ValidateAndThrow(marketDetailsDto);
-                    bool duplicateExists = await db.MarketDetails.AnyAsync(x => x.Type == marketDetailsDto.Type);
-                    if (duplicateExists)
+                    if (await db.MarketDetails.AnyAsync(x => x.Type == marketDetailsDto.Type))
                     {
-                        return TypedResults.BadRequest("Market details already exist for this market type");
+                        throw new ValidationException("Market details already exist for this market type");
                     }
 
                     MarketDetails marketDetails = marketDetailsDto.AsEntity();
@@ -75,7 +70,7 @@ public static class MarketDetailsEndpoints
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketDetailsAPI.Create");
                         logger.LogError(ex, "Failed to create market details for Type: {Type}", marketDetailsDto.Type);
-                        return TypedResults.BadRequest("Failed to create market details");
+                        return TypedResults.BadRequest();
                     }
 
                     return TypedResults.Created($"/market/{marketDetails.Id}", marketDetails.AsDto());
@@ -87,42 +82,34 @@ public static class MarketDetailsEndpoints
 
         group.MapPut(
                 "/{id:int}",
-                async Task<Results<Ok, NotFound, BadRequest<string>>> (
+                async Task<Results<Ok, NotFound, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
                     int id,
-                    MarketDetailsDto marketDetailsDto,
+                    UpdateMarketDetailsDto marketDetailsDto,
                     ILoggerFactory loggerFactory) =>
                 {
                     ValidationHelper.ValidateAndThrow(marketDetailsDto);
-                    if (id != marketDetailsDto.Id)
-                    {
-                        return TypedResults.BadRequest("ID mismatch");
-                    }
-
-                    bool marketExists = await db.MarketDetails.AnyAsync(x => x.Id == id);
-                    if (!marketExists)
+                    if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         return TypedResults.NotFound();
                     }
 
-                    bool duplicateExists = await db.MarketDetails.AnyAsync(x => x.Id != id && x.Type == marketDetailsDto.Type);
-                    if (duplicateExists)
+                    if (await db.MarketDetails.AnyAsync(x => x.Id != id && x.Type == marketDetailsDto.Type))
                     {
-                        return TypedResults.BadRequest("Market details already exist for this market type");
+                        throw new ValidationException("Market details already exist for this market type");
                     }
 
                     try
                     {
                         int rowsAffected = await db.MarketDetails.Where(x => x.Id == id)
                             .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.Type, marketDetailsDto.Type));
-
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }
                     catch (DbUpdateException ex)
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketDetailsAPI.Update");
                         logger.LogError(ex, "Failed to update market details with ID: {Id}", id);
-                        return TypedResults.BadRequest("Failed to update market details");
+                        return TypedResults.BadRequest();
                     }
                 })
             .WithName("UpdateMarketDetails")
@@ -133,12 +120,14 @@ public static class MarketDetailsEndpoints
 
         group.MapDelete(
                 "/{id:int}",
-                async Task<Results<NotFound, Ok, BadRequest<string>>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
+                async Task<Results<NotFound, Ok, BadRequest<ValidationProblemDetails>, BadRequest>> (
+                    WarehouseDbContext db,
+                    int id,
+                    ILoggerFactory loggerFactory) =>
                 {
-                    bool hasCredentials = await db.MarketCredentials.AnyAsync(x => x.MarketId == id);
-                    if (hasCredentials)
+                    if (await db.MarketCredentials.AnyAsync(x => x.MarketId == id))
                     {
-                        return TypedResults.BadRequest("Cannot delete market details that have associated credentials");
+                        throw new ValidationException("Cannot delete market details that have associated credentials");
                     }
 
                     try
@@ -150,7 +139,7 @@ public static class MarketDetailsEndpoints
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketDetailsAPI.Delete");
                         logger.LogError(ex, "Failed to delete market details with ID: {Id}", id);
-                        return TypedResults.BadRequest("Failed to delete market details");
+                        return TypedResults.BadRequest();
                     }
                 })
             .WithName("DeleteMarketDetails")
@@ -161,21 +150,18 @@ public static class MarketDetailsEndpoints
 
         group.MapGet(
                 "/{id:int}/credentials",
-                async Task<Results<Ok<List<MarketCredentialsDto>>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<MarketCredentialsDto>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
-                    bool marketExists = await db.MarketDetails.AnyAsync(x => x.Id == id);
-                    if (!marketExists)
-                    {
-                        return TypedResults.NotFound();
-                    }
-
-                    List<MarketCredentialsDto> credentials = await db.MarketCredentials.AsNoTracking()
-                        .Include(x => x.MarketDetails)
+                    MarketCredentialsDto? credentials = await db.MarketCredentials.AsNoTracking()
                         .Where(x => x.MarketId == id)
                         .Select(x => x.AsDto())
-                        .ToListAsync();
+                        .FirstOrDefaultAsync();
 
-                    return TypedResults.Ok(credentials);
+                    return credentials switch
+                    {
+                        null => TypedResults.NotFound(),
+                        _ => TypedResults.Ok(credentials)
+                    };
                 })
             .WithName("GetMarketCredentialsByMarketId")
             .WithSummary("Get all credentials for a specific market")
