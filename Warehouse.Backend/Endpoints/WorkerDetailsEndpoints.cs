@@ -74,11 +74,6 @@ public static class WorkerDetailsEndpoints
                 {
                     ValidationHelper.ValidateAndThrow(dto);
 
-                    if (await db.WorkerDetails.AnyAsync(x => x.Id == dto.Id))
-                    {
-                        throw new ValidationException($"Worker with ID {dto.Id} already exists");
-                    }
-
                     if (await db.WorkerDetails.AnyAsync(x => x.Type == dto.Type && x.Symbol == dto.Symbol.ToUpperInvariant()))
                     {
                         throw new ValidationException($"Worker configuration for {dto.Type}/{dto.Symbol} already exists");

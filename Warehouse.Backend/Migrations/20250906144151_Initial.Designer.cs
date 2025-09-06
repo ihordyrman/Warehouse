@@ -11,7 +11,7 @@ using Warehouse.Backend.Core.Infrastructure;
 namespace Warehouse.Backend.Migrations
 {
     [DbContext(typeof(WarehouseDbContext))]
-    [Migration("20250902180824_Initial")]
+    [Migration("20250906144151_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -105,9 +105,6 @@ namespace Warehouse.Backend.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("WorkerId")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

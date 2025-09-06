@@ -6,10 +6,6 @@ using System.ComponentModel.DataAnnotations;
 
 public class CreateWorkerDetailsDto
 {
-    [Required(ErrorMessage = "Worker ID is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "Worker ID must be greater than 0")]
-    public int Id { get; set; }
-
     public bool Enabled { get; set; } = false;
 
     [Required(ErrorMessage = "Market type is required")]
