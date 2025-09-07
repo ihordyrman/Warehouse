@@ -15,19 +15,45 @@ public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configurat
 
     public async Task StartTradingAsync(CancellationToken ct = default)
     {
-        await adapter.ConnectAsync(ct);
-        IsConnected = true;
-
-        IMarketDataSubscription marketData = await adapter.SubscribeToMarketDataAsync(configuration.Symbol, ct);
-        await foreach (MarketData cw in marketData)
+        try
         {
-            // here will be an implementation with pipelines
+            await adapter.ConnectAsync(ct);
+            IsConnected = true;
+
+            IMarketDataSubscription marketData = await adapter.SubscribeToMarketDataAsync(configuration.Symbol, ct);
+
+            await foreach (MarketData data in marketData.WithCancellation(ct))
+            {
+                ct.ThrowIfCancellationRequested();
+
+                // Process market data here (pipeline implementation will go here)
+                // For now, just continue the loop
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            IsConnected = false;
+            throw;
+        }
+        finally
+        {
+            if (IsConnected)
+            {
+                await StopTradingAsync(ct);
+            }
         }
     }
 
     public async Task StopTradingAsync(CancellationToken ct = default)
     {
-        await adapter.DisconnectAsync(ct);
-        IsConnected = false;
+        if (IsConnected)
+        {
+            await adapter.DisconnectAsync(ct);
+            IsConnected = false;
+        }
     }
 }

@@ -1,5 +1,5 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Abstractions.Workers;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
@@ -8,36 +8,43 @@ using Warehouse.Backend.Markets.Okx;
 
 namespace Warehouse.Backend.Core.Application.Workers;
 
-public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<WorkerOrchestrator> logger) : BackgroundService
+public class WorkerOrchestrator(
+    IServiceScopeFactory scopeFactory,
+    ILogger<WorkerOrchestrator> logger,
+    IWorkerManager workerManager) : BackgroundService
 {
-    private readonly ConcurrentDictionary<int, WorkerInstance> activeWorkers = new();
-    private readonly TimeSpan checkInterval = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan syncInterval = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan shutdownTimeout = TimeSpan.FromSeconds(30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("WorkerOrchestrator started");
+        logger.LogInformation("WorkerOrchestrator started with sync interval {Interval}", syncInterval);
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                CheckWorkersHealthAsync();
-                await SynchronizeWorkersAsync(stoppingToken);
-                await Task.Delay(checkInterval, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error in WorkerOrchestrator main loop");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                try
+                {
+                    await SynchronizeWorkersAsync(stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error during worker synchronization");
+                }
+
+                await Task.Delay(syncInterval, stoppingToken);
             }
         }
-
-        await StopAllWorkersAsync();
-        logger.LogInformation("WorkerOrchestrator stopped");
+        finally
+        {
+            await StopAllWorkersAsync();
+            logger.LogInformation("WorkerOrchestrator stopped");
+        }
     }
 
     private async Task SynchronizeWorkersAsync(CancellationToken cancellationToken)
@@ -45,23 +52,36 @@ public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Worke
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
-        List<WorkerConfiguration> workers = await dbContext.WorkerDetails.Select(x => new WorkerConfiguration
+        List<WorkerConfiguration> desiredWorkers = await dbContext.WorkerDetails.Where(x => x.Enabled)
+            .Select(x => new WorkerConfiguration
             {
                 WorkerId = x.Id,
                 Type = x.Type,
                 Enabled = x.Enabled,
                 Symbol = x.Symbol
             })
-            .ToListAsync(cancellationToken: cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        foreach (WorkerConfiguration worker in workers)
+        // Start missing workers
+        foreach (WorkerConfiguration config in desiredWorkers)
         {
-            if (worker.Enabled && activeWorkers.ContainsKey(worker.WorkerId))
+            if (workerManager.IsWorkerActive(config.WorkerId))
             {
                 continue;
             }
 
-            await StartWorkerAsync(worker, scope.ServiceProvider, cancellationToken);
+            await StartWorkerAsync(config, scope.ServiceProvider, cancellationToken);
+        }
+
+        // Remove redundant workers
+        foreach ((int id, WorkerInstance instance) in workerManager.GetWorkers())
+        {
+            if (desiredWorkers.Any(x => x.WorkerId == id))
+            {
+                continue;
+            }
+
+            await StopWorkerAsync(instance, id);
         }
     }
 
@@ -70,37 +90,11 @@ public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Worke
         try
         {
             logger.LogInformation("Starting worker {WorkerId} for {MarketType}/{Symbol}", config.WorkerId, config.Type, config.Symbol);
-            IMarketWorker worker = CreateWorker(config.Type, serviceProvider, config);
-            if (worker == null)
-            {
-                logger.LogError("Failed to create worker for market type {MarketType}", config.Type);
-                return;
-            }
 
+            IMarketWorker worker = CreateWorker(config, serviceProvider);
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            var workerTask = Task.Run(
-                async () =>
-                {
-                    try
-                    {
-                        await worker.StartTradingAsync(cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        logger.LogInformation("Worker {WorkerId} was cancelled", config.WorkerId);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Worker {WorkerId} crashed", config.WorkerId);
-                        if (activeWorkers.TryGetValue(config.WorkerId, out WorkerInstance? instance))
-                        {
-                            instance.IsHealthy = false;
-                            instance.LastError = ex.Message;
-                        }
-                    }
-                },
-                cts.Token);
+            Task workerTask = StartWorkerTaskAsync(worker, cts);
 
             var workerInstance = new WorkerInstance
             {
@@ -109,19 +103,16 @@ public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Worke
                 CancellationTokenSource = cts,
                 Task = workerTask,
                 StartedAt = DateTime.UtcNow,
+                Status = WorkerInstanceStatus.Starting,
                 IsHealthy = true,
-                LastHealthCheck = DateTime.UtcNow
+                LastHealthCheck = DateTime.UtcNow,
+                LastStatusUpdate = DateTime.UtcNow
             };
 
-            if (activeWorkers.TryAdd(config.WorkerId, workerInstance))
-            {
-                logger.LogInformation("Successfully started worker {WorkerId}", config.WorkerId);
-            }
-            else
-            {
-                await cts.CancelAsync();
-                cts.Dispose();
-            }
+            await workerManager.AddWorkerAsync(config.WorkerId, workerInstance);
+            await workerManager.UpdateWorkerStatusAsync(config.WorkerId, WorkerInstanceStatus.Running);
+
+            logger.LogInformation("Successfully started worker {WorkerId}", config.WorkerId);
         }
         catch (Exception ex)
         {
@@ -129,118 +120,103 @@ public class WorkerOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Worke
         }
     }
 
-    private static IMarketWorker CreateWorker(MarketType marketType, IServiceProvider serviceProvider, WorkerConfiguration config)
+    private async Task StartWorkerTaskAsync(IMarketWorker worker, CancellationTokenSource cts)
     {
-        OkxMarketAdapter adapter = marketType switch
+        try
         {
-            MarketType.Okx => serviceProvider.GetService<OkxMarketAdapter>()!,
-            _ => throw new ArgumentOutOfRangeException()
+            await worker.StartTradingAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("Worker {WorkerId} was cancelled", worker.WorkerId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Worker {WorkerId} encountered an error", worker.WorkerId);
+
+            if (workerManager.GetWorker(worker.WorkerId) is { } instance)
+            {
+                instance.IsHealthy = false;
+                instance.LastError = ex.Message;
+                await workerManager.UpdateWorkerStatusAsync(worker.WorkerId, WorkerInstanceStatus.Error);
+            }
+        }
+    }
+
+    private static IMarketWorker CreateWorker(WorkerConfiguration config, IServiceProvider serviceProvider)
+    {
+        IMarketAdapter adapter = config.Type switch
+        {
+            MarketType.Okx => serviceProvider.GetRequiredService<OkxMarketAdapter>(),
+            _ => throw new NotSupportedException($"Market type {config.Type} is not supported")
         };
 
         return new MarketWorker(adapter, config);
     }
 
-    private void CheckWorkersHealthAsync()
-    {
-        foreach ((int id, WorkerInstance instance) in activeWorkers)
-        {
-            try
-            {
-                if (instance.Task.IsCompleted)
-                {
-                    instance.IsHealthy = false;
-                    if (instance.Task.IsFaulted)
-                    {
-                        instance.LastError = instance.Task.Exception?.GetBaseException().Message;
-                    }
-
-                    logger.LogWarning(
-                        "Worker {WorkerId} (Type: {MarketType}, Symbol: {Symbol}) completed unexpectedly without error",
-                        instance.Worker.WorkerId,
-                        instance.Worker.MarketType,
-                        instance.Configuration.Symbol);
-                }
-                else
-                {
-                    instance.IsHealthy = instance.Worker.IsConnected;
-                    if (instance.IsHealthy)
-                    {
-                        logger.LogWarning(
-                            "Worker {WorkerId} (Type: {MarketType}, Symbol: {Symbol}) lost connection",
-                            instance.Worker.WorkerId,
-                            instance.Worker.MarketType,
-                            instance.Configuration.Symbol);
-                    }
-                }
-
-                instance.LastHealthCheck = DateTime.UtcNow;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error checking health for worker {WorkerId}", instance.Worker.WorkerId);
-            }
-        }
-    }
-
     private async Task StopAllWorkersAsync()
     {
-        logger.LogInformation("Stopping all workers");
+        IReadOnlyDictionary<int, WorkerInstance> activeWorkers = workerManager.GetWorkers();
+        if (activeWorkers.Count == 0)
+        {
+            logger.LogInformation("No workers to stop");
+            return;
+        }
 
-        var stopTasks = activeWorkers.Keys.Select(StopWorkerAsync).ToList();
+        logger.LogInformation("Stopping {WorkerCount} workers", activeWorkers.Count);
+
+        List<Task> stopTasks = [];
+        foreach ((int id, WorkerInstance instance) in activeWorkers)
+        {
+            stopTasks.Add(StopWorkerAsync(instance, id));
+        }
+
         await Task.WhenAll(stopTasks);
-
         logger.LogInformation("All workers stopped");
     }
 
-    private async Task StopWorkerAsync(int workerId)
+    private async Task StopWorkerAsync(WorkerInstance worker, int id)
     {
-        if (activeWorkers.Remove(workerId, out WorkerInstance? instance))
+        if (worker == null)
         {
-            try
+            logger.LogDebug("Worker {WorkerId} not found during stop", id);
+            return;
+        }
+
+        try
+        {
+            logger.LogInformation("Stopping worker {WorkerId}", id);
+
+            await workerManager.UpdateWorkerStatusAsync(id, WorkerInstanceStatus.Stopping);
+            await worker.CancellationTokenSource.CancelAsync();
+            await worker.Worker.StopTradingAsync();
+
+            bool completedInTime = await WaitForTaskWithTimeoutAsync(worker.Task, shutdownTimeout);
+            if (!completedInTime)
             {
-                logger.LogInformation("Stopping worker {WorkerId}", instance.Worker.WorkerId);
-
-                await instance.CancellationTokenSource.CancelAsync();
-                await instance.Worker.StopTradingAsync();
-
-                if (!await WaitForTaskCompletionAsync(instance.Task, TimeSpan.FromSeconds(30)))
-                {
-                    logger.LogWarning("Worker {WorkerId} did not stop within timeout", instance.Worker.WorkerId);
-                }
-
-                instance.CancellationTokenSource.Dispose();
-                logger.LogInformation("Successfully stopped worker {WorkerId}", instance.Worker.WorkerId);
+                logger.LogWarning("Worker {WorkerId} did not stop within {Timeout}", id, shutdownTimeout);
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error stopping worker {WorkerId}", instance.Worker.WorkerId);
-            }
+
+            await workerManager.UpdateWorkerStatusAsync(id, WorkerInstanceStatus.Stopped);
+            await workerManager.RemoveWorkerAsync(id);
+
+            logger.LogInformation("Successfully stopped worker {WorkerId}", id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error stopping worker {WorkerId}", id);
+        }
+        finally
+        {
+            worker.CancellationTokenSource.Dispose();
         }
     }
 
-    private static async Task<bool> WaitForTaskCompletionAsync(Task task, TimeSpan timeout)
+    private static async Task<bool> WaitForTaskWithTimeoutAsync(Task task, TimeSpan timeout)
     {
         using var cts = new CancellationTokenSource(timeout);
-        Task completedTask = await Task.WhenAny(task, Task.Delay(Timeout.Infinite, cts.Token));
+        var timeoutTask = Task.Delay(Timeout.Infinite, cts.Token);
+        Task completedTask = await Task.WhenAny(task, timeoutTask);
         return completedTask == task;
-    }
-
-    private class WorkerInstance
-    {
-        public required IMarketWorker Worker { get; init; }
-
-        public required WorkerConfiguration Configuration { get; init; }
-
-        public required CancellationTokenSource CancellationTokenSource { get; init; }
-
-        public required Task Task { get; init; }
-
-        public DateTime StartedAt { get; init; }
-
-        public DateTime LastHealthCheck { get; set; }
-
-        public bool IsHealthy { get; set; }
-
-        public string? LastError { get; set; }
     }
 }
