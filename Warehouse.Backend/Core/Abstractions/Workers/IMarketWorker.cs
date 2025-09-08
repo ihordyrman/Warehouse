@@ -10,7 +10,7 @@ public interface IMarketWorker
 
     bool IsConnected { get; }
 
-    Task StartTradingAsync(CancellationToken ct = default);
+    Task StartAsync(CancellationToken ct = default);
 
-    Task StopTradingAsync(CancellationToken ct = default);
+    Task StopAsync(CancellationToken ct = default);
 }

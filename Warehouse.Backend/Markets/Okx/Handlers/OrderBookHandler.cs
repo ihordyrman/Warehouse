@@ -30,8 +30,7 @@ public class OrderBookHandler(
             if (message.Data?.Length > 0)
             {
                 var marketData = new MarketData(
-                    message.Arguments!.Channel!,
-                    message.Arguments.InstrumentId!,
+                    message.Arguments!.InstrumentId!,
                     message.Data[0].Asks!,
                     message.Data[0].Bids!);
                 await marketDataWriter.WriteAsync(marketData, cancellationToken);

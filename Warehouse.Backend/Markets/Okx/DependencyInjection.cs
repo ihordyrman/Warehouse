@@ -6,7 +6,6 @@ using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Handlers;
-using Warehouse.Backend.Markets.Okx.Processors;
 using Warehouse.Backend.Markets.Okx.Services;
 
 namespace Warehouse.Backend.Markets.Okx;
@@ -18,10 +17,9 @@ public static class DependencyInjection
         services.Configure<MarketCredentials>(configuration.GetSection(nameof(MarketCredentials)));
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<OkxHeartbeatService>();
-        services.AddSingleton<OkxWebSocketService>();
+        services.AddScoped<OkxWebSocketService>();
         services.AddSingleton<OkxHttpService>();
-        services.AddHostedService<OkxMarketDataProcessor>();
-        services.AddHostedService<OkxMessageProcessor>();
+        services.AddScoped<OkxMarketAdapter>();
 
         services.AddKeyedSingleton(
             OkxChannelNames.MarketData,

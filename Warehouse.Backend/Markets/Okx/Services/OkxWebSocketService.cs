@@ -59,6 +59,11 @@ public class OkxWebSocketService : IDisposable
         OkxChannelType channelType = OkxChannelType.Public,
         CancellationToken cancellationToken = default)
     {
+        if (IsConnected)
+        {
+            return;
+        }
+
         Uri uri = GetConnectionUri(credentials.IsDemo, channelType);
         await webSocketClient.ConnectAsync(uri, cancellationToken);
         IsConnected = true;

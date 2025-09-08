@@ -11,57 +11,62 @@ public class OkxMarketAdapter(
     OkxWebSocketService wsService,
     OkxHttpService httpService,
     WarehouseDbContext dbContext,
-    ILogger<OkxMarketAdapter> logger) : IMarketAdapter
+    ILogger<OkxMarketAdapter> logger,
+    IMarketDataCache dataCache) : IMarketAdapter
 {
-    public static MarketType Type => MarketType.Okx;
-
-    public string MarketName { get; }
+    private string Symbol { get; set; }
 
     public MarketType MarketType { get; }
 
-    public bool IsConnected => wsService.IsConnected;
+    public bool IsConnected { get; }
 
     public ConnectionState ConnectionState { get; }
 
-    public event EventHandler<MarketConnectionEventArgs>? ConnectionStateChanged;
+    public MarketData GetData()
+    {
+        return dataCache.GetData(Symbol);
+    }
 
-    public event EventHandler<MarketErrorEventArgs>? ErrorOccurred;
-
-    public async Task<ConnectionResult> ConnectAsync(CancellationToken ct = default)
+    public async Task<bool> ConnectAsync(CancellationToken ct = default)
     {
         try
         {
-            MarketCredentials? credentials = await dbContext.MarketCredentials.Include(x => x.MarketDetails)
-                .FirstOrDefaultAsync(x => x.MarketDetails.Type == MarketType.Okx && !x.IsDemo, ct);
-            if (credentials is null)
-            {
-                return new ConnectionResult
-                {
-                    Success = false,
-                    ErrorMessage = "Credentials for Okx market are not found"
-                };
-            }
-
+            MarketCredentials credentials = await dbContext.MarketCredentials.Include(x => x.MarketDetails)
+                .FirstAsync(x => x.MarketDetails.Type == MarketType.Okx && !x.IsDemo, ct);
             httpService.Configure(credentials);
             await wsService.ConnectAsync(credentials, cancellationToken: ct);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to connect to OKX");
+            return false;
         }
 
-        return new ConnectionResult { Success = true };
+        return true;
     }
 
     public Task DisconnectAsync(CancellationToken ct = default) => throw new NotImplementedException();
 
-    public Task<bool> PingAsync(CancellationToken ct = default) => throw new NotImplementedException();
+    public async Task SubscribeAsync(string symbol, CancellationToken ct = default)
+    {
+        if (!IsConnected)
+        {
+            throw new Exception("Connection is not established.");
+        }
 
-    public Task<IMarketDataSubscription> SubscribeToMarketDataAsync(string symbol, CancellationToken ct = default)
-        => throw new NotImplementedException();
+        if (Symbol != symbol)
+        {
+            throw new Exception($"Already subscribed to a {Symbol}");
+        }
 
-    public Task UnsubscribeFromMarketDataAsync(string symbol, CancellationToken ct = default) => throw new NotImplementedException();
+        MarketCredentials credentials = await dbContext.MarketCredentials.Include(x => x.MarketDetails)
+            .FirstAsync(x => x.MarketDetails.Type == MarketType.Okx && !x.IsDemo, ct);
 
-    public IAsyncEnumerable<MarketData> StreamMarketDataAsync(string symbol, CancellationToken ct = default)
-        => throw new NotImplementedException();
+        await wsService.ConnectAsync(credentials, OkxChannelType.Public, ct);
+        await wsService.SubscribeAsync("books", symbol, ct);
+        Symbol = symbol;
+    }
+
+    public async Task UnsubscribeAsync(string symbol, CancellationToken ct = default)
+        => await wsService.UnsubscribeAsync("books", symbol, ct);
 }

@@ -13,22 +13,16 @@ public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configurat
 
     public bool IsConnected { get; private set; }
 
-    public async Task StartTradingAsync(CancellationToken ct = default)
+    public async Task StartAsync(CancellationToken ct = default)
     {
         try
         {
             await adapter.ConnectAsync(ct);
             IsConnected = true;
 
-            IMarketDataSubscription marketData = await adapter.SubscribeToMarketDataAsync(configuration.Symbol, ct);
+            await adapter.SubscribeAsync(configuration.Symbol, ct);
 
-            await foreach (MarketData data in marketData.WithCancellation(ct))
-            {
-                ct.ThrowIfCancellationRequested();
-
-                // Process market data here (pipeline implementation will go here)
-                // For now, just continue the loop
-            }
+            // todo: start analyzing data periodically
         }
         catch (OperationCanceledException)
         {
@@ -43,12 +37,12 @@ public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configurat
         {
             if (IsConnected)
             {
-                await StopTradingAsync(ct);
+                await StopAsync(ct);
             }
         }
     }
 
-    public async Task StopTradingAsync(CancellationToken ct = default)
+    public async Task StopAsync(CancellationToken ct = default)
     {
         if (IsConnected)
         {

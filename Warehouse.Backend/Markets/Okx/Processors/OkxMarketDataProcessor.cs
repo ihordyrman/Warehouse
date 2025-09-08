@@ -10,7 +10,7 @@ public class OkxMarketDataProcessor(
     ILogger<OkxMarketDataProcessor> logger,
     OkxWebSocketService okxWebSocketService) : BackgroundService
 {
-    private readonly Dictionary<MarketDataKey, MarketDataCache> cache = [];
+    private readonly Dictionary<string, MarketDataCache> cache = [];
     private readonly ChannelReader<MarketData> marketDataReader = marketDataChannel.Reader;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,20 +29,20 @@ public class OkxMarketDataProcessor(
         {
             try
             {
-                if (TryGetCache(marketData.Channel, marketData.Instrument, out MarketDataCache? dataCache))
+                if (TryGetCache(marketData.Instrument, out MarketDataCache? dataCache))
                 {
                     UpdateCache(dataCache!, marketData);
                 }
                 else
                 {
-                    var newCache = new MarketDataCache(marketData.Channel, marketData.Instrument);
+                    var newCache = new MarketDataCache(marketData.Instrument);
                     UpdateCache(newCache, marketData);
                     AddCache(newCache);
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error processing market data for {Channel}:{Instrument}", marketData.Channel, marketData.Instrument);
+                logger.LogError(ex, "Error processing market data for {Instrument}", marketData.Instrument);
             }
         }
     }
@@ -86,11 +86,7 @@ public class OkxMarketDataProcessor(
         }
     }
 
-    private bool TryGetCache(string channel, string instrument, out MarketDataCache? marketCache)
-    {
-        var key = new MarketDataKey(channel, instrument);
-        return cache.TryGetValue(key, out marketCache);
-    }
+    private bool TryGetCache(string instrument, out MarketDataCache? marketCache) => cache.TryGetValue(instrument, out marketCache);
 
-    private void AddCache(MarketDataCache marketData) => cache[marketData.Key] = marketData;
+    private void AddCache(MarketDataCache marketData) => cache[marketData.Instrument] = marketData;
 }

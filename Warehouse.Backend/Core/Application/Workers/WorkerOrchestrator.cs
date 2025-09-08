@@ -70,7 +70,7 @@ public class WorkerOrchestrator(
                 continue;
             }
 
-            await StartWorkerAsync(config, scope.ServiceProvider, cancellationToken);
+            await StartWorkerAsync(config, cancellationToken);
         }
 
         // Remove redundant workers
@@ -85,13 +85,13 @@ public class WorkerOrchestrator(
         }
     }
 
-    private async Task StartWorkerAsync(WorkerConfiguration config, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    private async Task StartWorkerAsync(WorkerConfiguration config, CancellationToken cancellationToken)
     {
         try
         {
             logger.LogInformation("Starting worker {WorkerId} for {MarketType}/{Symbol}", config.WorkerId, config.Type, config.Symbol);
 
-            IMarketWorker worker = CreateWorker(config, serviceProvider);
+            IMarketWorker worker = CreateWorker(config);
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             Task workerTask = StartWorkerTaskAsync(worker, cts);
@@ -124,7 +124,7 @@ public class WorkerOrchestrator(
     {
         try
         {
-            await worker.StartTradingAsync(cts.Token);
+            await worker.StartAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -143,11 +143,12 @@ public class WorkerOrchestrator(
         }
     }
 
-    private static IMarketWorker CreateWorker(WorkerConfiguration config, IServiceProvider serviceProvider)
+    private IMarketWorker CreateWorker(WorkerConfiguration config)
     {
+        IServiceScope scope = scopeFactory.CreateScope();
         IMarketAdapter adapter = config.Type switch
         {
-            MarketType.Okx => serviceProvider.GetRequiredService<OkxMarketAdapter>(),
+            MarketType.Okx => scope.ServiceProvider.GetRequiredService<OkxMarketAdapter>(),
             _ => throw new NotSupportedException($"Market type {config.Type} is not supported")
         };
 
@@ -189,7 +190,7 @@ public class WorkerOrchestrator(
 
             await workerManager.UpdateWorkerStatusAsync(id, WorkerInstanceStatus.Stopping);
             await worker.CancellationTokenSource.CancelAsync();
-            await worker.Worker.StopTradingAsync();
+            await worker.Worker.StopAsync();
 
             bool completedInTime = await WaitForTaskWithTimeoutAsync(worker.Task, shutdownTimeout);
             if (!completedInTime)

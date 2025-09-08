@@ -1,14 +1,16 @@
 ﻿namespace Warehouse.Backend.Core.Models;
 
-public sealed class MarketData(string channel, string instrument, string[][] asks, string[][] bids)
+public sealed class MarketData(string instrument, string[][] asks, string[][] bids)
 {
-    public string Channel { get; } = channel;
-
     public string Instrument { get; } = instrument;
 
     public string[][] Asks { get; init; } = asks;
 
     public string[][] Bids { get; init; } = bids;
+
+    public decimal BidPrice { get; set; }
+
+    public decimal AskPrice { get; set; }
 
     public bool Equals(MarketData? other)
     {
@@ -22,18 +24,14 @@ public sealed class MarketData(string channel, string instrument, string[][] ask
             return true;
         }
 
-        return Channel == other.Channel && Instrument == other.Instrument;
+        return Instrument == other.Instrument;
     }
 
-    public override int GetHashCode() => HashCode.Combine(Channel, Instrument);
+    public override int GetHashCode() => HashCode.Combine(Instrument);
 }
 
-public sealed class MarketDataCache(string channel, string instrument)
+public sealed class MarketDataCache(string instrument)
 {
-    public MarketDataKey Key => new(Channel, Instrument);
-
-    public string Channel { get; } = channel;
-
     public string Instrument { get; } = instrument;
 
     public OrderedDictionary<decimal, (decimal, int)> Asks { get; } = [];
@@ -52,10 +50,8 @@ public sealed class MarketDataCache(string channel, string instrument)
             return true;
         }
 
-        return Channel == other.Channel && Instrument == other.Instrument;
+        return Instrument == other.Instrument;
     }
 
-    public override int GetHashCode() => HashCode.Combine(Channel, Instrument);
+    public override int GetHashCode() => HashCode.Combine(Instrument);
 }
-
-public sealed record MarketDataKey(string Channel, string Instrument);
