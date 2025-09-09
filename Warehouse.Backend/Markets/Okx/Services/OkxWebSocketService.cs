@@ -16,6 +16,7 @@ public class OkxWebSocketService : IDisposable
     private readonly Channel<OkxSocketResponse> messageChannel;
     private readonly JsonSerializerOptions serializerOptions;
     private readonly IWebSocketClient webSocketClient;
+    private static readonly SemaphoreSlim Semaphore = new(1);
     private bool disposed;
 
     public OkxWebSocketService(IWebSocketClient webSocketClient, OkxHeartbeatService heartbeatService, ILogger<OkxWebSocketService> logger)
@@ -59,21 +60,29 @@ public class OkxWebSocketService : IDisposable
         OkxChannelType channelType = OkxChannelType.Public,
         CancellationToken cancellationToken = default)
     {
-        if (IsConnected)
+        try
         {
-            return;
+            await Semaphore.WaitAsync(cancellationToken);
+            if (IsConnected)
+            {
+                return;
+            }
+
+            Uri uri = GetConnectionUri(credentials.IsDemo, channelType);
+            await webSocketClient.ConnectAsync(uri, cancellationToken);
+            IsConnected = true;
+
+            if (channelType == OkxChannelType.Private)
+            {
+                await AuthenticateAsync(credentials, cancellationToken);
+            }
+
+            heartbeatService.Start(webSocketClient);
         }
-
-        Uri uri = GetConnectionUri(credentials.IsDemo, channelType);
-        await webSocketClient.ConnectAsync(uri, cancellationToken);
-        IsConnected = true;
-
-        if (channelType == OkxChannelType.Private)
+        finally
         {
-            await AuthenticateAsync(credentials, cancellationToken);
+            Semaphore.Release();
         }
-
-        heartbeatService.Start(webSocketClient);
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)

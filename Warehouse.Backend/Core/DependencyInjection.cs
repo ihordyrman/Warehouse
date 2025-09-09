@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Abstractions.Workers;
 using Warehouse.Backend.Core.Application.Workers;
 using Warehouse.Backend.Core.Domain;
@@ -22,6 +23,7 @@ public static class DependencyInjection
 
         services.AddHostedService<WorkerOrchestrator>();
         services.AddSingleton<IWorkerManager, WorkerManager>();
+        services.AddSingleton<IMarketDataCache, MarketDataCache>();
 
         return services;
     }

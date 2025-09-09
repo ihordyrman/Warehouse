@@ -19,10 +19,13 @@ public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configurat
         {
             await adapter.ConnectAsync(ct);
             IsConnected = true;
-
             await adapter.SubscribeAsync(configuration.Symbol, ct);
 
             // todo: start analyzing data periodically
+            while (true)
+            {
+                await Task.Delay(1000, ct);
+            }
         }
         catch (OperationCanceledException)
         {

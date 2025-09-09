@@ -7,11 +7,9 @@ public interface IMarketAdapter
 {
     MarketType MarketType { get; }
 
-    bool IsConnected { get; }
-
     ConnectionState ConnectionState { get; }
 
-    MarketData GetData();
+    MarketData? GetData();
 
     Task<bool> ConnectAsync(CancellationToken ct = default);
 
