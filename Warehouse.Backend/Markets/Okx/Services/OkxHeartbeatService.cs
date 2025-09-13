@@ -1,8 +1,8 @@
-﻿using Warehouse.Backend.Core;
+﻿using Warehouse.Backend.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
-public class OkxHeartbeatService(ILogger<OkxHeartbeatService> logger) : IDisposable
+internal class OkxHeartbeatService(ILogger<OkxHeartbeatService> logger) : IDisposable
 {
     private readonly PeriodicTimer timer = new(TimeSpan.FromSeconds(10));
     private CancellationTokenSource? cts;

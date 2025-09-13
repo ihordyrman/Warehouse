@@ -1,6 +1,6 @@
 using Warehouse.Backend.Core.Domain;
 
-namespace Warehouse.Backend.Core;
+namespace Warehouse.Backend.Core.Infrastructure;
 
 using static MarketType;
 

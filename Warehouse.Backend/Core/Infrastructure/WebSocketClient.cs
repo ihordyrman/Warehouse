@@ -3,7 +3,27 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-namespace Warehouse.Backend.Core;
+namespace Warehouse.Backend.Core.Infrastructure;
+
+internal interface IWebSocketClient : IDisposable
+{
+    WebSocketState State { get; }
+
+    event EventHandler<WebSocketMessage>? MessageReceived;
+
+    event EventHandler<WebSocketError>? ErrorOccurred;
+
+    event EventHandler<WebSocketState>? StateChanged;
+
+    Task ConnectAsync(Uri uri, CancellationToken cancellationToken = default);
+
+    Task DisconnectAsync(string? reason = null, CancellationToken cancellationToken = default);
+
+    Task SendAsync(string message, CancellationToken cancellationToken = default);
+
+    Task SendAsync<T>(T message, CancellationToken cancellationToken = default)
+        where T : class;
+}
 
 internal sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSocketClient
 {

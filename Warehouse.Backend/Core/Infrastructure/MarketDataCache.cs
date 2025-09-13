@@ -20,5 +20,44 @@ public class MarketDataCache(ILogger<MarketDataCache> logger) : IMarketDataCache
         logger.LogDebug("Updated market data for {Symbol}: Bid={Bid}, Ask={Ask}", symbol, data.BidPrice, data.AskPrice);
     }
 
+    private void UpdateCache(MarketData snapshot, MarketData marketData)
+    {
+        // foreach (string[] ask in marketData.Asks)
+        // {
+        //     if (ask.Length >= 4 &&
+        //         decimal.TryParse(ask[0], out decimal price) &&
+        //         decimal.TryParse(ask[1], out decimal size) &&
+        //         int.TryParse(ask[3], out int orderCount))
+        //     {
+        //         if (size == 0)
+        //         {
+        //             snapshot.Asks.Remove(price);
+        //         }
+        //         else
+        //         {
+        //             snapshot.Asks[price] = (size, orderCount);
+        //         }
+        //     }
+        // }
+        //
+        // foreach (string[] bid in marketData.Bids)
+        // {
+        //     if (bid.Length >= 4 &&
+        //         decimal.TryParse(bid[0], out decimal price) &&
+        //         decimal.TryParse(bid[1], out decimal size) &&
+        //         int.TryParse(bid[3], out int orderCount))
+        //     {
+        //         if (size == 0)
+        //         {
+        //             snapshot.Bids.Remove(price);
+        //         }
+        //         else
+        //         {
+        //             snapshot.Bids[price] = (size, orderCount);
+        //         }
+        //     }
+        // }
+    }
+
     public IReadOnlySet<string> GetCachedSymbols() => cache.Keys.ToHashSet();
 }

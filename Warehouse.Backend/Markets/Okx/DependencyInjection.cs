@@ -1,11 +1,10 @@
 ﻿using System.Net;
 using System.Threading.Channels;
 using Polly;
-using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Domain;
+using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Markets.Okx.Constants;
-using Warehouse.Backend.Markets.Okx.Handlers;
 using Warehouse.Backend.Markets.Okx.Services;
 
 namespace Warehouse.Backend.Markets.Okx;
@@ -33,8 +32,6 @@ public static class DependencyInjection
                 };
                 return Channel.CreateBounded<MarketData>(options);
             });
-
-        services.AddSingleton<IOkxMessageHandler, OrderBookHandler>();
 
         services.AddHttpClient(
                 "Okx",

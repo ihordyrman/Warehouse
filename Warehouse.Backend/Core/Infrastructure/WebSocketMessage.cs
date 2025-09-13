@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
 
-namespace Warehouse.Backend.Core;
+namespace Warehouse.Backend.Core.Infrastructure;
 
 public class WebSocketMessage
 {

@@ -1,30 +1,31 @@
 ﻿using System.Net.WebSockets;
 using System.Text.Json;
-using System.Threading.Channels;
-using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Domain;
+using Warehouse.Backend.Core.Infrastructure;
+using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Markets.Okx.Constants;
+using Warehouse.Backend.Markets.Okx.Messages;
 using Warehouse.Backend.Markets.Okx.Messages.Socket;
-using Core_WebSocketError = Warehouse.Backend.Core.WebSocketError;
+using WebSocketError = Warehouse.Backend.Core.Infrastructure.WebSocketError;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
-public class OkxWebSocketService : IDisposable
+internal class OkxWebSocketService : IDisposable
 {
     private readonly OkxHeartbeatService heartbeatService;
     private readonly ILogger<OkxWebSocketService> logger;
-    private readonly Channel<OkxSocketResponse> messageChannel;
     private readonly JsonSerializerOptions serializerOptions;
     private readonly IWebSocketClient webSocketClient;
     private static readonly SemaphoreSlim Semaphore = new(1);
     private bool disposed;
+
+    public event EventHandler<MarketData>? MarketDataReceived;
 
     public OkxWebSocketService(IWebSocketClient webSocketClient, OkxHeartbeatService heartbeatService, ILogger<OkxWebSocketService> logger)
     {
         this.webSocketClient = webSocketClient;
         this.heartbeatService = heartbeatService;
         this.logger = logger;
-        messageChannel = Channel.CreateUnbounded<OkxSocketResponse>();
         serializerOptions = new JsonSerializerOptions
         {
             TypeInfoResolver = OkxJsonContext.Default
@@ -36,24 +37,6 @@ public class OkxWebSocketService : IDisposable
     }
 
     public bool IsConnected { get; private set; }
-
-    public void Dispose()
-    {
-        if (disposed)
-        {
-            return;
-        }
-
-        disposed = true;
-        IsConnected = false;
-
-        heartbeatService.Stop();
-        webSocketClient.MessageReceived -= OnMessageReceived;
-        webSocketClient.ErrorOccurred -= OnErrorOccurred;
-        webSocketClient.StateChanged -= OnStateChanged;
-        webSocketClient.Dispose();
-        messageChannel.Writer.TryComplete();
-    }
 
     public async Task ConnectAsync(
         MarketCredentials credentials,
@@ -85,14 +68,13 @@ public class OkxWebSocketService : IDisposable
         }
     }
 
-    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+    public async Task DisconnectAsync(CancellationToken ct = default)
     {
         heartbeatService.Stop();
-        await webSocketClient.DisconnectAsync(cancellationToken: cancellationToken);
-        messageChannel.Writer.TryComplete();
+        await webSocketClient.DisconnectAsync(cancellationToken: ct);
     }
 
-    public async Task SubscribeAsync(string channel, string instId, CancellationToken cancellationToken = default)
+    public async Task SubscribeAsync(string channel, string instId, CancellationToken ct = default)
     {
         var request = new
         {
@@ -100,11 +82,11 @@ public class OkxWebSocketService : IDisposable
             args = new[] { new { channel, instId } }
         };
 
-        await webSocketClient.SendAsync(request, cancellationToken);
+        await webSocketClient.SendAsync(request, ct);
         logger.LogInformation("Subscribed to {Channel} for {InstId}", channel, instId);
     }
 
-    public async Task UnsubscribeAsync(string channel, string instId, CancellationToken cancellationToken = default)
+    public async Task UnsubscribeAsync(string channel, string instId, CancellationToken ct = default)
     {
         var request = new
         {
@@ -112,12 +94,9 @@ public class OkxWebSocketService : IDisposable
             args = new[] { new { channel, instId } }
         };
 
-        await webSocketClient.SendAsync(request, cancellationToken);
+        await webSocketClient.SendAsync(request, ct);
         logger.LogInformation("Unsubscribed from {Channel} for {InstId}", channel, instId);
     }
-
-    public IAsyncEnumerable<OkxSocketResponse> GetMessagesAsync(CancellationToken cancellationToken = default)
-        => messageChannel.Reader.ReadAllAsync(cancellationToken);
 
     private async Task AuthenticateAsync(MarketCredentials credentials, CancellationToken cancellationToken)
     {
@@ -126,7 +105,7 @@ public class OkxWebSocketService : IDisposable
         logger.LogInformation("Authentication request sent");
     }
 
-    private Uri GetConnectionUri(bool isDemo, OkxChannelType channelType)
+    private static Uri GetConnectionUri(bool isDemo, OkxChannelType channelType)
     {
         string baseUrl = (isDemo, channelType) switch
         {
@@ -158,21 +137,66 @@ public class OkxWebSocketService : IDisposable
             }
 
             OkxSocketResponse? okxMessage = JsonSerializer.Deserialize<OkxSocketResponse>(message.Text, serializerOptions);
-
-            if (okxMessage != null)
+            if (okxMessage == null)
             {
-                messageChannel.Writer.TryWrite(okxMessage);
+                return;
+            }
+
+            try
+            {
+                if (okxMessage.Event == OkxEvent.Subscribe)
+                {
+                    logger.LogInformation(
+                        "Successfully subscribed to {Channel}:{Instrument}",
+                        okxMessage.Arguments!.Channel,
+                        okxMessage.Arguments.InstrumentId);
+                    return;
+                }
+
+                if (okxMessage.Data?.Length > 0)
+                {
+                    var marketData = new MarketData(
+                        okxMessage.Arguments!.InstrumentId!,
+                        okxMessage.Data[0].Asks!,
+                        okxMessage.Data[0].Bids!);
+
+                    MarketDataReceived?.Invoke(this, marketData);
+                    return;
+                }
+
+                logger.LogWarning("Unable to process okx socket message: {Message}", message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error processing message: {Message}", message);
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to process message");
+            logger.LogError(ex, "Failed to process message: {Message}", message);
         }
     }
 
-    private void OnErrorOccurred(object? sender, Core_WebSocketError error)
+    private void OnErrorOccurred(object? sender, WebSocketError error)
         => logger.LogError(error.Exception, "WebSocket error: {Message}", error.Message);
 
     private void OnStateChanged(object? sender, WebSocketState state)
         => logger.LogInformation("WebSocket state changed to: {State}", state);
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        IsConnected = false;
+
+        heartbeatService.Stop();
+        webSocketClient.MessageReceived -= OnMessageReceived;
+        webSocketClient.ErrorOccurred -= OnErrorOccurred;
+        webSocketClient.StateChanged -= OnStateChanged;
+        webSocketClient.Dispose();
+    }
 }

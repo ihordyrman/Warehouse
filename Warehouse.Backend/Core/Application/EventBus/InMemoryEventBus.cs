@@ -128,7 +128,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
     {
         if (!subscriptions.TryGetValue(envelope.EventType, out List<ISubscription>? subs))
         {
-            logger.LogDebug("No subscriptions found for event type {EventType}", envelope.EventType.Name);
+            logger.LogWarning("No subscriptions found for event type {EventType}", envelope.EventType.Name);
             return;
         }
 

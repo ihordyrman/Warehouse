@@ -5,10 +5,7 @@ namespace Warehouse.Backend.Core.Application.EventBus;
 public static class EventBusServiceCollectionExtensions
 {
     public static IServiceCollection AddInMemoryEventBus(this IServiceCollection services)
-    {
-        services.AddSingleton<IEventBus, InMemoryEventBus>();
-        return services;
-    }
+        => services.AddSingleton<IEventBus, InMemoryEventBus>();
 
     public static IServiceCollection AddEventHandler<TEvent, THandler>(this IServiceCollection services)
         where TEvent : class

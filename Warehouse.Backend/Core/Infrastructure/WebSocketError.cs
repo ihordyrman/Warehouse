@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Backend.Core;
+﻿namespace Warehouse.Backend.Core.Infrastructure;
 
 public class WebSocketError
 {

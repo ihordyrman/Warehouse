@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Abstractions.Workers;
+using Warehouse.Backend.Core.Application.EventBus;
 using Warehouse.Backend.Core.Application.Workers;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
@@ -20,6 +21,7 @@ public static class DependencyInjection
         string connectionString = $"Data Source={Paths.GetDatabasePath()}";
         services.AddDbContext<WarehouseDbContext>(options => options.UseSqlite(connectionString));
         services.AddScoped<WebSocketClient>();
+        services.AddInMemoryEventBus();
 
         services.AddHostedService<WorkerOrchestrator>();
         services.AddSingleton<IWorkerManager, WorkerManager>();

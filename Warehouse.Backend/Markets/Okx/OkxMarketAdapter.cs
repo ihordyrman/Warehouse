@@ -7,7 +7,7 @@ using Warehouse.Backend.Markets.Okx.Services;
 
 namespace Warehouse.Backend.Markets.Okx;
 
-public class OkxMarketAdapter(
+internal class OkxMarketAdapter(
     OkxWebSocketService wsService,
     OkxHttpService httpService,
     ILogger<OkxMarketAdapter> logger,
@@ -32,6 +32,7 @@ public class OkxMarketAdapter(
                 .FirstAsync(x => x.MarketDetails.Type == MarketType.Okx && !x.IsDemo, ct);
             httpService.Configure(credentials);
             ConnectionState = ConnectionState.Connecting;
+            wsService.MarketDataReceived += OnMarketData;
             await wsService.ConnectAsync(credentials, cancellationToken: ct);
             ConnectionState = ConnectionState.Connected;
         }
@@ -75,4 +76,6 @@ public class OkxMarketAdapter(
 
     public async Task UnsubscribeAsync(string symbol, CancellationToken ct = default)
         => await wsService.UnsubscribeAsync("books", symbol, ct);
+
+    private void OnMarketData(object? sender, MarketData marketData) => logger.LogInformation("Market data received.");
 }
