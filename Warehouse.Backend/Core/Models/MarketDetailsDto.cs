@@ -34,6 +34,6 @@ public static class MarketMappingExtensions
         => new()
         {
             Id = marketDetails.Id,
-            Type = marketDetails.Type,
+            Type = marketDetails.Type
         };
 }

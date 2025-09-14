@@ -9,18 +9,18 @@ namespace Warehouse.Backend.Markets.Okx;
 
 internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 {
-    private readonly OkxConnectionManager connectionManager;
-    private readonly MarketCredentials credentials;
-    private readonly IMarketDataCache dataCache;
+    private readonly CancellationTokenSource processingCts = new();
     private readonly Channel<MarketDataEvent> dataChannel;
-    private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
-    private readonly OkxHttpService httpService;
     private readonly ILogger<OkxMarketAdapter> logger;
+    private readonly IMarketDataCache dataCache;
+    private readonly IWebSocketClient webSocketClient;
+    private readonly MarketCredentials credentials;
+    private readonly OkxConnectionManager connectionManager;
+    private readonly OkxHttpService httpService;
     private readonly OkxMessageProcessor messageProcessor;
     private readonly OkxSubscriptionManager subscriptionManager;
-    private readonly IWebSocketClient webSocketClient;
+    private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
     private bool disposed;
-    private CancellationTokenSource? processingCts;
     private Task? processingTask;
 
     public OkxMarketAdapter(
@@ -53,7 +53,7 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         messageProcessor = new OkxMessageProcessor(dataChannel, loggerFactory.CreateLogger<OkxMessageProcessor>());
         subscriptionManager = new OkxSubscriptionManager(connectionManager, loggerFactory.CreateLogger<OkxSubscriptionManager>());
 
-        webSocketClient.MessageReceived += OnWebSocketMessage;
+        this.webSocketClient.MessageReceived += OnWebSocketMessage;
         connectionManager.StateChanged += OnConnectionStateChanged;
     }
 
@@ -93,7 +93,7 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         {
             httpService.Configure(credentials!);
 
-            Uri uri = GetConnectionUri(credentials!.IsDemo, OkxChannelType.Public);
+            Uri uri = GetConnectionUri(OkxChannelType.Public);
             bool connected = await connectionManager.ConnectAsync(uri, cancellationToken);
 
             if (!connected)
@@ -159,8 +159,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
     private void StartDataProcessing()
     {
         StopDataProcessing();
-
-        processingCts = new CancellationTokenSource();
         processingTask = Task.Run(
             async () =>
             {
@@ -177,7 +175,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         processingCts?.Cancel();
         processingTask?.Wait(TimeSpan.FromSeconds(5));
         processingCts?.Dispose();
-        processingCts = null;
         processingTask = null;
     }
 
@@ -210,17 +207,12 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
     private void OnConnectionStateChanged(object? sender, ConnectionState state)
         => logger.LogInformation("Connection state changed to: {State}", state);
 
-    private static Uri GetConnectionUri(bool isDemo, OkxChannelType channelType)
-    {
-        string baseUrl = (isDemo, channelType) switch
-        {
-            (true, OkxChannelType.Public) => SocketEndpoints.DEMO_PUBLIC_WS_URL,
-            (true, OkxChannelType.Private) => SocketEndpoints.DEMO_PRIVATE_WS_URL,
-            (false, OkxChannelType.Public) => SocketEndpoints.PUBLIC_WS_URL,
-            (false, OkxChannelType.Private) => SocketEndpoints.PRIVATE_WS_URL,
-            _ => throw new ArgumentException($"Invalid channel type: {channelType}")
-        };
-
-        return new Uri(baseUrl);
-    }
+    private static Uri GetConnectionUri(OkxChannelType channelType)
+        => new(
+            channelType switch
+            {
+                OkxChannelType.Public => SocketEndpoints.PUBLIC_WS_URL,
+                OkxChannelType.Private => SocketEndpoints.PRIVATE_WS_URL,
+                _ => throw new ArgumentException($"Invalid channel type: {channelType}")
+            });
 }

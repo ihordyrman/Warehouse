@@ -20,8 +20,6 @@ public abstract class BaseMarketCredentialsDto
     [Required(ErrorMessage = "Secret Key is required")]
     [StringLength(1000, MinimumLength = 1, ErrorMessage = "Secret Key must be between 1 and 1000 characters")]
     public string? SecretKey { get; init; } = string.Empty;
-
-    public bool IsDemo { get; init; }
 }
 
 public class MarketCredentialsDto : BaseMarketCredentialsDto
@@ -44,7 +42,6 @@ public static class MarketCredentialsMappingExtensions
             ApiKey = credentialsDto.ApiKey!,
             Passphrase = credentialsDto.Passphrase!,
             SecretKey = credentialsDto.SecretKey!,
-            IsDemo = credentialsDto.IsDemo
         };
 
     public static MarketCredentialsDto AsDto(this MarketCredentials marketCredentials)
@@ -55,6 +52,5 @@ public static class MarketCredentialsMappingExtensions
             ApiKey = marketCredentials.ApiKey,
             Passphrase = marketCredentials.Passphrase,
             SecretKey = marketCredentials.SecretKey,
-            IsDemo = marketCredentials.IsDemo
         };
 }

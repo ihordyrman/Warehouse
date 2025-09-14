@@ -101,8 +101,7 @@ public static class MarketCredentialsEndpoints
                         int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id) // Use MarketId since it's one-to-one
                             .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.ApiKey, marketCredentialsDto.ApiKey)
                                                     .SetProperty(x => x.Passphrase, marketCredentialsDto.Passphrase)
-                                                    .SetProperty(x => x.SecretKey, marketCredentialsDto.SecretKey)
-                                                    .SetProperty(x => x.IsDemo, marketCredentialsDto.IsDemo));
+                                                    .SetProperty(x => x.SecretKey, marketCredentialsDto.SecretKey));
 
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }
@@ -125,8 +124,7 @@ public static class MarketCredentialsEndpoints
                 {
                     try
                     {
-                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id)
-                            .ExecuteDeleteAsync();
+                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id).ExecuteDeleteAsync();
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }
                     catch (DbUpdateException ex)

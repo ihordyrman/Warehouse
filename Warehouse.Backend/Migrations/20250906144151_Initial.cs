@@ -53,7 +53,6 @@ namespace Warehouse.Backend.Migrations
                     ApiKey = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     Passphrase = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     SecretKey = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    IsDemo = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },

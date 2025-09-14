@@ -18,8 +18,6 @@ internal sealed class OkxSubscriptionManager
         connectionManager.StateChanged += OnConnectionStateChanged;
     }
 
-    public IReadOnlyCollection<string> ActiveSubscriptions => subscriptions.AsReadOnly().Keys;
-
     public async Task<bool> SubscribeAsync(string channel, string symbol, CancellationToken cancellationToken = default)
     {
         string key = $"{channel}:{symbol}";

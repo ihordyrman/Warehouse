@@ -13,6 +13,4 @@ public class MarketCredentials : AuditEntity
     public string Passphrase { get; set; } = string.Empty;
 
     public string SecretKey { get; set; } = string.Empty;
-
-    public bool IsDemo { get; set; }
 }

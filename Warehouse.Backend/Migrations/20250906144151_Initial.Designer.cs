@@ -34,9 +34,6 @@ namespace Warehouse.Backend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsDemo")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("MarketId")
                         .HasColumnType("INTEGER");
 
