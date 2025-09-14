@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddHostedService<WorkerOrchestrator>();
         services.AddSingleton<IWorkerManager, WorkerManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
+        services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
 
         return services;
     }

@@ -10,3 +10,10 @@ public interface IMarketDataCache
 
     IReadOnlySet<string> GetCachedSymbols();
 }
+
+public interface IMarketDataStream : IDisposable
+{
+    IAsyncEnumerable<MarketData> ReadAsync(CancellationToken cancellationToken = default);
+
+    bool TryRead(out MarketData? data);
+}

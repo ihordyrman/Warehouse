@@ -12,4 +12,10 @@ public record OkxSocketResponse : OkxSocketEventResponse
 
     [JsonPropertyName("data")]
     public OkxSocketBookData[]? Data { get; init; }
+
+    [JsonPropertyName("msg")]
+    public string? Message { get; set; }
+
+    [JsonPropertyName("code")]
+    public OkxResponseCode? Code { get; set; }
 }
