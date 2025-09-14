@@ -41,7 +41,7 @@ public static class MarketCredentialsMappingExtensions
             MarketId = marketId,
             ApiKey = credentialsDto.ApiKey!,
             Passphrase = credentialsDto.Passphrase!,
-            SecretKey = credentialsDto.SecretKey!,
+            SecretKey = credentialsDto.SecretKey!
         };
 
     public static MarketCredentialsDto AsDto(this MarketCredentials marketCredentials)
@@ -51,6 +51,6 @@ public static class MarketCredentialsMappingExtensions
             MarketId = marketCredentials.MarketId,
             ApiKey = marketCredentials.ApiKey,
             Passphrase = marketCredentials.Passphrase,
-            SecretKey = marketCredentials.SecretKey,
+            SecretKey = marketCredentials.SecretKey
         };
 }

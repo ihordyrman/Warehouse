@@ -1,8 +1,7 @@
-﻿using Warehouse.Backend.Core.Domain;
+﻿using System.ComponentModel.DataAnnotations;
+using Warehouse.Backend.Core.Domain;
 
 namespace Warehouse.Backend.Core.Models;
-
-using System.ComponentModel.DataAnnotations;
 
 public class CreateWorkerDto
 {

@@ -1,5 +1,4 @@
-﻿using System.Threading.Channels;
-using Warehouse.Backend.Core.Abstractions.Markets;
+﻿using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Markets.Okx.Constants;
@@ -9,19 +8,15 @@ namespace Warehouse.Backend.Markets.Okx;
 
 internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 {
-    private readonly CancellationTokenSource processingCts = new();
-    private readonly Channel<MarketDataEvent> dataChannel;
-    private readonly ILogger<OkxMarketAdapter> logger;
-    private readonly IMarketDataCache dataCache;
-    private readonly IWebSocketClient webSocketClient;
-    private readonly MarketCredentials credentials;
     private readonly OkxConnectionManager connectionManager;
+    private readonly MarketCredentials credentials;
+    private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
     private readonly OkxHttpService httpService;
+    private readonly ILogger<OkxMarketAdapter> logger;
     private readonly OkxMessageProcessor messageProcessor;
     private readonly OkxSubscriptionManager subscriptionManager;
-    private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
+    private readonly IWebSocketClient webSocketClient;
     private bool disposed;
-    private Task? processingTask;
 
     public OkxMarketAdapter(
         IServiceScopeFactory scopeFactory,
@@ -31,7 +26,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         OkxHttpService httpService,
         ILoggerFactory loggerFactory)
     {
-        this.dataCache = dataCache;
         this.webSocketClient = webSocketClient;
         this.httpService = httpService;
         logger = loggerFactory.CreateLogger<OkxMarketAdapter>();
@@ -41,16 +35,8 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
             .GetAwaiter()
             .GetResult();
 
-        dataChannel = Channel.CreateBounded<MarketDataEvent>(
-            new BoundedChannelOptions(1000)
-            {
-                FullMode = BoundedChannelFullMode.Wait,
-                SingleReader = true,
-                SingleWriter = false
-            });
-
         connectionManager = new OkxConnectionManager(webSocketClient, heartbeatService, loggerFactory.CreateLogger<OkxConnectionManager>());
-        messageProcessor = new OkxMessageProcessor(dataChannel, loggerFactory.CreateLogger<OkxMessageProcessor>());
+        messageProcessor = new OkxMessageProcessor(loggerFactory.CreateLogger<OkxMessageProcessor>(), dataCache);
         subscriptionManager = new OkxSubscriptionManager(connectionManager, loggerFactory.CreateLogger<OkxSubscriptionManager>());
 
         this.webSocketClient.MessageReceived += OnWebSocketMessage;
@@ -66,14 +52,10 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 
         disposed = true;
 
-        StopDataProcessing();
-
         webSocketClient.MessageReceived -= OnWebSocketMessage;
         connectionManager.StateChanged -= OnConnectionStateChanged;
 
-        messageProcessor.Dispose();
         connectionManager.Dispose();
-        dataChannel.Writer.TryComplete();
         dataLock.Dispose();
     }
 
@@ -101,8 +83,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
                 return false;
             }
 
-            StartDataProcessing();
-
             if (credentials.ApiKey != null)
             {
                 await AuthenticateAsync(cancellationToken);
@@ -121,7 +101,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
     {
         await subscriptionManager.UnsubscribeAllAsync(cancellationToken);
         await connectionManager.DisconnectAsync(cancellationToken);
-        StopDataProcessing();
     }
 
     public async Task SubscribeAsync(string symbol, CancellationToken cancellationToken = default)
@@ -156,42 +135,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         logger.LogInformation("Authentication request sent");
     }
 
-    private void StartDataProcessing()
-    {
-        StopDataProcessing();
-        processingTask = Task.Run(
-            async () =>
-            {
-                await foreach (MarketDataEvent dataEvent in dataChannel.Reader.ReadAllAsync(processingCts.Token))
-                {
-                    UpdateLatestData(dataEvent);
-                }
-            },
-            processingCts.Token);
-    }
-
-    private void StopDataProcessing()
-    {
-        processingCts?.Cancel();
-        processingTask?.Wait(TimeSpan.FromSeconds(5));
-        processingCts?.Dispose();
-        processingTask = null;
-    }
-
-    private void UpdateLatestData(MarketDataEvent dataEvent)
-    {
-        dataLock.EnterWriteLock();
-        try
-        {
-            // todo: update data
-            logger.LogTrace("Updated data for {Symbol}, seq: {Seq}", dataEvent.Symbol, dataEvent.SequenceNumber);
-        }
-        finally
-        {
-            dataLock.ExitWriteLock();
-        }
-    }
-
     private async void OnWebSocketMessage(object? sender, WebSocketMessage message)
     {
         try
@@ -200,7 +143,7 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error processing WebSocket message");
+            logger.LogError(ex, "Error processing WebSocket message: {Message}", message);
         }
     }
 

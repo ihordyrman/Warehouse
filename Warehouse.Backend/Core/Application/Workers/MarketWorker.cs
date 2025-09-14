@@ -5,7 +5,11 @@ using Warehouse.Backend.Core.Models;
 
 namespace Warehouse.Backend.Core.Application.Workers;
 
-public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configuration) : IMarketWorker
+// todo: I don't think worker should know about adapter. Can be moved on the level of orchestrator
+public class MarketWorker(
+    IMarketAdapter adapter,
+    WorkerConfiguration configuration,
+    IMarketDataCache marketDataCache) : IMarketWorker
 {
     public int WorkerId { get; } = configuration.WorkerId;
 
@@ -24,6 +28,13 @@ public class MarketWorker(IMarketAdapter adapter, WorkerConfiguration configurat
             // todo: start analyzing data periodically
             while (true)
             {
+                MarketData? marketData = marketDataCache.GetData(configuration.Symbol, MarketType);
+
+                if (marketData is null)
+                {
+                    continue;
+                }
+
                 await Task.Delay(1000, ct);
             }
         }

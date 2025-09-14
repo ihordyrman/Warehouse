@@ -98,7 +98,7 @@ public static class MarketCredentialsEndpoints
 
                     try
                     {
-                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id) // Use MarketId since it's one-to-one
+                        int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id)
                             .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.ApiKey, marketCredentialsDto.ApiKey)
                                                     .SetProperty(x => x.Passphrase, marketCredentialsDto.Passphrase)
                                                     .SetProperty(x => x.SecretKey, marketCredentialsDto.SecretKey));

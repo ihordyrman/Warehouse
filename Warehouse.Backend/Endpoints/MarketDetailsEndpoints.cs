@@ -20,9 +20,7 @@ public static class MarketEndpoints
                 "/",
                 async (WarehouseDbContext db) =>
                 {
-                    List<MarketDto> marketsWithCredentials = await db.MarketDetails.AsNoTracking()
-                        .Select(x => x.AsDto())
-                        .ToListAsync();
+                    List<MarketDto> marketsWithCredentials = await db.MarketDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync();
                     return TypedResults.Ok(marketsWithCredentials);
                 })
             .WithName("GetAllMarkets")

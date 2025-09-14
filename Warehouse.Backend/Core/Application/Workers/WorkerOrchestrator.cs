@@ -11,10 +11,11 @@ namespace Warehouse.Backend.Core.Application.Workers;
 public class WorkerOrchestrator(
     IServiceScopeFactory scopeFactory,
     ILogger<WorkerOrchestrator> logger,
-    IWorkerManager workerManager) : BackgroundService
+    IWorkerManager workerManager,
+    IMarketDataCache marketDataCache) : BackgroundService
 {
-    private readonly TimeSpan syncInterval = TimeSpan.FromSeconds(10);
     private readonly TimeSpan shutdownTimeout = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan syncInterval = TimeSpan.FromSeconds(10);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -152,7 +153,7 @@ public class WorkerOrchestrator(
             _ => throw new NotSupportedException($"Market type {config.Type} is not supported")
         };
 
-        return new MarketWorker(adapter, config);
+        return new MarketWorker(adapter, config, marketDataCache);
     }
 
     private async Task StopAllWorkersAsync()

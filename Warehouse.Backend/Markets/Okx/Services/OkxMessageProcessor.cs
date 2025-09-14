@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using System.Threading.Channels;
+using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Core.Models;
@@ -8,25 +8,14 @@ using Warehouse.Backend.Markets.Okx.Messages.Socket;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
-internal sealed class OkxMessageProcessor(Channel<MarketDataEvent> marketDataChannel, ILogger<OkxMessageProcessor> logger) : IDisposable
+internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, IMarketDataCache marketDataCache)
 {
     private readonly JsonSerializerOptions serializerOptions = new()
     {
         TypeInfoResolver = OkxJsonContext.Default
     };
-    private bool disposed;
+
     private long sequenceNumber;
-
-    public void Dispose()
-    {
-        if (disposed)
-        {
-            return;
-        }
-
-        disposed = true;
-        marketDataChannel.Writer.TryComplete();
-    }
 
     public async Task ProcessMessageAsync(WebSocketMessage message, CancellationToken cancellationToken = default)
     {
@@ -92,35 +81,7 @@ internal sealed class OkxMessageProcessor(Channel<MarketDataEvent> marketDataCha
             return;
         }
 
-        var marketDataEvent = new MarketDataEvent
-        {
-            Symbol = symbol,
-            Data = new MarketData(symbol, data.Asks, data.Bids),
-            ReceivedAt = DateTime.UtcNow,
-            Source = MarketType.Okx,
-            SequenceNumber = Interlocked.Increment(ref sequenceNumber)
-        };
-
-        if (!marketDataChannel.Writer.TryWrite(marketDataEvent))
-        {
-            logger.LogWarning("Market data channel is full, dropping message for {Symbol}", symbol);
-        }
-        else
-        {
-            logger.LogTrace("Market data processed for {Symbol}, seq: {Seq}", symbol, marketDataEvent.SequenceNumber);
-        }
+        marketDataCache.Update(
+            new MarketDataEvent(symbol, MarketType.Okx, Interlocked.Increment(ref sequenceNumber), data.Asks, data.Bids));
     }
-}
-
-public sealed class MarketDataEvent
-{
-    public required string Symbol { get; init; }
-
-    public required MarketData Data { get; init; }
-
-    public required DateTime ReceivedAt { get; init; }
-
-    public required MarketType Source { get; init; }
-
-    public long SequenceNumber { get; init; }
 }

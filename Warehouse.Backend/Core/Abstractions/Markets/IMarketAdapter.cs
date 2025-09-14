@@ -16,11 +16,3 @@ public interface IMarketAdapter
 
     Task UnsubscribeAsync(string symbol, CancellationToken ct = default);
 }
-
-public enum ConnectionState
-{
-    Disconnected,
-    Connecting,
-    Connected,
-    Failed
-}

@@ -6,13 +6,7 @@ namespace Warehouse.Backend.Core.Application.EventBus;
 
 public class InMemoryEventBus : IEventBus, IDisposable
 {
-    private readonly ConcurrentDictionary<Type, List<ISubscription>> subscriptions = [];
-    private readonly SemaphoreSlim semaphore = new(1);
-
     private readonly CancellationTokenSource cancellationTokenSource = new();
-    private readonly Task processingTask;
-
-    private bool disposed;
     private readonly Channel<EventEnvelope> eventChannel = Channel.CreateBounded<EventEnvelope>(
         new BoundedChannelOptions(10000)
         {
@@ -21,13 +15,50 @@ public class InMemoryEventBus : IEventBus, IDisposable
             SingleWriter = false
         });
     private readonly ILogger<InMemoryEventBus> logger;
+    private readonly Task processingTask;
+    private readonly SemaphoreSlim semaphore = new(1);
     private readonly IServiceProvider serviceProvider;
+    private readonly ConcurrentDictionary<Type, List<ISubscription>> subscriptions = [];
+
+    private bool disposed;
 
     public InMemoryEventBus(ILogger<InMemoryEventBus> logger, IServiceProvider serviceProvider)
     {
         this.logger = logger;
         this.serviceProvider = serviceProvider;
         processingTask = Task.Run(async () => await ProcessEventsAsync(cancellationTokenSource.Token), cancellationTokenSource.Token);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            semaphore.Wait();
+            if (disposed)
+            {
+                return;
+            }
+
+            cancellationTokenSource.Cancel();
+            eventChannel.Writer.TryComplete();
+
+            try
+            {
+                processingTask.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error waiting for event processing to complete");
+            }
+
+            cancellationTokenSource.Dispose();
+            disposed = true;
+        }
+        finally
+        {
+            semaphore.Release();
+            semaphore.Dispose();
+        }
     }
 
     public async Task PublishAsync<T>(T eventData, CancellationToken ct = default)
@@ -218,92 +249,6 @@ public class InMemoryEventBus : IEventBus, IDisposable
             ct);
     }
 
-    private interface ISubscription
-    {
-        Task HandleAsync(object eventData, CancellationToken ct);
-    }
-
-    private class ActionSubscription<T>(Action<T> handler, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
-        where T : class
-    {
-        private bool disposed;
-
-        public Task HandleAsync(object eventData, CancellationToken ct)
-        {
-            if (eventData is T typedEvent)
-            {
-                handler(typedEvent);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            removeAction(typeof(T), this);
-            disposed = true;
-        }
-    }
-
-    private class AsyncSubscription<T>(Func<T, Task> handler, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
-        where T : class
-    {
-        private bool disposed;
-
-        public async Task HandleAsync(object eventData, CancellationToken ct)
-        {
-            if (eventData is T typedEvent)
-            {
-                await handler(typedEvent);
-            }
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            removeAction(typeof(T), this);
-            disposed = true;
-        }
-    }
-
-    private class TypedSubscription
-        <T, THandler>(IServiceProvider serviceProvider, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
-        where T : class
-        where THandler : IEventHandler<T>
-    {
-        private bool disposed;
-
-        public async Task HandleAsync(object eventData, CancellationToken ct)
-        {
-            if (eventData is T typedEvent)
-            {
-                using IServiceScope scope = serviceProvider.CreateScope();
-                THandler handler = scope.ServiceProvider.GetRequiredService<THandler>();
-                await handler.HandleAsync(typedEvent, ct);
-            }
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            removeAction(typeof(T), this);
-            disposed = true;
-        }
-    }
-
     private void ThrowIfDisposed()
     {
         if (!disposed)
@@ -314,35 +259,89 @@ public class InMemoryEventBus : IEventBus, IDisposable
         throw new ObjectDisposedException(nameof(InMemoryEventBus));
     }
 
-    public void Dispose()
+    private interface ISubscription
     {
-        try
+        Task HandleAsync(object eventData, CancellationToken ct);
+    }
+
+    private class ActionSubscription<T>(Action<T> handler, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
+        where T : class
+    {
+        private bool disposed;
+
+        public void Dispose()
         {
-            semaphore.Wait();
             if (disposed)
             {
                 return;
             }
 
-            cancellationTokenSource.Cancel();
-            eventChannel.Writer.TryComplete();
-
-            try
-            {
-                processingTask.Wait(TimeSpan.FromSeconds(5));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error waiting for event processing to complete");
-            }
-
-            cancellationTokenSource.Dispose();
+            removeAction(typeof(T), this);
             disposed = true;
         }
-        finally
+
+        public Task HandleAsync(object eventData, CancellationToken ct)
         {
-            semaphore.Release();
-            semaphore.Dispose();
+            if (eventData is T typedEvent)
+            {
+                handler(typedEvent);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private class AsyncSubscription<T>(Func<T, Task> handler, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
+        where T : class
+    {
+        private bool disposed;
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            removeAction(typeof(T), this);
+            disposed = true;
+        }
+
+        public async Task HandleAsync(object eventData, CancellationToken ct)
+        {
+            if (eventData is T typedEvent)
+            {
+                await handler(typedEvent);
+            }
+        }
+    }
+
+    private class TypedSubscription
+        <T, THandler>(IServiceProvider serviceProvider, Action<Type, ISubscription> removeAction) : ISubscription, IDisposable
+        where T : class
+        where THandler : IEventHandler<T>
+    {
+        private bool disposed;
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            removeAction(typeof(T), this);
+            disposed = true;
+        }
+
+        public async Task HandleAsync(object eventData, CancellationToken ct)
+        {
+            if (eventData is T typedEvent)
+            {
+                using IServiceScope scope = serviceProvider.CreateScope();
+                THandler handler = scope.ServiceProvider.GetRequiredService<THandler>();
+                await handler.HandleAsync(typedEvent, ct);
+            }
         }
     }
 }
