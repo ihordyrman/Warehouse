@@ -8,7 +8,11 @@ public interface IMarketWorker
 
     MarketType MarketType { get; }
 
-    bool IsConnected { get; }
+    bool IsRunning { get; }
+
+    WorkerState State { get; }
+
+    DateTime? LastProcessedAt { get; }
 
     Task StartAsync(CancellationToken ct = default);
 

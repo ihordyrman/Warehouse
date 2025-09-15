@@ -147,13 +147,16 @@ public class WorkerOrchestrator(
     private IMarketWorker CreateWorker(WorkerConfiguration config)
     {
         IServiceScope scope = scopeFactory.CreateScope();
+        ILogger<MarketWorker> workerLogger = scope.ServiceProvider.GetRequiredService<ILogger<MarketWorker>>();
+
+        // todo: start managing adapters in orchestrator
         IMarketAdapter adapter = config.Type switch
         {
             MarketType.Okx => scope.ServiceProvider.GetRequiredService<OkxMarketAdapter>(),
             _ => throw new NotSupportedException($"Market type {config.Type} is not supported")
         };
 
-        return new MarketWorker(adapter, config, marketDataCache);
+        return new MarketWorker(config, marketDataCache, workerLogger);
     }
 
     private async Task StopAllWorkersAsync()

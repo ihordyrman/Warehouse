@@ -5,63 +5,110 @@ using Warehouse.Backend.Core.Models;
 
 namespace Warehouse.Backend.Core.Application.Workers;
 
-// todo: I don't think worker should know about adapter. Can be moved on the level of orchestrator
-public class MarketWorker(
-    IMarketAdapter adapter,
-    WorkerConfiguration configuration,
-    IMarketDataCache marketDataCache) : IMarketWorker
+public class MarketWorker(WorkerConfiguration configuration, IMarketDataCache marketDataCache, ILogger<MarketWorker> logger) : IMarketWorker
 {
+    private CancellationTokenSource? cancellationTokenSource;
+    private Task? processingTask;
+
     public int WorkerId { get; } = configuration.WorkerId;
 
     public MarketType MarketType { get; } = configuration.Type;
 
-    public bool IsConnected { get; private set; }
+    public bool IsRunning { get; private set; }
 
-    public async Task StartAsync(CancellationToken ct = default)
+    public WorkerState State { get; private set; } = WorkerState.Stopped;
+
+    public DateTime? LastProcessedAt { get; private set; }
+
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        if (IsRunning)
+        {
+            logger.LogWarning("Worker {WorkerId} is already running", WorkerId);
+            return;
+        }
+
+        logger.LogInformation("Starting worker {WorkerId} for {Symbol}", WorkerId, configuration.Symbol);
+
+        cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        IsRunning = true;
+        State = WorkerState.Running;
+
+        processingTask = ProcessMarketDataAsync(cancellationTokenSource.Token);
+
+        await Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsRunning)
+        {
+            logger.LogWarning("Worker {WorkerId} is not running", WorkerId);
+            return;
+        }
+
+        logger.LogInformation("Stopping worker {WorkerId}", WorkerId);
+        State = WorkerState.Stopped;
+
+        await cancellationTokenSource?.CancelAsync()!;
+
+        if (processingTask != null)
+        {
+            try
+            {
+                await processingTask.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                logger.LogWarning("Worker {WorkerId} did not stop gracefully within timeout", WorkerId);
+            }
+        }
+
+        IsRunning = false;
+        State = WorkerState.Stopped;
+        cancellationTokenSource?.Dispose();
+        cancellationTokenSource = null;
+        processingTask = null;
+
+        logger.LogInformation("Worker {WorkerId} stopped", WorkerId);
+    }
+
+    private async Task ProcessMarketDataAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Worker {WorkerId} started processing loop", WorkerId);
+
         try
         {
-            await adapter.ConnectAsync(ct);
-            IsConnected = true;
-            await adapter.SubscribeAsync(configuration.Symbol, ct);
-
-            // todo: start analyzing data periodically
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                MarketData? marketData = marketDataCache.GetData(configuration.Symbol, MarketType);
-
-                if (marketData is null)
+                try
                 {
-                    continue;
-                }
+                    MarketData? marketData = marketDataCache.GetData(configuration.Symbol, MarketType);
 
-                await Task.Delay(1000, ct);
+                    if (marketData != null)
+                    {
+                        // ...
+                    }
+
+                    await Task.Delay(configuration.ProcessingInterval, cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogError(ex, "Error processing market data in worker {WorkerId}", WorkerId);
+                    State = WorkerState.Error;
+
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    State = WorkerState.Running;
+                }
             }
         }
         catch (OperationCanceledException)
         {
-            throw;
-        }
-        catch (Exception)
-        {
-            IsConnected = false;
-            throw;
+            logger.LogInformation("Worker {WorkerId} processing cancelled", WorkerId);
         }
         finally
         {
-            if (IsConnected)
-            {
-                await StopAsync(ct);
-            }
-        }
-    }
-
-    public async Task StopAsync(CancellationToken ct = default)
-    {
-        if (IsConnected)
-        {
-            await adapter.DisconnectAsync(ct);
-            IsConnected = false;
+            logger.LogInformation("Worker {WorkerId} exited processing loop", WorkerId);
         }
     }
 }

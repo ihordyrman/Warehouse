@@ -18,16 +18,14 @@ public static class DependencyInjection
             .SetApplicationName("Warehouse.Backend")
             .SetDefaultKeyLifetime(TimeSpan.FromDays(365));
 
-        string connectionString = $"Data Source={Paths.GetDatabasePath()}";
-        services.AddDbContext<WarehouseDbContext>(options => options.UseSqlite(connectionString));
-        services.AddScoped<WebSocketClient>();
+        services.AddDbContext<WarehouseDbContext>(options => options.UseSqlite($"Data Source={Paths.GetDatabasePath()}"));
         services.AddInMemoryEventBus();
 
-        services.AddHostedService<WorkerOrchestrator>();
+        services.AddScoped<WebSocketClient>();
+        services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
         services.AddSingleton<IWorkerManager, WorkerManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
-        services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
-
+        services.AddHostedService<WorkerOrchestrator>();
         return services;
     }
 
