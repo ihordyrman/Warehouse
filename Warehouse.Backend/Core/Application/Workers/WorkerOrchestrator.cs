@@ -14,8 +14,9 @@ public class WorkerOrchestrator(
     IWorkerManager workerManager,
     IMarketDataCache marketDataCache) : BackgroundService
 {
-    private readonly TimeSpan shutdownTimeout = TimeSpan.FromSeconds(30);
     private readonly TimeSpan syncInterval = TimeSpan.FromSeconds(10);
+    private readonly Dictionary<MarketType, MarketConnection> marketConnections = [];
+    private readonly SemaphoreSlim connectionLock = new(1, 1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -43,7 +44,7 @@ public class WorkerOrchestrator(
         }
         finally
         {
-            await StopAllWorkersAsync();
+            await ShutdownAsync();
             logger.LogInformation("WorkerOrchestrator stopped");
         }
     }
@@ -63,6 +64,11 @@ public class WorkerOrchestrator(
             })
             .ToListAsync(cancellationToken);
 
+        foreach (IGrouping<MarketType, WorkerConfiguration> marketGroup in desiredWorkers.GroupBy(x => x.Type))
+        {
+            await EnsureMarketConnectionAsync(marketGroup.Key, marketGroup.ToList(), cancellationToken);
+        }
+
         // Start missing workers
         foreach (WorkerConfiguration config in desiredWorkers)
         {
@@ -75,15 +81,16 @@ public class WorkerOrchestrator(
         }
 
         // Remove redundant workers
-        foreach ((int id, WorkerInstance instance) in workerManager.GetWorkers())
+        IReadOnlyDictionary<int, WorkerInstance> activeWorkers = workerManager.GetWorkers();
+        foreach ((int id, WorkerInstance instance) in activeWorkers)
         {
-            if (desiredWorkers.Any(x => x.WorkerId == id))
+            if (desiredWorkers.All(x => x.WorkerId != id))
             {
-                continue;
+                await StopWorkerAsync(instance, id);
             }
-
-            await StopWorkerAsync(instance, id);
         }
+
+        await DisconnectUnusedMarketsAsync(desiredWorkers);
     }
 
     private async Task StartWorkerAsync(WorkerConfiguration config, CancellationToken cancellationToken)
@@ -95,14 +102,14 @@ public class WorkerOrchestrator(
             IMarketWorker worker = CreateWorker(config);
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            Task workerTask = StartWorkerTaskAsync(worker, cts);
+            Task task = worker.StartAsync(cts.Token);
 
             var workerInstance = new WorkerInstance
             {
                 Worker = worker,
                 Configuration = config,
                 CancellationTokenSource = cts,
-                Task = workerTask,
+                Task = task,
                 StartedAt = DateTime.UtcNow,
                 Status = WorkerInstanceStatus.Starting,
                 IsHealthy = true,
@@ -121,26 +128,109 @@ public class WorkerOrchestrator(
         }
     }
 
-    private async Task StartWorkerTaskAsync(IMarketWorker worker, CancellationTokenSource cts)
+    private async Task EnsureMarketConnectionAsync(
+        MarketType marketType,
+        List<WorkerConfiguration> workers,
+        CancellationToken cancellationToken)
     {
+        await connectionLock.WaitAsync(cancellationToken);
         try
         {
-            await worker.StartAsync(cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            logger.LogInformation("Worker {WorkerId} was cancelled", worker.WorkerId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Worker {WorkerId} encountered an error", worker.WorkerId);
-
-            if (workerManager.GetWorker(worker.WorkerId) is { } instance)
+            if (marketConnections.TryGetValue(marketType, out MarketConnection? connection) && connection.IsConnected)
             {
-                instance.IsHealthy = false;
-                instance.LastError = ex.Message;
-                await workerManager.UpdateWorkerStatusAsync(worker.WorkerId, WorkerInstanceStatus.Error);
+                await UpdateSubscriptionsAsync(connection, workers, cancellationToken);
+                return;
             }
+
+            logger.LogInformation("Establishing connection to {MarketType}", marketType);
+
+            IMarketAdapter adapter = CreateMarketAdapter(marketType);
+            await adapter.ConnectAsync(cancellationToken);
+
+            var symbols = workers.Select(x => x.Symbol).Distinct().ToList();
+            foreach (string symbol in symbols)
+            {
+                await adapter.SubscribeAsync(symbol, cancellationToken);
+            }
+
+            marketConnections[marketType] = new MarketConnection
+            {
+                MarketType = marketType,
+                Adapter = adapter,
+                Symbols = symbols.ToHashSet(),
+                IsConnected = true,
+                ConnectedAt = DateTime.UtcNow
+            };
+
+            logger.LogInformation("Successfully connected to {MarketType} with {SymbolCount} symbols", marketType, symbols.Count);
+        }
+        finally
+        {
+            connectionLock.Release();
+        }
+    }
+
+    private async Task UpdateSubscriptionsAsync(
+        MarketConnection connection,
+        List<WorkerConfiguration> workers,
+        CancellationToken cancellationToken)
+    {
+        var requiredSymbols = workers.Select(x => x.Symbol).Distinct().ToHashSet();
+
+        IEnumerable<string> newSymbols = requiredSymbols.Except(connection.Symbols);
+        foreach (string symbol in newSymbols)
+        {
+            logger.LogInformation("Adding subscription for {Symbol} on {MarketType}", symbol, connection.MarketType);
+            await connection.Adapter.SubscribeAsync(symbol, cancellationToken);
+            connection.Symbols.Add(symbol);
+        }
+
+        IEnumerable<string> unusedSymbols = connection.Symbols.Except(requiredSymbols);
+        foreach (string symbol in unusedSymbols)
+        {
+            logger.LogInformation("Removing subscription for {Symbol} on {MarketType}", symbol, connection.MarketType);
+            await connection.Adapter.UnsubscribeAsync(symbol, cancellationToken);
+            connection.Symbols.Remove(symbol);
+        }
+    }
+
+    private async Task DisconnectUnusedMarketsAsync(List<WorkerConfiguration> activeWorkers)
+    {
+        var activeMarkets = activeWorkers.Select(x => x.Type).Distinct().ToHashSet();
+        var marketsToDisconnect = marketConnections.Keys.Where(x => !activeMarkets.Contains(x)).ToList();
+
+        foreach (MarketType marketType in marketsToDisconnect)
+        {
+            await DisconnectMarketAsync(marketType);
+        }
+    }
+
+    private async Task DisconnectMarketAsync(MarketType marketType)
+    {
+        await connectionLock.WaitAsync();
+        try
+        {
+            if (!marketConnections.TryGetValue(marketType, out MarketConnection? connection))
+            {
+                return;
+            }
+
+            logger.LogInformation("Disconnecting from {MarketType}", marketType);
+
+            try
+            {
+                await connection.Adapter.DisconnectAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error disconnecting from {MarketType}", marketType);
+            }
+
+            marketConnections.Remove(marketType);
+        }
+        finally
+        {
+            connectionLock.Release();
         }
     }
 
@@ -149,58 +239,67 @@ public class WorkerOrchestrator(
         IServiceScope scope = scopeFactory.CreateScope();
         ILogger<MarketWorker> workerLogger = scope.ServiceProvider.GetRequiredService<ILogger<MarketWorker>>();
 
-        // todo: start managing adapters in orchestrator
-        IMarketAdapter adapter = config.Type switch
-        {
-            MarketType.Okx => scope.ServiceProvider.GetRequiredService<OkxMarketAdapter>(),
-            _ => throw new NotSupportedException($"Market type {config.Type} is not supported")
-        };
-
         return new MarketWorker(config, marketDataCache, workerLogger);
     }
 
-    private async Task StopAllWorkersAsync()
+    private IMarketAdapter CreateMarketAdapter(MarketType marketType)
     {
+        IServiceScope scope = scopeFactory.CreateScope();
+
+        return marketType switch
+        {
+            MarketType.Okx => scope.ServiceProvider.GetRequiredService<OkxMarketAdapter>(),
+            _ => throw new NotSupportedException($"Market type {marketType} is not supported")
+        };
+    }
+
+    private async Task ShutdownAsync()
+    {
+        logger.LogInformation("Shutting down WorkerOrchestrator");
+
         IReadOnlyDictionary<int, WorkerInstance> activeWorkers = workerManager.GetWorkers();
-        if (activeWorkers.Count == 0)
-        {
-            logger.LogInformation("No workers to stop");
-            return;
-        }
-
-        logger.LogInformation("Stopping {WorkerCount} workers", activeWorkers.Count);
-
-        List<Task> stopTasks = [];
-        foreach ((int id, WorkerInstance instance) in activeWorkers)
-        {
-            stopTasks.Add(StopWorkerAsync(instance, id));
-        }
-
+        IEnumerable<Task> stopTasks = activeWorkers.Select(x => StopWorkerAsync(x.Value, x.Key));
         await Task.WhenAll(stopTasks);
-        logger.LogInformation("All workers stopped");
+
+        await connectionLock.WaitAsync();
+        try
+        {
+            IEnumerable<Task> disconnectTasks = marketConnections.Values.Select(async connection =>
+            {
+                try
+                {
+                    await connection.Adapter.DisconnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error disconnecting from {MarketType}", connection.MarketType);
+                }
+            });
+
+            await Task.WhenAll(disconnectTasks);
+            marketConnections.Clear();
+        }
+        finally
+        {
+            connectionLock.Release();
+        }
+
+        logger.LogInformation("WorkerOrchestrator shutdown complete");
     }
 
     private async Task StopWorkerAsync(WorkerInstance worker, int id)
     {
         if (worker == null)
         {
-            logger.LogDebug("Worker {WorkerId} not found during stop", id);
+            logger.LogWarning("Worker {WorkerId} not found during stop", id);
             return;
         }
 
         try
         {
             logger.LogInformation("Stopping worker {WorkerId}", id);
-
             await workerManager.UpdateWorkerStatusAsync(id, WorkerInstanceStatus.Stopping);
-            await worker.CancellationTokenSource.CancelAsync();
             await worker.Worker.StopAsync();
-
-            bool completedInTime = await WaitForTaskWithTimeoutAsync(worker.Task, shutdownTimeout);
-            if (!completedInTime)
-            {
-                logger.LogWarning("Worker {WorkerId} did not stop within {Timeout}", id, shutdownTimeout);
-            }
 
             await workerManager.UpdateWorkerStatusAsync(id, WorkerInstanceStatus.Stopped);
             await workerManager.RemoveWorkerAsync(id);
@@ -217,11 +316,17 @@ public class WorkerOrchestrator(
         }
     }
 
-    private static async Task<bool> WaitForTaskWithTimeoutAsync(Task task, TimeSpan timeout)
+    // maybe implement MarketManager instead? but definitely not today
+    private class MarketConnection
     {
-        using var cts = new CancellationTokenSource(timeout);
-        var timeoutTask = Task.Delay(Timeout.Infinite, cts.Token);
-        Task completedTask = await Task.WhenAny(task, timeoutTask);
-        return completedTask == task;
+        public MarketType MarketType { get; init; }
+
+        public IMarketAdapter Adapter { get; init; } = null!;
+
+        public HashSet<string> Symbols { get; init; } = [];
+
+        public bool IsConnected { get; init; }
+
+        public DateTime ConnectedAt { get; set; }
     }
 }

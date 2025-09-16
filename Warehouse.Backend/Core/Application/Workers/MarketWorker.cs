@@ -87,7 +87,7 @@ public class MarketWorker(WorkerConfiguration configuration, IMarketDataCache ma
 
                     if (marketData != null)
                     {
-                        // ...
+                        LastProcessedAt = DateTime.UtcNow;
                     }
 
                     await Task.Delay(configuration.ProcessingInterval, cancellationToken);
