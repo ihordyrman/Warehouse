@@ -2,7 +2,7 @@
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Endpoints.Validation;
 
-namespace Warehouse.Backend.Core.Models;
+namespace Warehouse.Backend.Core.Models.Endpoints;
 
 public abstract class BaseMarketDto
 {

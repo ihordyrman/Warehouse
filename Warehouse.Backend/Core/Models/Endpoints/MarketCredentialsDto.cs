@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Warehouse.Backend.Core.Domain;
 
-namespace Warehouse.Backend.Core.Models;
+namespace Warehouse.Backend.Core.Models.Endpoints;
 
 public abstract class BaseMarketCredentialsDto
 {
