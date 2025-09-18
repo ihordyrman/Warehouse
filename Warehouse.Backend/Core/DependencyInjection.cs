@@ -14,11 +14,12 @@ public static class DependencyInjection
     public static IServiceCollection AddCoreDependencies(this IServiceCollection services)
     {
         services.AddDataProtection(x => x.ApplicationDiscriminator = "Warehouse")
-            .PersistKeysToFileSystem(new DirectoryInfo(Paths.GetDataProtectionPath()))
+            .PersistKeysToFileSystem(new DirectoryInfo(Directory.GetCurrentDirectory()))
             .SetApplicationName("Warehouse.Backend")
             .SetDefaultKeyLifetime(TimeSpan.FromDays(365));
 
-        services.AddDbContext<WarehouseDbContext>(options => options.UseSqlite($"Data Source={Paths.GetDatabasePath()}"));
+        // todo: while in local development
+        services.AddDbContext<WarehouseDbContext>(options => options.UseNpgsql("Host=localhost;Database=warehouse;Username=postgres;Password=postgres"));
         services.AddInMemoryEventBus();
 
         services.AddScoped<WebSocketClient>();
@@ -37,19 +38,7 @@ public static class DependencyInjection
 
         IConfiguration configuration = scope.ServiceProvider.GetService<IConfiguration>()!;
 
-        if (await dbContext!.Database.CanConnectAsync())
-        {
-            IEnumerable<string> pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
-            if (pendingMigrations.Any())
-            {
-                await dbContext.Database.MigrateAsync();
-            }
-        }
-        else
-        {
-            await dbContext.Database.MigrateAsync();
-        }
-
+        await dbContext!.Database.EnsureCreatedAsync();
         await EnsureCredentialsPopulated(configuration, dbContext);
 
         return app;

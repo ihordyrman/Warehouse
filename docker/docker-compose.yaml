@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - warehouse-network
+
+  warehouse-backend:
+    build:
+      context: ../
+      dockerfile: Warehouse.Backend/Dockerfile
+    image: dyrman/warehouse-backend:latest
+    networks:
+      - warehouse-network
+
+volumes:
+  postgres_data:
+
+networks:
+  warehouse-network:
+    driver: bridge
