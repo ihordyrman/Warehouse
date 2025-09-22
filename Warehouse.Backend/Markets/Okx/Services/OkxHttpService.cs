@@ -26,8 +26,7 @@ public class OkxHttpService(
     public async Task<Result<OkxBalanceDetail[]>> GetBalanceAsync()
     {
         const string endpoint = "/api/v5/asset/balances";
-        Result<OkxBalanceDetail[]> response = await SendRequestAsync<OkxBalanceDetail[]>("GET", endpoint);
-        return response;
+        return await SendRequestAsync<OkxBalanceDetail[]>("GET", endpoint);
     }
 
     public async Task<Result<OkxFundingBalance[]>> GetFundingBalanceAsync(string? currency = null)
@@ -40,8 +39,7 @@ public class OkxHttpService(
             parameters["ccy"] = currency;
         }
 
-        Result<OkxFundingBalance[]> response = await SendRequestAsync<OkxFundingBalance[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxFundingBalance[]>("GET", endpoint, parameters);
     }
 
     public async Task<Result<OkxOrder[]>> GetPendingOrdersAsync(string? instType = null, string? instId = null)
@@ -59,8 +57,7 @@ public class OkxHttpService(
             parameters["instId"] = instId;
         }
 
-        Result<OkxOrder[]> response = await SendRequestAsync<OkxOrder[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxOrder[]>("GET", endpoint, parameters);
     }
 
     public async Task<Result<OkxOrder[]>> GetOrderHistoryAsync(string? instType = null, string? instId = null, int limit = 100)
@@ -81,8 +78,7 @@ public class OkxHttpService(
             parameters["instId"] = instId;
         }
 
-        Result<OkxOrder[]> response = await SendRequestAsync<OkxOrder[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxOrder[]>("GET", endpoint, parameters);
     }
 
     public async Task<Result<OkxTicker[]>> GetTickerAsync(string instId)
@@ -93,8 +89,7 @@ public class OkxHttpService(
             ["instId"] = instId
         };
 
-        Result<OkxTicker[]> response = await SendRequestAsync<OkxTicker[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxTicker[]>("GET", endpoint, parameters);
     }
 
     public async Task<Result<OkxTicker[]>> GetAllTickersAsync(string instType = InstrumentType.Spot)
@@ -105,8 +100,7 @@ public class OkxHttpService(
             ["instType"] = instType
         };
 
-        Result<OkxTicker[]> response = await SendRequestAsync<OkxTicker[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxTicker[]>("GET", endpoint, parameters);
     }
 
     public async Task<Result<OkxOrderBook[]>> GetOrderBookAsync(string instId, int depth = 20)
@@ -118,8 +112,43 @@ public class OkxHttpService(
             ["sz"] = depth.ToString()
         };
 
-        Result<OkxOrderBook[]> response = await SendRequestAsync<OkxOrderBook[]>("GET", endpoint, parameters);
-        return response;
+        return await SendRequestAsync<OkxOrderBook[]>("GET", endpoint, parameters);
+    }
+
+    public async Task<Result<OkxCandlestick[]>> GetCandlesticksAsync(
+        string instId,
+        string? bar = null,
+        string? after = null,
+        string? before = null,
+        int? limit = null)
+    {
+        const string endpoint = "/api/v5/market/candles";
+        var parameters = new Dictionary<string, string>
+        {
+            ["instId"] = instId
+        };
+
+        if (!string.IsNullOrEmpty(bar))
+        {
+            parameters["bar"] = bar;
+        }
+
+        if (!string.IsNullOrEmpty(after))
+        {
+            parameters["after"] = after;
+        }
+
+        if (!string.IsNullOrEmpty(before))
+        {
+            parameters["before"] = before;
+        }
+
+        if (limit.HasValue)
+        {
+            parameters["limit"] = limit.Value.ToString();
+        }
+
+        return await SendRequestAsync<OkxCandlestick[]>("GET", endpoint, parameters);
     }
 
     private async Task<Result<T>> SendRequestAsync<T>(string method, string endpoint, Dictionary<string, string>? parameters = null)

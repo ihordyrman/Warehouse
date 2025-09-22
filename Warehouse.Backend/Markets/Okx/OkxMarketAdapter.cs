@@ -130,16 +130,16 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 
     private async Task AuthenticateAsync(CancellationToken cancellationToken)
     {
-        object authRequest = OkxAuthService.CreateAuthRequest(credentials!);
+        object authRequest = OkxAuthService.CreateAuthRequest(credentials);
         await connectionManager.SendAsync(authRequest, cancellationToken);
         logger.LogInformation("Authentication request sent");
     }
 
-    private async void OnWebSocketMessage(object? sender, WebSocketMessage message)
+    private void OnWebSocketMessage(object? sender, WebSocketMessage message)
     {
         try
         {
-            await messageProcessor.ProcessMessageAsync(message);
+            messageProcessor.ProcessMessage(message);
         }
         catch (Exception ex)
         {

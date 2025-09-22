@@ -3,7 +3,7 @@ using Warehouse.Backend.Core.Domain;
 
 namespace Warehouse.Backend.Core.Models.Endpoints;
 
-public abstract class BaseMarketCredentialsDto
+public abstract class BaseMarketCredentialsModel
 {
     [Required(ErrorMessage = "Market ID is required")]
     [Range(1, int.MaxValue, ErrorMessage = "Market ID must be greater than 0")]
@@ -22,29 +22,29 @@ public abstract class BaseMarketCredentialsDto
     public string? SecretKey { get; init; } = string.Empty;
 }
 
-public class MarketCredentialsDto : BaseMarketCredentialsDto
+public class MarketCredentialsResponse : BaseMarketCredentialsModel
 {
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "ID must be greater than 0")]
     public int? Id { get; init; }
 }
 
-public class CreateMarketCredentialsDto : BaseMarketCredentialsDto;
+public class CreateMarketCredentialsRequest : BaseMarketCredentialsModel;
 
-public class UpdateMarketCredentialsDto : BaseMarketCredentialsDto;
+public class UpdateMarketCredentialsRequest : BaseMarketCredentialsModel;
 
 public static class MarketCredentialsMappingExtensions
 {
-    public static MarketCredentials AsEntity(this CreateMarketCredentialsDto credentialsDto, int marketId)
+    public static MarketCredentials AsEntity(this CreateMarketCredentialsRequest credentialsResponse, int marketId)
         => new()
         {
             MarketId = marketId,
-            ApiKey = credentialsDto.ApiKey!,
-            Passphrase = credentialsDto.Passphrase!,
-            SecretKey = credentialsDto.SecretKey!
+            ApiKey = credentialsResponse.ApiKey!,
+            Passphrase = credentialsResponse.Passphrase!,
+            SecretKey = credentialsResponse.SecretKey!
         };
 
-    public static MarketCredentialsDto AsDto(this MarketCredentials marketCredentials)
+    public static MarketCredentialsResponse AsDto(this MarketCredentials marketCredentials)
         => new()
         {
             Id = marketCredentials.Id,

@@ -22,4 +22,5 @@ namespace Warehouse.Backend.Markets.Okx;
 [JsonSerializable(typeof(OkxOrder))]
 [JsonSerializable(typeof(OkxOrderBook))]
 [JsonSerializable(typeof(OkxTicker))]
+[JsonSerializable(typeof(OkxCandlestick))]
 internal partial class OkxJsonContext : JsonSerializerContext;

@@ -18,9 +18,9 @@ public static class MarketCredentialsEndpoints
 
         group.MapGet(
                 "/",
-                async Task<Results<Ok<MarketCredentialsDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<MarketCredentialsResponse>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
-                    MarketCredentialsDto? credential = await db.MarketCredentials.Include(x => x.MarketDetails)
+                    MarketCredentialsResponse? credential = await db.MarketCredentials.Include(x => x.MarketDetails)
                         .Where(x => x.MarketId == id)
                         .Select(x => x.AsDto())
                         .FirstOrDefaultAsync();
@@ -33,18 +33,18 @@ public static class MarketCredentialsEndpoints
                 })
             .WithName("GetMarketCredential")
             .WithSummary("Get market credential by market ID")
-            .Produces<MarketCredentialsDto>()
+            .Produces<MarketCredentialsResponse>()
             .Produces(404);
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<MarketCredentialsDto>, BadRequest<ValidationProblemDetails>>> (
+                async Task<Results<Created<MarketCredentialsResponse>, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
-                    CreateMarketCredentialsDto marketCredentialsDto,
+                    CreateMarketCredentialsRequest marketCredentialsRequest,
                     ILoggerFactory loggerFactory,
                     int id) =>
                 {
-                    ValidationHelper.ValidateAndThrow(marketCredentialsDto);
+                    ValidationHelper.ValidateAndThrow(marketCredentialsRequest);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         throw new ValidationException("Market not found");
@@ -55,7 +55,7 @@ public static class MarketCredentialsEndpoints
                         throw new ValidationException("Credentials already exist for this market");
                     }
 
-                    MarketCredentials marketCredentials = marketCredentialsDto.AsEntity(id);
+                    MarketCredentials marketCredentials = marketCredentialsRequest.AsEntity(id);
 
                     try
                     {
@@ -74,7 +74,7 @@ public static class MarketCredentialsEndpoints
                 })
             .WithName("CreateMarketCredential")
             .WithSummary("Create new market credential")
-            .Produces<MarketCredentialsDto>(201)
+            .Produces<MarketCredentialsResponse>(201)
             .Produces<string>(400);
 
         group.MapPut(
@@ -82,10 +82,10 @@ public static class MarketCredentialsEndpoints
                 async Task<Results<Ok, NotFound, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
                     int id,
-                    UpdateMarketCredentialsDto marketCredentialsDto,
+                    UpdateMarketCredentialsRequest marketCredentialsRequest,
                     ILoggerFactory loggerFactory) =>
                 {
-                    ValidationHelper.ValidateAndThrow(marketCredentialsDto);
+                    ValidationHelper.ValidateAndThrow(marketCredentialsRequest);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         throw new ValidationException("Market not found");
@@ -99,9 +99,9 @@ public static class MarketCredentialsEndpoints
                     try
                     {
                         int rowsAffected = await db.MarketCredentials.Where(x => x.MarketId == id)
-                            .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.ApiKey, marketCredentialsDto.ApiKey)
-                                                    .SetProperty(x => x.Passphrase, marketCredentialsDto.Passphrase)
-                                                    .SetProperty(x => x.SecretKey, marketCredentialsDto.SecretKey));
+                            .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.ApiKey, marketCredentialsRequest.ApiKey)
+                                                    .SetProperty(x => x.Passphrase, marketCredentialsRequest.Passphrase)
+                                                    .SetProperty(x => x.SecretKey, marketCredentialsRequest.SecretKey));
 
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }

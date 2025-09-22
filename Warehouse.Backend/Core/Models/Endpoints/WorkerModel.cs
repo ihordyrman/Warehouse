@@ -3,7 +3,7 @@ using Warehouse.Backend.Core.Domain;
 
 namespace Warehouse.Backend.Core.Models.Endpoints;
 
-public class CreateWorkerDto
+public class CreateWorkerRequest
 {
     public bool Enabled { get; set; } = false;
 
@@ -17,7 +17,7 @@ public class CreateWorkerDto
     public string Symbol { get; set; } = string.Empty;
 }
 
-public class UpdateWorkerDto
+public class UpdateWorkerRequest
 {
     public bool? Enabled { get; set; }
 
@@ -29,7 +29,7 @@ public class UpdateWorkerDto
     public string? Symbol { get; set; }
 }
 
-public class WorkerDto
+public class WorkerResponse
 {
     public int Id { get; set; }
 
@@ -42,7 +42,7 @@ public class WorkerDto
 
 public static class WorkerMappingExtensions
 {
-    public static WorkerDto AsDto(this WorkerDetails entity)
+    public static WorkerResponse AsDto(this WorkerDetails entity)
         => new()
         {
             Id = entity.Id,
@@ -51,29 +51,29 @@ public static class WorkerMappingExtensions
             Symbol = entity.Symbol
         };
 
-    public static WorkerDetails AsEntity(this CreateWorkerDto dto)
+    public static WorkerDetails AsEntity(this CreateWorkerRequest request)
         => new()
         {
-            Enabled = dto.Enabled,
-            Type = dto.Type,
-            Symbol = dto.Symbol.ToUpperInvariant()
+            Enabled = request.Enabled,
+            Type = request.Type,
+            Symbol = request.Symbol.ToUpperInvariant()
         };
 
-    public static void UpdateFrom(this WorkerDetails entity, UpdateWorkerDto dto)
+    public static void UpdateFrom(this WorkerDetails entity, UpdateWorkerRequest request)
     {
-        if (dto.Enabled.HasValue)
+        if (request.Enabled.HasValue)
         {
-            entity.Enabled = dto.Enabled.Value;
+            entity.Enabled = request.Enabled.Value;
         }
 
-        if (dto.Type.HasValue)
+        if (request.Type.HasValue)
         {
-            entity.Type = dto.Type.Value;
+            entity.Type = request.Type.Value;
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.Symbol))
+        if (!string.IsNullOrWhiteSpace(request.Symbol))
         {
-            entity.Symbol = dto.Symbol.ToUpperInvariant();
+            entity.Symbol = request.Symbol.ToUpperInvariant();
         }
 
         entity.UpdatedAt = DateTime.UtcNow;

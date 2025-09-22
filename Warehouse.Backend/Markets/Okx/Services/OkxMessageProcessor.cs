@@ -17,7 +17,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
 
     private long sequenceNumber;
 
-    public async Task ProcessMessageAsync(WebSocketMessage message, CancellationToken cancellationToken = default)
+    public void ProcessMessage(WebSocketMessage message)
     {
         if (message.Text == null)
         {
@@ -39,7 +39,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
                 return;
             }
 
-            await RouteMessageAsync(okxMessage, cancellationToken);
+            RouteMessage(okxMessage);
         }
         catch (Exception ex)
         {
@@ -47,7 +47,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
         }
     }
 
-    private async Task RouteMessageAsync(OkxSocketResponse message, CancellationToken cancellationToken)
+    private void RouteMessage(OkxSocketResponse message)
     {
         if (message.Event == OkxEvent.Subscribe)
         {
@@ -66,11 +66,11 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
 
         if (message.Data?.Length > 0 && message.Arguments?.InstrumentId != null)
         {
-            await ProcessMarketDataAsync(message, cancellationToken);
+            ProcessMarketData(message);
         }
     }
 
-    private async Task ProcessMarketDataAsync(OkxSocketResponse message, CancellationToken cancellationToken)
+    private void ProcessMarketData(OkxSocketResponse message)
     {
         string symbol = message.Arguments!.InstrumentId!;
         OkxSocketBookData data = message.Data![0];

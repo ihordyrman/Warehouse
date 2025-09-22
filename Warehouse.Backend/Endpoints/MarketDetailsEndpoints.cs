@@ -20,17 +20,17 @@ public static class MarketEndpoints
                 "/",
                 async (WarehouseDbContext db) =>
                 {
-                    List<MarketDto> marketsWithCredentials = await db.MarketDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync();
+                    List<MarketResponse> marketsWithCredentials =
+                        await db.MarketDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync();
                     return TypedResults.Ok(marketsWithCredentials);
                 })
             .WithName("GetAllMarkets")
             .WithSummary("Get all markets")
-            .Produces<List<MarketDto>>()
-            .Produces<List<MarketDto>>();
+            .Produces<List<MarketResponse>>();
 
         group.MapGet(
                 "/{id:int}",
-                async Task<Results<Ok<MarketDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<MarketResponse>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
                     MarketDetails? market = await db.MarketDetails.FirstOrDefaultAsync(x => x.Id == id);
                     return market switch
@@ -41,23 +41,23 @@ public static class MarketEndpoints
                 })
             .WithName("GetMarket")
             .WithSummary("Get market by ID")
-            .Produces<MarketDto>()
+            .Produces<MarketResponse>()
             .Produces(404);
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<MarketDto>, BadRequest<ValidationProblemDetails>, BadRequest>> (
+                async Task<Results<Created<MarketResponse>, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
-                    CreateMarketDto marketDto,
+                    CreateMarketRequest marketRequest,
                     ILoggerFactory loggerFactory) =>
                 {
-                    ValidationHelper.ValidateAndThrow(marketDto);
-                    if (await db.MarketDetails.AnyAsync(x => x.Type == marketDto.Type))
+                    ValidationHelper.ValidateAndThrow(marketRequest);
+                    if (await db.MarketDetails.AnyAsync(x => x.Type == marketRequest.Type))
                     {
                         throw new ValidationException("Market already exist for this market type");
                     }
 
-                    MarketDetails marketDetails = marketDto.AsEntity();
+                    MarketDetails marketDetails = marketRequest.AsEntity();
 
                     try
                     {
@@ -67,7 +67,7 @@ public static class MarketEndpoints
                     catch (DbUpdateException ex)
                     {
                         ILogger logger = loggerFactory.CreateLogger("MarketAPI.Create");
-                        logger.LogError(ex, "Failed to create market for Type: {Type}", marketDto.Type);
+                        logger.LogError(ex, "Failed to create market for Type: {Type}", marketRequest.Type);
                         return TypedResults.BadRequest();
                     }
 
@@ -75,7 +75,7 @@ public static class MarketEndpoints
                 })
             .WithName("CreateMarket")
             .WithSummary("Create new market")
-            .Produces<MarketDto>(201)
+            .Produces<MarketResponse>(201)
             .Produces<string>(400);
 
         group.MapPut(
@@ -83,16 +83,16 @@ public static class MarketEndpoints
                 async Task<Results<Ok, NotFound, BadRequest<ValidationProblemDetails>, BadRequest>> (
                     WarehouseDbContext db,
                     int id,
-                    UpdateMarketDto marketDto,
+                    UpdateMarketRequest marketRequest,
                     ILoggerFactory loggerFactory) =>
                 {
-                    ValidationHelper.ValidateAndThrow(marketDto);
+                    ValidationHelper.ValidateAndThrow(marketRequest);
                     if (!await db.MarketDetails.AnyAsync(x => x.Id == id))
                     {
                         return TypedResults.NotFound();
                     }
 
-                    if (await db.MarketDetails.AnyAsync(x => x.Id != id && x.Type == marketDto.Type))
+                    if (await db.MarketDetails.AnyAsync(x => x.Id != id && x.Type == marketRequest.Type))
                     {
                         throw new ValidationException("Market already exist for this market type");
                     }
@@ -100,7 +100,7 @@ public static class MarketEndpoints
                     try
                     {
                         int rowsAffected = await db.MarketDetails.Where(x => x.Id == id)
-                            .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.Type, marketDto.Type));
+                            .ExecuteUpdateAsync(updates => updates.SetProperty(x => x.Type, marketRequest.Type));
                         return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
                     }
                     catch (DbUpdateException ex)
@@ -148,9 +148,9 @@ public static class MarketEndpoints
 
         group.MapGet(
                 "/{id:int}/credentials",
-                async Task<Results<Ok<MarketCredentialsDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<MarketCredentialsResponse>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
-                    MarketCredentialsDto? credentials = await db.MarketCredentials.AsNoTracking()
+                    MarketCredentialsResponse? credentials = await db.MarketCredentials.AsNoTracking()
                         .Where(x => x.MarketId == id)
                         .Select(x => x.AsDto())
                         .FirstOrDefaultAsync();
@@ -163,7 +163,7 @@ public static class MarketEndpoints
                 })
             .WithName("GetMarketCredentialsByMarketId")
             .WithSummary("Get all credentials for a specific market")
-            .Produces<List<MarketCredentialsDto>>()
+            .Produces<List<MarketCredentialsResponse>>()
             .Produces(404);
 
         return group;

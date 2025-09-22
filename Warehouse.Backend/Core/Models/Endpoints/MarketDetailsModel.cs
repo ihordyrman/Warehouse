@@ -4,33 +4,33 @@ using Warehouse.Backend.Endpoints.Validation;
 
 namespace Warehouse.Backend.Core.Models.Endpoints;
 
-public abstract class BaseMarketDto
+public abstract class BaseMarketModel
 {
     [Required(ErrorMessage = "Market type is required")]
     [ValidEnum(typeof(MarketType), ErrorMessage = "Invalid market type")]
     public MarketType Type { get; init; }
 }
 
-public class MarketDto : BaseMarketDto
+public class MarketResponse : BaseMarketModel
 {
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "ID must be greater than 0")]
     public int Id { get; init; }
 }
 
-public class CreateMarketDto : BaseMarketDto;
+public class CreateMarketRequest : BaseMarketModel;
 
-public class UpdateMarketDto : BaseMarketDto;
+public class UpdateMarketRequest : BaseMarketModel;
 
 public static class MarketMappingExtensions
 {
-    public static MarketDetails AsEntity(this CreateMarketDto dto)
+    public static MarketDetails AsEntity(this CreateMarketRequest request)
         => new()
         {
-            Type = dto.Type
+            Type = request.Type
         };
 
-    public static MarketDto AsDto(this MarketDetails marketDetails)
+    public static MarketResponse AsDto(this MarketDetails marketDetails)
         => new()
         {
             Id = marketDetails.Id,

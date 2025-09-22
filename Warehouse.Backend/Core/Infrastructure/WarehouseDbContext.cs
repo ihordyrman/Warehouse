@@ -17,6 +17,8 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 
     public DbSet<WorkerDetails> WorkerDetails { get; set; }
 
+    public DbSet<Candlestick> Candlesticks { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
@@ -37,6 +39,25 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasOne<MarketCredentials>(x => x.Credentials)
                 .WithOne(x => x.MarketDetails)
                 .HasForeignKey<MarketCredentials>(x => x.MarketId);
+        });
+
+        modelBuilder.Entity<Candlestick>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedOnAdd();
+            entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.MarketType).IsRequired();
+            entity.Property(x => x.Timestamp).IsRequired();
+            entity.Property(x => x.Timeframe).IsRequired().HasMaxLength(10);
+            entity.Property(x => x.Open).HasPrecision(28, 10);
+            entity.Property(x => x.High).HasPrecision(28, 10);
+            entity.Property(x => x.Low).HasPrecision(28, 10);
+            entity.Property(x => x.Close).HasPrecision(28, 10);
+            entity.Property(x => x.Volume).HasPrecision(28, 10);
+            entity.Property(x => x.VolumeQuote).HasPrecision(28, 10);
+
+            entity.HasIndex(x => new { x.Symbol, x.MarketType, x.Timeframe, x.Timestamp });
+            entity.HasIndex(x => x.Timestamp);
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

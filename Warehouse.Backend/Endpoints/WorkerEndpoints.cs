@@ -22,11 +22,11 @@ public static class WorkerEndpoints
                     => TypedResults.Ok(await db.WorkerDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync()))
             .WithName("GetAllWorkers")
             .WithSummary("Get all worker configurations")
-            .Produces<List<WorkerDto>>();
+            .Produces<List<WorkerResponse>>();
 
         group.MapGet(
                 "/{id:int}",
-                async Task<Results<Ok<WorkerDto>, NotFound>> (WarehouseDbContext db, int id) =>
+                async Task<Results<Ok<WorkerResponse>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
                     WorkerDetails? worker = await db.WorkerDetails.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
                     return worker switch
@@ -37,12 +37,15 @@ public static class WorkerEndpoints
                 })
             .WithName("GetWorkerById")
             .WithSummary("Get a worker by its ID")
-            .Produces<WorkerDto>()
+            .Produces<WorkerResponse>()
             .Produces(404);
 
         group.MapGet(
                 "/by-market/{marketType}",
-                async Task<Results<Ok<List<WorkerDto>>, BadRequest<ValidationProblemDetails>>> (WarehouseDbContext db, string marketType) =>
+                async Task<Results<Ok<List<WorkerResponse>>, BadRequest<ValidationProblemDetails>>> (
+                        WarehouseDbContext db,
+                        string marketType)
+                    =>
                 {
                     if (!Enum.TryParse(marketType, true, out MarketType type))
                     {
@@ -54,7 +57,7 @@ public static class WorkerEndpoints
                 })
             .WithName("GetWorkersByMarketType")
             .WithSummary("Get all workers for a specific market type")
-            .Produces<List<WorkerDto>>()
+            .Produces<List<WorkerResponse>>()
             .Produces<string>(400);
 
         group.MapGet(
@@ -63,23 +66,23 @@ public static class WorkerEndpoints
                     await db.WorkerDetails.AsNoTracking().Where(x => x.Enabled).Select(x => x.AsDto()).ToListAsync()))
             .WithName("GetEnabledWorkers")
             .WithSummary("Get all enabled workers")
-            .Produces<List<WorkerDto>>();
+            .Produces<List<WorkerResponse>>();
 
         group.MapPost(
                 "/",
-                async Task<Results<Created<WorkerDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
+                async Task<Results<Created<WorkerResponse>, NotFound, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
-                    CreateWorkerDto dto,
+                    CreateWorkerRequest request,
                     ILoggerFactory loggerFactory) =>
                 {
-                    ValidationHelper.ValidateAndThrow(dto);
+                    ValidationHelper.ValidateAndThrow(request);
 
-                    if (await db.WorkerDetails.AnyAsync(x => x.Type == dto.Type && x.Symbol == dto.Symbol.ToUpperInvariant()))
+                    if (await db.WorkerDetails.AnyAsync(x => x.Type == request.Type && x.Symbol == request.Symbol.ToUpperInvariant()))
                     {
-                        throw new ValidationException($"Worker configuration for {dto.Type}/{dto.Symbol} already exists");
+                        throw new ValidationException($"Worker configuration for {request.Type}/{request.Symbol} already exists");
                     }
 
-                    WorkerDetails worker = dto.AsEntity();
+                    WorkerDetails worker = request.AsEntity();
 
                     try
                     {
@@ -99,18 +102,18 @@ public static class WorkerEndpoints
                 })
             .WithName("CreateWorker")
             .WithSummary("Create a new worker configuration")
-            .Produces<WorkerDto>(201)
+            .Produces<WorkerResponse>(201)
             .ProducesValidationProblem();
 
         group.MapPut(
                 "/{id:int}",
-                async Task<Results<Ok<WorkerDto>, NotFound, BadRequest<ValidationProblemDetails>>> (
+                async Task<Results<Ok<WorkerResponse>, NotFound, BadRequest<ValidationProblemDetails>>> (
                     WarehouseDbContext db,
                     int id,
-                    UpdateWorkerDto dto,
+                    UpdateWorkerRequest request,
                     ILoggerFactory loggerFactory) =>
                 {
-                    ValidationHelper.ValidateAndThrow(dto);
+                    ValidationHelper.ValidateAndThrow(request);
                     WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
 
                     if (worker == null)
@@ -118,17 +121,18 @@ public static class WorkerEndpoints
                         return TypedResults.NotFound();
                     }
 
-                    if (dto.Type.HasValue || !string.IsNullOrWhiteSpace(dto.Symbol))
+                    if (request.Type.HasValue || !string.IsNullOrWhiteSpace(request.Symbol))
                     {
-                        MarketType checkType = dto.Type ?? worker.Type;
-                        string checkSymbol = (!string.IsNullOrWhiteSpace(dto.Symbol) ? dto.Symbol : worker.Symbol).ToUpperInvariant();
+                        MarketType checkType = request.Type ?? worker.Type;
+                        string checkSymbol =
+                            (!string.IsNullOrWhiteSpace(request.Symbol) ? request.Symbol : worker.Symbol).ToUpperInvariant();
                         if (await db.WorkerDetails.AnyAsync(x => x.Id != id && x.Type == checkType && x.Symbol == checkSymbol))
                         {
                             throw new ValidationException($"Worker configuration for {checkType}/{checkSymbol} already exists");
                         }
                     }
 
-                    worker.UpdateFrom(dto);
+                    worker.UpdateFrom(request);
 
                     try
                     {
@@ -147,7 +151,7 @@ public static class WorkerEndpoints
                 })
             .WithName("UpdateWorker")
             .WithSummary("Update an existing worker configuration")
-            .Produces<WorkerDto>()
+            .Produces<WorkerResponse>()
             .Produces(404)
             .ProducesValidationProblem();
 
