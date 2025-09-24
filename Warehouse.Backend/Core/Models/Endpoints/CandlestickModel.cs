@@ -2,7 +2,7 @@
 
 namespace Warehouse.Backend.Core.Models.Endpoints;
 
-public class CandlestickModel
+public abstract class CandlestickModel
 {
     public long Id { get; set; }
 
@@ -27,4 +27,26 @@ public class CandlestickModel
     public bool IsCompleted { get; set; }
 
     public string Timeframe { get; set; } = string.Empty;
+}
+
+public class CandlestickResponse : CandlestickModel;
+
+public static class CandlestickMappingExtensions
+{
+    public static CandlestickResponse ToResponse(this Candlestick entity)
+        => new()
+        {
+            Id = entity.Id,
+            Symbol = entity.Symbol,
+            MarketType = entity.MarketType,
+            Timestamp = entity.Timestamp,
+            Open = entity.Open,
+            High = entity.High,
+            Low = entity.Low,
+            Close = entity.Close,
+            Volume = entity.Volume,
+            VolumeQuote = entity.VolumeQuote,
+            IsCompleted = entity.IsCompleted,
+            Timeframe = entity.Timeframe
+        };
 }

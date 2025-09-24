@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Core.Abstractions.Markets;
 using Warehouse.Backend.Core.Abstractions.Workers;
 using Warehouse.Backend.Core.Application.EventBus;
+using Warehouse.Backend.Core.Application.Services;
 using Warehouse.Backend.Core.Application.Workers;
 using Warehouse.Backend.Core.Domain;
 using Warehouse.Backend.Core.Infrastructure;
@@ -24,6 +25,7 @@ public static class DependencyInjection
 
         services.AddScoped<WebSocketClient>();
         services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
+        services.AddScoped<ICandlestickService, CandlestickService>();
         services.AddSingleton<IWorkerManager, WorkerManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddHostedService<WorkerOrchestrator>();
