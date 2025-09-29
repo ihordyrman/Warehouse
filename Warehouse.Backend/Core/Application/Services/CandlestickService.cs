@@ -78,9 +78,7 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
         CancellationToken cancellationToken = default)
     {
         IQueryable<Candlestick> query =
-            dbContext.Candlesticks.Where(x => x.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase) &&
-                                              x.MarketType == marketType &&
-                                              x.Timeframe == timeframe);
+            dbContext.Candlesticks.Where(x => x.Symbol == symbol && x.MarketType == marketType && x.Timeframe == timeframe);
 
         if (from.HasValue)
         {
@@ -107,10 +105,7 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
         MarketType marketType,
         string timeframe,
         CancellationToken cancellationToken = default)
-        => await dbContext.Candlesticks
-            .Where(x => x.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase) &&
-                        x.MarketType == marketType &&
-                        x.Timeframe == timeframe)
+        => await dbContext.Candlesticks.Where(x => x.Symbol == symbol && x.MarketType == marketType && x.Timeframe == timeframe)
             .OrderByDescending(x => x.Timestamp)
             .FirstOrDefaultAsync(cancellationToken);
 }

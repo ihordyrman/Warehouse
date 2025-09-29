@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddSingleton<OkxHeartbeatService>();
         services.AddSingleton<OkxHttpService>();
         services.AddSingleton<OkxMarketAdapter>();
+        services.AddHostedService<OkxSynchronizationWorker>();
 
         services.AddHttpClient(
                 "Okx",
