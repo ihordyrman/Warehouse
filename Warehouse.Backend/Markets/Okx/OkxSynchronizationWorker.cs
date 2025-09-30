@@ -12,8 +12,8 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
     private const string Symbol = "OKB-USDT";
     private const string Timeframe = CandlestickTimeframes.OneMinute;
     private const int BatchSize = 100;
-
-    private static readonly DateTime SyncStartDate = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(10));
+    private static readonly DateTime SyncStartDate = DateTime.Today;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -23,54 +23,40 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
         ICandlestickService candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>();
         Candlestick? latestCandle = await candlestickService.GetLatestCandlestickAsync(Symbol, MarketType.Okx, Timeframe, stoppingToken);
 
-        DateTime startFrom = latestCandle?.Timestamp ?? SyncStartDate;
+        DateTime startFrom = latestCandle?.Timestamp.AddMinutes(-2) ?? SyncStartDate;
 
-        if (latestCandle != null)
-        {
-            logger.LogInformation("Found existing data. Latest candlestick: {Timestamp}. Syncing from there.", latestCandle.Timestamp);
-        }
-        else
-        {
-            logger.LogInformation("No existing data found. Starting full sync from {StartDate}", SyncStartDate);
-        }
-
-        await SyncCandlesticksAsync(startFrom, DateTime.UtcNow, stoppingToken);
+        await SyncCandlesticksAsync(startFrom, stoppingToken);
     }
 
-    private async Task SyncCandlesticksAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken)
+    private async Task SyncCandlesticksAsync(DateTime fromDate, CancellationToken cancellationToken)
     {
-        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-        OkxHttpService okxHttpService = scope.ServiceProvider.GetRequiredService<OkxHttpService>();
-        ICandlestickService candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>();
+        logger.LogInformation("Starting candlestick sync for {Symbol} from {FromDate}", Symbol, fromDate);
 
-        logger.LogInformation("Starting candlestick sync for {Symbol} from {FromDate} to {ToDate}", Symbol, fromDate, toDate);
-
-        int totalFetched = 0;
         int totalSaved = 0;
-        DateTime? currentAfter = null;
-        bool hasMoreData = true;
+        DateTime? lastSynced = null;
 
-        while (hasMoreData && !cancellationToken.IsCancellationRequested)
+        while (await periodicTimer.WaitForNextTickAsync(cancellationToken))
         {
             try
             {
-                string? afterTimestamp = currentAfter.HasValue ?
-                    new DateTimeOffset(currentAfter.Value).ToUnixTimeMilliseconds().ToString() :
-                    new DateTimeOffset(SyncStartDate).ToUnixTimeMilliseconds().ToString();
+                await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                OkxHttpService okxHttpService = scope.ServiceProvider.GetRequiredService<OkxHttpService>();
+                ICandlestickService candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>();
 
-                string beforeTimestamp = new DateTimeOffset(toDate).ToUnixTimeMilliseconds().ToString();
+                string before = lastSynced.HasValue ?
+                    new DateTimeOffset(lastSynced.Value).ToUnixTimeMilliseconds().ToString() :
+                    new DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString();
 
                 Result<OkxCandlestick[]> result = await okxHttpService.GetCandlesticksAsync(
                     Symbol,
                     Timeframe,
-                    afterTimestamp,
-                    beforeTimestamp,
-                    BatchSize);
+                    before: before,
+                    limit: BatchSize);
 
                 if (!result.IsSuccess)
                 {
                     logger.LogError("Failed to fetch candlesticks: {Error}", result.Error);
-                    break;
+                    continue;
                 }
 
                 OkxCandlestick[]? okxCandles = result.Value;
@@ -78,11 +64,9 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
                 if (okxCandles == null || okxCandles.Length == 0)
                 {
                     logger.LogInformation("No more candlesticks to fetch");
-                    hasMoreData = false;
-                    break;
+                    continue;
                 }
 
-                totalFetched += okxCandles.Length;
                 logger.LogDebug("Fetched {Count} candlesticks", okxCandles.Length);
 
                 var candlesticks = okxCandles.Select(okxCandle => new Candlestick
@@ -101,26 +85,22 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
                     })
                     .ToList();
 
-                await candlestickService.SaveCandlesticksAsync(candlesticks, cancellationToken);
-                totalSaved += candlesticks.Count;
+                int saved = await candlestickService.SaveCandlesticksAsync(candlesticks, cancellationToken);
+                totalSaved += saved;
 
                 logger.LogInformation(
-                    "Saved batch of {Count} candlesticks. Latest: {LatestTimestamp}. Total fetched: {TotalFetched}, Total saved: {TotalSaved}",
-                    candlesticks.Count,
-                    candlesticks.Max(c => c.Timestamp),
-                    totalFetched,
+                    "Saved batch of {Count} candlesticks. Latest: {LatestTimestamp}. Total saved: {TotalSaved}",
+                    saved,
+                    candlesticks.Max(x => x.Timestamp),
                     totalSaved);
 
                 if (okxCandles.Length < BatchSize)
                 {
-                    hasMoreData = false;
-                    break;
+                    continue;
                 }
 
-                DateTime oldestInBatch = okxCandles.Min(c => c.Timestamp);
-                currentAfter = oldestInBatch;
-
-                await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+                DateTime oldestInBatch = okxCandles.Min(x => x.Timestamp);
+                lastSynced = oldestInBatch;
             }
             catch (OperationCanceledException)
             {
@@ -133,10 +113,6 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
             }
         }
 
-        logger.LogInformation(
-            "Sync completed for {Symbol}. Total fetched: {TotalFetched}, Total saved: {TotalSaved}",
-            Symbol,
-            totalFetched,
-            totalSaved);
+        logger.LogInformation("Sync completed for {Symbol}. Total saved: {TotalSaved}", Symbol, totalSaved);
     }
 }

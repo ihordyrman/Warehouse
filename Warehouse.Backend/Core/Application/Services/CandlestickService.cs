@@ -6,7 +6,7 @@ namespace Warehouse.Backend.Core.Application.Services;
 
 public interface ICandlestickService
 {
-    Task SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default);
+    Task<int> SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default);
 
     Task<List<Candlestick>> GetCandlesticksAsync(
         string symbol,
@@ -26,37 +26,48 @@ public interface ICandlestickService
 
 public class CandlestickService(WarehouseDbContext dbContext, ILogger<CandlestickService> logger) : ICandlestickService
 {
-    public async Task SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default)
+    public async Task<int> SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default)
     {
         var candleList = candlesticks.ToList();
+        int saved = 0;
         if (candleList.Count == 0)
         {
-            return;
+            return saved;
         }
 
         try
         {
+            // todo: think about more optimal way
             foreach (Candlestick candlestick in candleList)
             {
                 Candlestick? existing = await dbContext.Candlesticks.FirstOrDefaultAsync(
-                    x => x.Symbol == candlestick.Symbol && x.MarketType == candlestick.MarketType && x.Timeframe == candlestick.Timeframe,
+                    x => x.Symbol == candlestick.Symbol &&
+                         x.MarketType == candlestick.MarketType &&
+                         x.Timeframe == candlestick.Timeframe &&
+                         x.Timestamp == candlestick.Timestamp,
                     cancellationToken);
 
                 if (existing == null)
                 {
                     dbContext.Candlesticks.Add(candlestick);
+                    saved++;
+                    continue;
                 }
-                else
+
+                if (existing.IsCompleted && candlestick.IsCompleted)
                 {
-                    existing.Open = candlestick.Open;
-                    existing.High = candlestick.High;
-                    existing.Low = candlestick.Low;
-                    existing.Close = candlestick.Close;
-                    existing.Volume = candlestick.Volume;
-                    existing.VolumeQuote = candlestick.VolumeQuote;
-                    existing.IsCompleted = candlestick.IsCompleted;
-                    existing.Timestamp = candlestick.Timestamp;
+                    continue;
                 }
+
+                existing.Open = candlestick.Open;
+                existing.High = candlestick.High;
+                existing.Low = candlestick.Low;
+                existing.Close = candlestick.Close;
+                existing.Volume = candlestick.Volume;
+                existing.VolumeQuote = candlestick.VolumeQuote;
+                existing.IsCompleted = candlestick.IsCompleted;
+                existing.Timestamp = candlestick.Timestamp;
+                saved++;
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -66,6 +77,8 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
             logger.LogError(ex, "Failed to save {Count} candlesticks", candleList.Count);
             throw;
         }
+
+        return saved;
     }
 
     public async Task<List<Candlestick>> GetCandlesticksAsync(
