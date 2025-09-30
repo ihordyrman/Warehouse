@@ -11,7 +11,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
     private readonly OkxConnectionManager connectionManager;
     private readonly MarketCredentials credentials;
     private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
-    private readonly OkxHttpService httpService;
     private readonly ILogger<OkxMarketAdapter> logger;
     private readonly OkxMessageProcessor messageProcessor;
     private readonly OkxSubscriptionManager subscriptionManager;
@@ -23,11 +22,9 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         IMarketDataCache dataCache,
         IWebSocketClient webSocketClient,
         OkxHeartbeatService heartbeatService,
-        OkxHttpService httpService,
         ILoggerFactory loggerFactory)
     {
         this.webSocketClient = webSocketClient;
-        this.httpService = httpService;
         logger = loggerFactory.CreateLogger<OkxMarketAdapter>();
 
         IServiceScope scope = scopeFactory.CreateScope();
@@ -73,8 +70,6 @@ internal sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 
         try
         {
-            httpService.Configure(credentials!);
-
             Uri uri = GetConnectionUri(OkxChannelType.Public);
             bool connected = await connectionManager.ConnectAsync(uri, cancellationToken);
 

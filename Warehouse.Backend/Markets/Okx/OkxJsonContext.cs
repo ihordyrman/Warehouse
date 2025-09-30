@@ -16,6 +16,7 @@ namespace Warehouse.Backend.Markets.Okx;
 [JsonSerializable(typeof(OkxHttpResponse<OkxOrder[]>))]
 [JsonSerializable(typeof(OkxHttpResponse<OkxOrderBook[]>))]
 [JsonSerializable(typeof(OkxHttpResponse<OkxTicker[]>))]
+[JsonSerializable(typeof(OkxHttpResponse<OkxCandlestick[]>))]
 [JsonSerializable(typeof(OkxAccountBalance))]
 [JsonSerializable(typeof(OkxBalanceDetail))]
 [JsonSerializable(typeof(OkxFundingBalance))]

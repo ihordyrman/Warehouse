@@ -4,15 +4,13 @@ using System.Web;
 using Microsoft.Extensions.Options;
 using Warehouse.Backend.Core;
 using Warehouse.Backend.Core.Domain;
+using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Messages.Http;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
-public class OkxHttpService(
-    IOptions<MarketCredentials> okxAuthConfiguration,
-    ILogger<OkxHttpService> logger,
-    IHttpClientFactory httpClientFactory)
+public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory httpClientFactory, ICredentialsProvider credentialsProvider)
 {
     private readonly JsonSerializerOptions serializerOptions = new()
     {
@@ -20,8 +18,6 @@ public class OkxHttpService(
     };
 
     private MarketCredentials? Credentials { get; set; }
-
-    public void Configure(MarketCredentials credentials) => Credentials = credentials;
 
     public async Task<Result<OkxBalanceDetail[]>> GetBalanceAsync()
     {
@@ -155,14 +151,18 @@ public class OkxHttpService(
     {
         if (Credentials is null)
         {
-            return Result<T>.Failure(new Error("Credentials are not found"));
+            Credentials = await credentialsProvider.GetCredentialsAsync(MarketType.Okx);
+            if (Credentials is null)
+            {
+                return Result<T>.Failure(new Error("Credentials are not found"));
+            }
         }
 
         using HttpClient httpClient = httpClientFactory.CreateClient("Okx");
 
         string requestPath = BuildRequestPath();
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-        string signature = OkxAuthService.GenerateSignature(timestamp, okxAuthConfiguration.Value.SecretKey, method, requestPath);
+        string signature = OkxAuthService.GenerateSignature(timestamp, Credentials.SecretKey, method, requestPath);
 
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature);
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp);

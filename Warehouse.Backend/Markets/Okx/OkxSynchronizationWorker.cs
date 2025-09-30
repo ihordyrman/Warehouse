@@ -56,7 +56,7 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
             {
                 string? afterTimestamp = currentAfter.HasValue ?
                     new DateTimeOffset(currentAfter.Value).ToUnixTimeMilliseconds().ToString() :
-                    null;
+                    new DateTimeOffset(SyncStartDate).ToUnixTimeMilliseconds().ToString();
 
                 string beforeTimestamp = new DateTimeOffset(toDate).ToUnixTimeMilliseconds().ToString();
 

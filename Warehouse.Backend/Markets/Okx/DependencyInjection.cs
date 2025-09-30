@@ -13,7 +13,7 @@ public static class DependencyInjection
         services.Configure<MarketCredentials>(configuration.GetSection(nameof(MarketCredentials)));
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<OkxHeartbeatService>();
-        services.AddSingleton<OkxHttpService>();
+        services.AddScoped<OkxHttpService>();
         services.AddSingleton<OkxMarketAdapter>();
         services.AddHostedService<OkxSynchronizationWorker>();
 
