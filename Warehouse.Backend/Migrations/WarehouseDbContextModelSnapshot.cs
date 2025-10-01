@@ -34,9 +34,6 @@ namespace Warehouse.Backend.Migrations
                         .HasPrecision(28, 10)
                         .HasColumnType("numeric(28,10)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<decimal>("High")
                         .HasPrecision(28, 10)
                         .HasColumnType("numeric(28,10)");
@@ -66,9 +63,6 @@ namespace Warehouse.Backend.Migrations
                         .HasColumnType("character varying(10)");
 
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Volume")

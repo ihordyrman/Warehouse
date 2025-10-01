@@ -29,8 +29,6 @@ namespace Warehouse.Backend.Migrations
                     VolumeQuote = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
                     IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
                     Timeframe = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

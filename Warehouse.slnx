@@ -1,15 +1,16 @@
 ﻿<Solution>
-    <Folder Name="/Architecture/">
-        <File Path="Architecture\detailed-flow.mmd" />
-        <File Path="Architecture\trading-flow.mmd" />
-    </Folder>
-    <Folder Name="/docker/">
-        <File Path="docker\docker-compose.yaml" />
-    </Folder>
-    <Folder Name="/Solution items/">
-        <File Path="README.md" />
-        <File Path=".gitignore" />
-        <File Path=".editorconfig" />
-    </Folder>
-    <Project Path="Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
+  <Folder Name="/Architecture/">
+    <File Path="Architecture\detailed-flow.mmd" />
+    <File Path="Architecture\trading-flow.mmd" />
+  </Folder>
+  <Folder Name="/docker/">
+    <File Path="docker\docker-compose.yaml" />
+  </Folder>
+  <Folder Name="/Solution items/">
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+    <File Path=".editorconfig" />
+    <File Path="sync.sh" />
+  </Folder>
+  <Project Path="Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
 </Solution>

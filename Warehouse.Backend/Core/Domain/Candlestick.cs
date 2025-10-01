@@ -1,6 +1,6 @@
 ﻿namespace Warehouse.Backend.Core.Domain;
 
-public class Candlestick : AuditEntity
+public class Candlestick
 {
     public long Id { get; set; }
 
@@ -24,6 +24,5 @@ public class Candlestick : AuditEntity
 
     public bool IsCompleted { get; set; }
 
-    /// 1m, 1H, 1D
     public required string Timeframe { get; set; }
 }
