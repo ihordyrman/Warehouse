@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using Warehouse.Backend.Core.Abstractions.Markets;
+using Warehouse.Core.Abstractions.Markets;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
@@ -103,6 +103,7 @@ internal sealed class OkxSubscriptionManager
         await Task.WhenAll(tasks);
     }
 
+    // ReSharper disable once AsyncVoidMethod
     private async void OnConnectionStateChanged(object? sender, ConnectionState state)
     {
         if (state != ConnectionState.Connected || subscriptions.IsEmpty)

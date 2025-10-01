@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿// ReSharper disable InconsistentNaming
+
+using System.Text.Json.Serialization;
 
 namespace Warehouse.Backend.Markets.Okx.Messages.Http;
 

@@ -1,4 +1,4 @@
-﻿using Warehouse.Backend.Core.Infrastructure;
+﻿using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 

@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Core.Infrastructure;
-using Warehouse.Backend.Core.Models.Endpoints;
+using Warehouse.Backend.Endpoints.Models;
 using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Endpoints;
 

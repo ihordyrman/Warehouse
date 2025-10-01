@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Polly;
-using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Core.Infrastructure;
 using Warehouse.Backend.Markets.Okx.Services;
+using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx;
 
@@ -36,7 +36,7 @@ public static class DependencyInjection
                     .WaitAndRetryAsync(
                         3,
                         retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                        (outcome, timespan, retryCount, context) =>
+                        (_, timespan, retryCount, _) =>
                         {
                             logger.LogWarning("Retry attempt {RetryCount} after {TimeSpan} seconds", retryCount, timespan);
                         });

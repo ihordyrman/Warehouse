@@ -1,8 +1,8 @@
-﻿using Warehouse.Backend.Core.Abstractions.Markets;
-using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Core.Infrastructure;
-using Warehouse.Backend.Markets.Okx.Constants;
+﻿using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Services;
+using Warehouse.Core.Abstractions.Markets;
+using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx;
 

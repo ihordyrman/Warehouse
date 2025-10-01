@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Warehouse.Backend.Core.Application.Services;
-using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Core.Models.Endpoints;
+using Warehouse.Backend.Endpoints.Models;
+using Warehouse.Core.Application.Services;
+using Warehouse.Core.Domain;
 
 namespace Warehouse.Backend.Endpoints;
 

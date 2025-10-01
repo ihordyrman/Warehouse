@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using Warehouse.Backend.Core.Domain;
+using Warehouse.Core.Domain;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 

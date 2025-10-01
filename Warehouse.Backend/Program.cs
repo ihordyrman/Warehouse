@@ -1,14 +1,19 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Warehouse.Backend.Core;
+using Microsoft.EntityFrameworkCore;
+using Warehouse.Backend;
 using Warehouse.Backend.Endpoints;
 using Warehouse.Backend.Markets.Okx;
+using Warehouse.Core;
+using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApi(builder.Environment);
 builder.Services.AddCoreDependencies();
 builder.Services.AddOkxSupport(builder.Configuration);
+builder.Services.AddHostedService<WorkerOrchestrator>();
 
 WebApplication app = builder.Build();
 
@@ -34,6 +39,53 @@ app.UseExceptionHandler(exceptionHandlerApp =>
     });
 });
 
-await app.EnsureDbReadinessAsync();
+await EnsureDbReadinessAsync(app);
 app.AddApi();
 app.Run();
+
+static async Task EnsureDbReadinessAsync(WebApplication app)
+{
+    IServiceScopeFactory? scopeFactory = app.Services.GetService<IServiceScopeFactory>();
+    using IServiceScope scope = scopeFactory!.CreateScope();
+    WarehouseDbContext? dbContext = scope.ServiceProvider.GetService<WarehouseDbContext>();
+
+    IConfiguration configuration = scope.ServiceProvider.GetService<IConfiguration>()!;
+
+    await dbContext!.Database.EnsureCreatedAsync();
+    await EnsureCredentialsPopulated(configuration, dbContext);
+}
+
+static async Task EnsureCredentialsPopulated(IConfiguration configuration, WarehouseDbContext dbContext)
+{
+    if (await dbContext.MarketCredentials.AnyAsync())
+    {
+        return;
+    }
+
+    const string section = "OkxAuthConfiguration";
+    string apiKey = configuration[$"{section}:ApiKey"] ?? throw new ArgumentNullException();
+    string passPhrase = configuration[$"{section}:Passphrase"] ?? throw new ArgumentNullException();
+    string secretKey = configuration[$"{section}:SecretKey"] ?? throw new ArgumentNullException();
+
+    MarketDetails? market = await dbContext.MarketDetails.FirstOrDefaultAsync(x => x.Type == MarketType.Okx);
+    if (market is null)
+    {
+        market = new MarketDetails
+        {
+            Type = MarketType.Okx
+        };
+
+        dbContext.MarketDetails.Add(market);
+    }
+
+    var marketCredentials = new MarketCredentials
+    {
+        ApiKey = apiKey,
+        Passphrase = passPhrase,
+        SecretKey = secretKey,
+        MarketDetails = market
+    };
+
+    dbContext.MarketCredentials.Add(marketCredentials);
+    await dbContext.SaveChangesAsync();
+}

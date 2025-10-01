@@ -1,5 +1,5 @@
 CURRENT_DATE=$(date '+%Y-%m-%d')
-BASE_DIR="/home/ihor/okx-data"
+BASE_DIR="/home/ubuntu/okx-data"
 LOG_FILE="$BASE_DIR/monitor.log"
 CURRENCIES=("OKB" "BTC" "SOL" "ETH" "DOGE" "XRP" "BCH" "LTC")
 

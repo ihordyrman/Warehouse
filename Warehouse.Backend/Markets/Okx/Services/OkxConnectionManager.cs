@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
-using Warehouse.Backend.Core.Abstractions.Markets;
-using Warehouse.Backend.Core.Infrastructure;
+using Warehouse.Core.Abstractions.Markets;
+using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
@@ -39,7 +39,7 @@ internal sealed class OkxConnectionManager : IDisposable
         disposed = true;
 
         StopReconnect();
-        connectionLock?.Dispose();
+        connectionLock.Dispose();
         webSocketClient.StateChanged -= OnStateChanged;
     }
 

@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
-using Warehouse.Backend.Core.Abstractions.Markets;
-using Warehouse.Backend.Core.Domain;
-using Warehouse.Backend.Core.Infrastructure;
-using Warehouse.Backend.Core.Models;
 using Warehouse.Backend.Markets.Okx.Messages;
 using Warehouse.Backend.Markets.Okx.Messages.Socket;
+using Warehouse.Core.Abstractions.Markets;
+using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Models;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
