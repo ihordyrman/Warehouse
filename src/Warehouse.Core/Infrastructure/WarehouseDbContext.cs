@@ -7,9 +7,9 @@ using Warehouse.Core.Domain;
 
 namespace Warehouse.Core.Infrastructure;
 
-public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvider dataProtection) : DbContext(options)
+public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvider? dataProtection) : DbContext(options)
 {
-    private readonly IDataProtector protector = dataProtection.CreateProtector("Warehouse.Credentials");
+    private readonly IDataProtector protector = dataProtection?.CreateProtector("Warehouse.Credentials") ?? null!;
 
     public DbSet<MarketCredentials> MarketCredentials { get; set; }
 

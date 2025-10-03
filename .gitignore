@@ -56,3 +56,4 @@ nunit-*.xml
 .idea/
 *.DotSettings
 *.DotSettings.user
+**/key-*.xml
