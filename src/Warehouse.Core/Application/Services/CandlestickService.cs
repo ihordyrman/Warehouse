@@ -9,14 +9,13 @@ public interface ICandlestickService
 {
     Task<int> SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default);
 
-    Task<List<Candlestick>> GetCandlesticksAsync(
+    IAsyncEnumerable<Candlestick> GetCandlesticksAsync(
         string symbol,
         MarketType marketType,
         string timeframe,
         DateTime? from = null,
         DateTime? to = null,
-        int? limit = null,
-        CancellationToken cancellationToken = default);
+        int? limit = null);
 
     Task<Candlestick?> GetLatestCandlestickAsync(
         string symbol,
@@ -97,14 +96,13 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
         }
     }
 
-    public async Task<List<Candlestick>> GetCandlesticksAsync(
+    public async IAsyncEnumerable<Candlestick> GetCandlesticksAsync(
         string symbol,
         MarketType marketType,
         string timeframe,
         DateTime? from = null,
         DateTime? to = null,
-        int? limit = null,
-        CancellationToken cancellationToken = default)
+        int? limit = null)
     {
         IQueryable<Candlestick> query =
             dbContext.Candlesticks.Where(x => x.Symbol == symbol && x.MarketType == marketType && x.Timeframe == timeframe);
@@ -126,7 +124,10 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
             query = query.Take(limit.Value);
         }
 
-        return await query.ToListAsync(cancellationToken);
+        await foreach (Candlestick candlestick in query.AsAsyncEnumerable())
+        {
+            yield return candlestick;
+        }
     }
 
     public async Task<Candlestick?> GetLatestCandlestickAsync(

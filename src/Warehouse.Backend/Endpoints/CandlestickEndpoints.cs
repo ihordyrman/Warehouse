@@ -26,13 +26,18 @@ public static class CandlestickEndpoints
                 {
                     try
                     {
-                        List<Candlestick> candlesticks = await candlestickService.GetCandlesticksAsync(
-                            symbol,
-                            marketType,
-                            timeframe,
-                            from,
-                            to,
-                            limit);
+                        List<Candlestick> candlesticks = [];
+                        await foreach (Candlestick candlestick in candlestickService.GetCandlesticksAsync(
+                                           symbol,
+                                           marketType,
+                                           timeframe,
+                                           from,
+                                           to,
+                                           limit))
+                        {
+                            candlesticks.Add(candlestick);
+                        }
+
                         return TypedResults.Ok(candlesticks.Select(x => x.ToResponse()).ToList());
                     }
                     catch (Exception ex)
