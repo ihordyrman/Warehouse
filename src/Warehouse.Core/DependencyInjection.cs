@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Warehouse.Core.Abstractions.Markets;
 using Warehouse.Core.Abstractions.Workers;
 using Warehouse.Core.Application.EventBus;

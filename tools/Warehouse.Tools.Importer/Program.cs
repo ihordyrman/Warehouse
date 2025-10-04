@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Json;
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
@@ -8,7 +9,8 @@ using Spectre.Console;
 using Warehouse.Core;
 using Warehouse.Core.Application.Services;
 using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using static Warehouse.Core.Domain.Instrument;
+using static Warehouse.Core.Domain.MarketType;
 
 namespace Warehouse.Tools.Importer;
 
@@ -32,10 +34,15 @@ public static class Program
         try
         {
             string choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>().Title("[green]Select a tool:[/]").AddChoices("Import CSV File", "Import Directory", "Exit"));
+                new SelectionPrompt<string>().Title("[green]Select a tool:[/]")
+                    .AddChoices("Binance API", "Import CSV File", "Import Directory", "Exit"));
 
             switch (choice)
             {
+                case "Binance API":
+                    await ImportFromBinanceAsync(serviceProvider);
+                    break;
+
                 case "Import CSV File":
                     await ImportSingleFileAsync(serviceProvider);
                     break;
@@ -55,6 +62,76 @@ public static class Program
         {
             AnsiConsole.WriteException(ex);
             return 1;
+        }
+    }
+
+    private static async Task ImportFromBinanceAsync(ServiceProvider serviceProvider)
+    {
+        string instrument = AnsiConsole.Prompt(
+            new SelectionPrompt<string>().Title("[green]Select an instrument:[/]")
+                .AddChoices(nameof(BTC), nameof(SOL), nameof(ETH), nameof(DOGE), nameof(XRP), nameof(BCH), nameof(LTC)));
+
+        string limit = AnsiConsole.Prompt(
+            new SelectionPrompt<string>().Title("[green]Select an limit range:[/]").AddChoices("10", "100", "1000"));
+
+        var httpClient = new HttpClient();
+        int totalImported = 0;
+        var start = new DateTime(2025, 01, 01);
+        DateTime currentDate = start;
+        ICandlestickService? candlestickService = serviceProvider.GetService<ICandlestickService>();
+
+        while (currentDate < DateTime.Now - TimeSpan.FromMinutes(1))
+        {
+            long startTime = new DateTimeOffset(currentDate.ToUniversalTime()).ToUnixTimeMilliseconds();
+            HttpResponseMessage response = await httpClient.GetAsync(
+                $"https://api.binance.com/api/v3/klines?symbol={instrument}USDT&limit={limit}&interval=1m&startTime={startTime}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                AnsiConsole.WriteLine($"Failed to fetch data at {currentDate}. Status: {response.StatusCode}");
+                return;
+            }
+
+            string json = await response.Content.ReadAsStringAsync();
+            JsonElement candles = JsonSerializer.Deserialize<JsonElement>(json);
+
+            var candlesticks = new List<Candlestick>();
+
+            foreach (JsonElement candle in candles.EnumerateArray())
+            {
+                JsonElement[] array = candle.EnumerateArray().ToArray();
+
+                long openTime = array[0].GetInt64();
+                long closeTime = array[6].GetInt64();
+                if (!Enum.TryParse(instrument, out Instrument inst))
+                {
+                    AnsiConsole.WriteLine("Failed to parse enum");
+                    return;
+                }
+
+                var candlestick = new Candlestick
+                {
+                    Symbol = new Pair(inst, USDT),
+                    MarketType = Binance,
+                    Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(openTime).UtcDateTime,
+                    Open = decimal.Parse(array[1].GetString()!),
+                    High = decimal.Parse(array[2].GetString()!),
+                    Low = decimal.Parse(array[3].GetString()!),
+                    Close = decimal.Parse(array[4].GetString()!),
+                    Volume = decimal.Parse(array[5].GetString()!),
+                    VolumeQuote = decimal.Parse(array[7].GetString()!),
+                    IsCompleted = closeTime < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    Timeframe = "1m"
+                };
+
+                candlesticks.Add(candlestick);
+            }
+
+            int updated = await candlestickService!.SaveCandlesticksAsync(candlesticks);
+            currentDate = candlesticks.Last().Timestamp;
+            totalImported += updated;
+            AnsiConsole.WriteLine($"Imported {updated} candles. Total: {totalImported}. Last timestamp: {candlesticks.Last().Timestamp}");
+            await Task.Delay(100);
         }
     }
 
@@ -114,7 +191,7 @@ public static class Program
                 High = x.High,
                 IsCompleted = true,
                 Low = x.Low,
-                MarketType = MarketType.Okx,
+                MarketType = Okx,
                 Open = x.Open,
                 Volume = x.Volume,
                 VolumeQuote = x.VolumeQuote,

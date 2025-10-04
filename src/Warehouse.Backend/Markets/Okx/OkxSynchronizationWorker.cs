@@ -4,12 +4,13 @@ using Warehouse.Backend.Markets.Okx.Services;
 using Warehouse.Core;
 using Warehouse.Core.Application.Services;
 using Warehouse.Core.Domain;
+using static Warehouse.Core.Domain.Instrument;
 
 namespace Warehouse.Backend.Markets.Okx;
 
 public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger<OkxSynchronizationWorker> logger) : BackgroundService
 {
-    private static readonly string[] Symbols = ["OKB", "BTC", "SOL", "ETH", "DOGE", "XRP", "BCH", "LTC"];
+    private static readonly Instrument[] Symbols = [OKB, BTC, SOL, ETH, DOGE, XRP, BCH, LTC];
     private const string Timeframe = CandlestickTimeframes.OneMinute;
     private const int BatchSize = 100;
     private static readonly DateTime SyncStartDate = DateTime.Today;
@@ -24,9 +25,9 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
             ICandlestickService candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>();
             OkxHttpService okxHttpService = scope.ServiceProvider.GetRequiredService<OkxHttpService>();
 
-            foreach (string symbol in Symbols)
+            foreach (Instrument symbol in Symbols)
             {
-                string pairSymbol = $"{symbol}-USDT";
+                var pairSymbol = new Pair(symbol, USDT);
                 Candlestick? latestCandle = await candlestickService.GetLatestCandlestickAsync(
                     pairSymbol,
                     MarketType.Okx,
