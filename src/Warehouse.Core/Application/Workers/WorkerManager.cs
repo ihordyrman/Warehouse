@@ -1,9 +1,25 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
-using Warehouse.Core.Abstractions.Workers;
 
 namespace Warehouse.Core.Application.Workers;
+
+public interface IWorkerManager
+{
+    IReadOnlyDictionary<int, WorkerInstance> GetWorkers();
+
+    WorkerInstance? GetWorker(int workerId);
+
+    bool IsWorkerActive(int workerId);
+
+    int GetWorkerCount();
+
+    Task AddWorkerAsync(int workerId, WorkerInstance worker);
+
+    Task RemoveWorkerAsync(int workerId);
+
+    Task UpdateWorkerStatusAsync(int workerId, WorkerInstanceStatus instanceStatus);
+}
 
 public class WorkerManager(ILogger<WorkerManager> logger) : IWorkerManager
 {

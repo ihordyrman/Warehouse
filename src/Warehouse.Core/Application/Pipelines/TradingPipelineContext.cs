@@ -1,7 +1,8 @@
-﻿using Warehouse.Core.Abstractions.Pipelines;
-using Warehouse.Core.Domain;
+﻿using Warehouse.Core.Domain;
+using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Pipelines.Base;
 
-namespace Warehouse.Core.Models.Pipelines;
+namespace Warehouse.Core.Pipelines;
 
 public class TradingPipelineContext : IPipelineContext
 {

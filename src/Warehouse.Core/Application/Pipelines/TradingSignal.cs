@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Models.Pipelines;
+﻿namespace Warehouse.Core.Pipelines;
 
 public enum TradingSignal
 {

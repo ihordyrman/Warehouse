@@ -1,6 +1,6 @@
 ﻿using Warehouse.Core.Domain;
 
-namespace Warehouse.Core.Abstractions.Markets;
+namespace Warehouse.Core.Application.Markets;
 
 public interface IMarketAdapter
 {

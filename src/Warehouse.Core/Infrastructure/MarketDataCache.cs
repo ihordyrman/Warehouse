@@ -1,10 +1,15 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Frozen;
-using Warehouse.Core.Abstractions.Markets;
 using Warehouse.Core.Domain;
-using Warehouse.Core.Models;
 
 namespace Warehouse.Core.Infrastructure;
+
+public interface IMarketDataCache
+{
+    MarketData? GetData(string symbol, MarketType marketType);
+
+    void Update(MarketDataEvent marketDataEvent);
+}
 
 public class MarketDataCache : IMarketDataCache
 {

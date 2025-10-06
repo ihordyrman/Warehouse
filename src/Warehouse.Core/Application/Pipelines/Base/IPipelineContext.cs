@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Abstractions.Pipelines;
+﻿namespace Warehouse.Core.Pipelines.Base;
 
 public interface IPipelineContext
 {

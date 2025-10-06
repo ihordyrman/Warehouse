@@ -87,7 +87,7 @@ static async Task ExportDataAsync(ServiceProvider serviceProvider)
                     writer,
                     new CsvConfiguration(CultureInfo.InvariantCulture)
                     {
-                        HasHeaderRecord = true,
+                        HasHeaderRecord = true
                     });
 
                 csv.WriteHeader<Candlestick>();
@@ -97,7 +97,7 @@ static async Task ExportDataAsync(ServiceProvider serviceProvider)
 
                 await foreach (Candlestick candlestick in candlestickService!.GetCandlesticksAsync(
                                    instrument,
-                                   MarketType.Binance,
+                                   Binance,
                                    "1m",
                                    startDate,
                                    endDate))

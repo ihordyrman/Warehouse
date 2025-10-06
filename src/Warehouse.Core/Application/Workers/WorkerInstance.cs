@@ -1,5 +1,4 @@
-﻿using Warehouse.Core.Abstractions.Workers;
-using Warehouse.Core.Models;
+﻿using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Core.Application.Workers;
 

@@ -1,5 +1,5 @@
 ﻿using System.Net.WebSockets;
-using Warehouse.Core.Abstractions.Markets;
+using Warehouse.Core.Application.Markets;
 using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Backend.Markets.Okx.Services;

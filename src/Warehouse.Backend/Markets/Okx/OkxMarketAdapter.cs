@@ -1,6 +1,6 @@
 ﻿using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Services;
-using Warehouse.Core.Abstractions.Markets;
+using Warehouse.Core.Application.Markets;
 using Warehouse.Core.Domain;
 using Warehouse.Core.Infrastructure;
 

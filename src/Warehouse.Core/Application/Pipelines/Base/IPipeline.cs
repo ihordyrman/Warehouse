@@ -1,6 +1,4 @@
-﻿using Warehouse.Core.Models.Pipelines;
-
-namespace Warehouse.Core.Abstractions.Pipelines;
+﻿namespace Warehouse.Core.Pipelines.Base;
 
 public interface IPipeline<in TContext>
     where TContext : IPipelineContext

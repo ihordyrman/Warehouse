@@ -1,7 +1,7 @@
 ﻿using System.Collections.Frozen;
 using Warehouse.Core.Domain;
 
-namespace Warehouse.Core.Models;
+namespace Warehouse.Core.Infrastructure;
 
 public sealed record MarketData(
     FrozenDictionary<decimal, (decimal size, int count)> Asks,

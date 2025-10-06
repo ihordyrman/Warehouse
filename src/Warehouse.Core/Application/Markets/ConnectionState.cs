@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Abstractions.Markets;
+﻿namespace Warehouse.Core.Application.Markets;
 
 public enum ConnectionState
 {

@@ -1,10 +1,25 @@
 ﻿using Microsoft.Extensions.Logging;
-using Warehouse.Core.Abstractions.Markets;
-using Warehouse.Core.Abstractions.Workers;
 using Warehouse.Core.Domain;
-using Warehouse.Core.Models;
+using Warehouse.Core.Infrastructure;
 
 namespace Warehouse.Core.Application.Workers;
+
+public interface IMarketWorker
+{
+    int WorkerId { get; }
+
+    MarketType MarketType { get; }
+
+    bool IsRunning { get; }
+
+    WorkerState State { get; }
+
+    DateTime? LastProcessedAt { get; }
+
+    Task StartAsync(CancellationToken ct = default);
+
+    Task StopAsync(CancellationToken ct = default);
+}
 
 public class MarketWorker(WorkerConfiguration configuration, IMarketDataCache marketDataCache, ILogger<MarketWorker> logger) : IMarketWorker
 {

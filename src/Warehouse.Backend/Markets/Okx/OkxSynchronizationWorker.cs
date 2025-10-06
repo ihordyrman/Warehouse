@@ -10,9 +10,9 @@ namespace Warehouse.Backend.Markets.Okx;
 
 public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger<OkxSynchronizationWorker> logger) : BackgroundService
 {
-    private static readonly Instrument[] Symbols = [OKB, BTC, SOL, ETH, DOGE, XRP, BCH, LTC];
     private const string Timeframe = CandlestickTimeframes.OneMinute;
     private const int BatchSize = 100;
+    private static readonly Instrument[] Symbols = [OKB, BTC, SOL, ETH, DOGE, XRP, BCH, LTC];
     private static readonly DateTime SyncStartDate = DateTime.Today;
     private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromMinutes(1));
 

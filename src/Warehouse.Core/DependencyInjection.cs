@@ -1,11 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Warehouse.Core.Abstractions.Markets;
-using Warehouse.Core.Abstractions.Workers;
-using Warehouse.Core.Application.EventBus;
 using Warehouse.Core.Application.Services;
 using Warehouse.Core.Application.Workers;
 using Warehouse.Core.Infrastructure;
@@ -24,8 +19,6 @@ public static class DependencyInjection
         // todo: while in local development
         services.AddDbContext<WarehouseDbContext>(options => options.UseNpgsql(
                                                       "Host=localhost;Database=warehouse;Username=postgres;Password=postgres"));
-        services.AddInMemoryEventBus();
-
         services.AddScoped<WebSocketClient>();
         services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
         services.AddScoped<ICandlestickService, CandlestickService>();

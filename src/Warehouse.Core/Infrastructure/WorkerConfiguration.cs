@@ -1,6 +1,6 @@
 ﻿using Warehouse.Core.Domain;
 
-namespace Warehouse.Core.Models;
+namespace Warehouse.Core.Infrastructure;
 
 public class WorkerConfiguration
 {
