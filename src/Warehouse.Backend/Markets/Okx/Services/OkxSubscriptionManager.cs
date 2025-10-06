@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using Warehouse.Core.Application.Markets;
+using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 

@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
-using Warehouse.Core.Application.Markets;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.WebSockets;
+using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 

@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Polly;
 using Warehouse.Backend.Markets.Okx.Services;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.WebSockets;
+using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Markets.Okx;
 

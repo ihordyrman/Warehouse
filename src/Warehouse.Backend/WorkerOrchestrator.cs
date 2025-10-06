@@ -1,9 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Markets.Okx;
-using Warehouse.Core.Application.Markets;
-using Warehouse.Core.Application.Workers;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Contracts;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Markets.Services;
+using Warehouse.Core.Workers.Contracts;
+using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Workers.Models;
+using Warehouse.Core.Workers.Services;
 
 namespace Warehouse.Backend;
 

@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend.Endpoints.Models;
 using Warehouse.Backend.Endpoints.Validation;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Endpoints;
 

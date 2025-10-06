@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Warehouse.Backend.Endpoints.Validation;
-using Warehouse.Core.Domain;
+using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Endpoints.Models;
 

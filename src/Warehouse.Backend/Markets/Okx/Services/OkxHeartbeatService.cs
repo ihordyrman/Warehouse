@@ -1,4 +1,4 @@
-﻿using Warehouse.Core.Infrastructure;
+﻿using Warehouse.Core.Infrastructure.WebSockets;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 

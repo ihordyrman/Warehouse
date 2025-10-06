@@ -1,4 +1,5 @@
-﻿using Warehouse.Core.Domain;
+﻿using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Shared.Domain;
 
 namespace Warehouse.Backend.Endpoints.Models;
 

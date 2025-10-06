@@ -1,10 +1,11 @@
 ﻿using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Messages.Http;
 using Warehouse.Backend.Markets.Okx.Services;
-using Warehouse.Core;
-using Warehouse.Core.Application.Services;
-using Warehouse.Core.Domain;
-using static Warehouse.Core.Domain.Instrument;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Shared;
+using Warehouse.Core.Shared.Domain;
+using Warehouse.Core.Shared.Services;
+using static Warehouse.Core.Shared.Domain.Instrument;
 
 namespace Warehouse.Backend.Markets.Okx;
 

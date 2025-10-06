@@ -1,9 +1,13 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Warehouse.Core.Application.Services;
-using Warehouse.Core.Application.Workers;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Infrastructure.WebSockets;
+using Warehouse.Core.Markets.Contracts;
+using Warehouse.Core.Markets.Services;
+using Warehouse.Core.Shared.Services;
+using Warehouse.Core.Workers.Contracts;
+using Warehouse.Core.Workers.Services;
 
 namespace Warehouse.Core;
 

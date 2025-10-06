@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Warehouse.Core.Domain;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.Backend.Endpoints.Models;
 

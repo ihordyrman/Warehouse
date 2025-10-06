@@ -5,8 +5,8 @@ using Warehouse.Backend;
 using Warehouse.Backend.Endpoints;
 using Warehouse.Backend.Markets.Okx;
 using Warehouse.Core;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Domain;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

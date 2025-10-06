@@ -7,10 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Warehouse.Core;
-using Warehouse.Core.Application.Services;
-using Warehouse.Core.Domain;
-using static Warehouse.Core.Domain.Instrument;
-using static Warehouse.Core.Domain.MarketType;
+using Warehouse.Core.Shared.Domain;
+using Warehouse.Core.Shared.Services;
+using Warehouse.Tools;
+using static Warehouse.Core.Shared.Domain.Instrument;
+using static Warehouse.Core.Markets.Domain.MarketType;
 
 AnsiConsole.Write(new FigletText("Warehouse Tools").Centered().Color(Color.Blue));
 AnsiConsole.WriteLine();
@@ -309,29 +310,32 @@ static async Task ImportDataAsync(ServiceProvider serviceProvider)
     }
 }
 
-public class CandlestickCsvRecord
+namespace Warehouse.Tools
 {
-    [Index(0)]
-    public long Timestamp { get; set; }
+    public class CandlestickCsvRecord
+    {
+        [Index(0)]
+        public long Timestamp { get; set; }
 
-    [Index(1)]
-    public decimal Open { get; set; }
+        [Index(1)]
+        public decimal Open { get; set; }
 
-    [Index(2)]
-    public decimal High { get; set; }
+        [Index(2)]
+        public decimal High { get; set; }
 
-    [Index(3)]
-    public decimal Low { get; set; }
+        [Index(3)]
+        public decimal Low { get; set; }
 
-    [Index(4)]
-    public decimal Close { get; set; }
+        [Index(4)]
+        public decimal Close { get; set; }
 
-    [Index(5)]
-    public decimal Volume { get; set; }
+        [Index(5)]
+        public decimal Volume { get; set; }
 
-    [Index(6)]
-    public decimal VolumeQuote { get; set; }
+        [Index(6)]
+        public decimal VolumeQuote { get; set; }
 
-    [Index(7)]
-    public int Confirmed { get; set; }
+        [Index(7)]
+        public int Confirmed { get; set; }
+    }
 }

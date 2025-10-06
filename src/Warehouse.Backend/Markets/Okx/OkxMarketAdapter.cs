@@ -1,8 +1,9 @@
 ﻿using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Services;
-using Warehouse.Core.Application.Markets;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Infrastructure.WebSockets;
+using Warehouse.Core.Markets.Contracts;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Markets.Services;
 
 namespace Warehouse.Backend.Markets.Okx;
 

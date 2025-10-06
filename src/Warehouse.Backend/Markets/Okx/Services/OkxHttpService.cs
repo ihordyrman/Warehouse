@@ -3,9 +3,9 @@ using System.Text.Json;
 using System.Web;
 using Warehouse.Backend.Markets.Okx.Constants;
 using Warehouse.Backend.Markets.Okx.Messages.Http;
-using Warehouse.Core;
-using Warehouse.Core.Domain;
-using Warehouse.Core.Infrastructure;
+using Warehouse.Core.Markets.Contracts;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Shared;
 
 namespace Warehouse.Backend.Markets.Okx.Services;
 
