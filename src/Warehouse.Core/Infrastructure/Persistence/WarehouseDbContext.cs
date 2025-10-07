@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -5,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Warehouse.Core.Infrastructure.Common;
 using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Shared.Domain;
 using Warehouse.Core.Workers.Domain;
 
@@ -21,6 +23,8 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
     public DbSet<WorkerDetails> WorkerDetails { get; set; }
 
     public DbSet<Candlestick> Candlesticks { get; set; }
+
+    public DbSet<PipelineStep> PipelineSteps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,9 +62,29 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Close).HasPrecision(28, 10);
             entity.Property(x => x.Volume).HasPrecision(28, 10);
             entity.Property(x => x.VolumeQuote).HasPrecision(28, 10);
-
             entity.HasIndex(x => new { x.Symbol, x.MarketType, x.Timeframe, x.Timestamp });
             entity.HasIndex(x => x.Timestamp);
+        });
+
+        modelBuilder.Entity<PipelineStep>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedOnAdd();
+            entity.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            entity.Property(x => x.Order).IsRequired();
+            entity.Property(x => x.Parameters)
+                .HasConversion(
+                    x => JsonSerializer.Serialize(x, (JsonSerializerOptions)null!),
+                    x => JsonSerializer.Deserialize<Dictionary<string, string>>(x, (JsonSerializerOptions)null!) ??
+                         new Dictionary<string, string>())
+                .HasColumnType("nvarchar(max)")
+                .HasDefaultValue(new Dictionary<string, string>());
+            entity.HasOne(x => x.WorkerDetails)
+                .WithMany(x => x.PipelineSteps)
+                .HasForeignKey(x => x.WorkerDetailsId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => x.WorkerDetailsId);
+            entity.HasIndex(x => new { x.WorkerDetailsId, x.Order }).IsUnique();
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

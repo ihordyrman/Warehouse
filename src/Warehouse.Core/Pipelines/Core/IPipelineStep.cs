@@ -5,6 +5,10 @@ public interface IPipelineStep<in TContext>
 {
     int Order { get; }
 
+    PipelineStepType Type { get; }
+
+    string Name { get; }
+
     Task<PipelineStepResult> ExecuteAsync(TContext context, CancellationToken cancellationToken = default);
 
     Task<bool> ShouldExecuteAsync(TContext context, CancellationToken cancellationToken = default);

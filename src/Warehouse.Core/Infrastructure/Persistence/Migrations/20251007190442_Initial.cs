@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Warehouse.Backend.Migrations
+namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -28,7 +28,7 @@ namespace Warehouse.Backend.Migrations
                     Volume = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
                     VolumeQuote = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
                     IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
-                    Timeframe = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    Timeframe = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -91,6 +91,31 @@ namespace Warehouse.Backend.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "PipelineSteps",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WorkerDetailsId = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Order = table.Column<int>(type: "integer", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    Parameters = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "{}"),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PipelineSteps", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PipelineSteps_WorkerDetails_WorkerDetailsId",
+                        column: x => x.WorkerDetailsId,
+                        principalTable: "WorkerDetails",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Candlesticks_Symbol_MarketType_Timeframe_Timestamp",
                 table: "Candlesticks",
@@ -112,6 +137,17 @@ namespace Warehouse.Backend.Migrations
                 table: "MarketDetails",
                 column: "Type",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PipelineSteps_WorkerDetailsId",
+                table: "PipelineSteps",
+                column: "WorkerDetailsId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PipelineSteps_WorkerDetailsId_Order",
+                table: "PipelineSteps",
+                columns: new[] { "WorkerDetailsId", "Order" },
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -124,10 +160,13 @@ namespace Warehouse.Backend.Migrations
                 name: "MarketCredentials");
 
             migrationBuilder.DropTable(
-                name: "WorkerDetails");
+                name: "PipelineSteps");
 
             migrationBuilder.DropTable(
                 name: "MarketDetails");
+
+            migrationBuilder.DropTable(
+                name: "WorkerDetails");
         }
     }
 }

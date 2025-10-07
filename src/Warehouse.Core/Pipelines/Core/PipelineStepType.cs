@@ -1,6 +1,6 @@
 ﻿namespace Warehouse.Core.Pipelines.Core;
 
-public enum PipelineType
+public enum PipelineStepType
 {
     Validation,
     RiskManagement,

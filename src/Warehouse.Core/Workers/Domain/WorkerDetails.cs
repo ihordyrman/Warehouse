@@ -1,6 +1,7 @@
 ﻿// ReSharper disable EntityFramework.ModelValidation.UnlimitedStringLength
 
 using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Shared.Domain;
 
 namespace Warehouse.Core.Workers.Domain;
@@ -14,4 +15,6 @@ public class WorkerDetails : AuditEntity
     public MarketType Type { get; set; }
 
     public string Symbol { get; set; } = string.Empty;
+
+    public List<PipelineStep> PipelineSteps { get; set; } = new();
 }
