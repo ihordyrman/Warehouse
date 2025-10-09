@@ -9,9 +9,9 @@ public interface IPipelineStep<in TContext>
 
     string Name { get; }
 
-    Task<PipelineStepResult> ExecuteAsync(TContext context, CancellationToken cancellationToken = default);
+    Dictionary<string, string> Parameters { get; }
 
-    Task<bool> ShouldExecuteAsync(TContext context, CancellationToken cancellationToken = default);
+    Task<PipelineStepResult> ExecuteAsync(TContext context, CancellationToken cancellationToken = default);
 
     Task OnErrorAsync(TContext context, Exception exception, CancellationToken cancellationToken = default);
 }
