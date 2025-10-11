@@ -1,82 +1,170 @@
 sequenceDiagram
-    participant API as API Controller
-    participant Orch as Worker Orchestrator
-    participant Creds as Credentials Provider
-    participant Worker as Market Worker
-    participant Adapter as OKX Market Adapter
-    participant ConnMgr as Connection Manager
-    participant SubMgr as Subscription Manager
-    participant MsgProc as Message Processor
-    participant WS as WebSocket Client
-    participant Channel as Data Channel
+    participant System as System Startup
+    participant Orch as WorkerOrchestrator
+    participant DB as WarehouseDbContext
+    participant WM as WorkerManager
+    participant Creds as DatabaseCredentialsProvider
+    participant Cache as MarketDataCache
+    participant Adapter as OkxMarketAdapter
+    participant ConnMgr as OkxConnectionManager
+    participant SubMgr as OkxSubscriptionManager
+    participant MsgProc as OkxMessageProcessor
+    participant HeartBeat as OkxHeartbeatService
+    participant WS as WebSocketClient
+    participant HTTP as OkxHttpService
+    participant Worker as MarketWorker
+    participant Pipeline as TradingPipeline
+    participant Strategy as IStrategy
     participant OKX as OKX Exchange
-    Note over API, OKX: INITIALIZATION PHASE
-    API ->> Orch: StartWorkerAsync(OKX, BTC-USDT, config)
-    Orch ->> Creds: GetCredentialsAsync(OKX)
-    Creds -->> Orch: MarketCredentials
-    Note over Orch, Adapter: ADAPTER SETUP
-    Orch ->> Adapter: ConnectAsync(credentials)
-    Adapter ->> ConnMgr: ConnectAsync(uri)
-    ConnMgr ->> WS: ConnectAsync(wss://ws.okx.com)
-    WS ->> OKX: WebSocket Handshake
-    OKX -->> WS: Connection Established
-    WS -->> ConnMgr: Connected
-    ConnMgr ->> ConnMgr: Start Heartbeat
-    ConnMgr -->> Adapter: ConnectionState.Connected
-    Note over Adapter, Channel: START DATA PROCESSING
-    Adapter ->> Adapter: StartDataProcessing()
-    Adapter ->> Channel: Create Channel<MarketDataEvent>
-    Adapter ->> MsgProc: Initialize(channel)
-    Note over Orch, Worker: WORKER CREATION
-    Orch ->> Worker: new MarketWorker(adapter, pipeline)
-    Orch ->> Worker: StartAsync(cancellationToken)
-    Worker -->> Orch: WorkerId
-    Note over Worker, OKX: SUBSCRIPTION PHASE
-    Worker ->> Adapter: SubscribeAsync("BTC-USDT")
-    Adapter ->> SubMgr: SubscribeAsync("books", "BTC-USDT")
-    SubMgr ->> ConnMgr: SendAsync(subscription_request)
-    ConnMgr ->> WS: SendAsync({op: "subscribe"})
-    WS ->> OKX: Subscribe Request
-    OKX -->> WS: Subscription Confirmed
-    Note over OKX, Worker: MARKET DATA FLOW
-    loop Market Data Stream
-        OKX ->> WS: Market Data (books)
-        WS ->> WS: OnMessageReceived Event
-        WS ->> MsgProc: ProcessMessageAsync(message)
-        MsgProc ->> MsgProc: Parse & Validate
-        alt Valid Market Data
-            MsgProc ->> MsgProc: Check Staleness
-            MsgProc ->> Channel: Writer.TryWrite(MarketDataEvent)
-            Note over Channel: Buffered Channel (1000 capacity)
-            Channel ->> Adapter: Reader.ReadAsync()
-            Adapter ->> Adapter: UpdateLatestData(event)
 
-            alt Worker Using Streaming
-                Adapter ->> Worker: yield return MarketDataEvent
-                Worker ->> Worker: ProcessThroughPipeline()
-            else Worker Using Polling
-                Worker ->> Adapter: GetData("BTC-USDT")
-                Adapter -->> Worker: Latest MarketData
-                Worker ->> Worker: ProcessThroughPipeline()
+    Note over System, OKX: SYSTEM INITIALIZATION PHASE
+    System ->> Orch: Start as BackgroundService
+    Orch ->> Orch: Start ExecuteAsync Loop
+
+    loop Synchronization Every 10 Seconds
+        Note over Orch, DB: WORKER SYNCHRONIZATION
+        Orch ->> DB: Get Enabled Workers
+        DB -->> Orch: List<WorkerConfiguration>
+
+        Note over Orch, Adapter: MARKET CONNECTION MANAGEMENT
+        Orch ->> Orch: Group Workers by MarketType
+
+        alt New Market Connection Needed
+            Orch ->> Adapter: CreateMarketAdapter(MarketType.Okx)
+            Adapter ->> Creds: GetCredentialsAsync(MarketType.Okx)
+            Creds ->> DB: Query MarketCredentials
+            DB -->> Creds: Encrypted Credentials
+            Creds -->> Adapter: Decrypted Credentials
+
+            Note over Adapter, OKX: ESTABLISH CONNECTION
+            Adapter ->> ConnMgr: ConnectAsync(uri)
+            ConnMgr ->> WS: new WebSocketClient()
+            ConnMgr ->> WS: ConnectAsync(wss://ws.okx.com)
+            WS ->> OKX: WebSocket Handshake
+            OKX -->> WS: Connection Established
+            WS -->> ConnMgr: State = Connected
+
+            ConnMgr ->> HeartBeat: Start(webSocketClient)
+            loop Heartbeat Every 10 Seconds
+                HeartBeat ->> WS: SendAsync("ping")
+                WS ->> OKX: ping
+                OKX -->> WS: pong
             end
-        else Invalid/Stale Data
-            MsgProc ->> MsgProc: Log & Discard
+
+            Note over Adapter, OKX: AUTHENTICATION
+            Adapter ->> Adapter: OkxAuthService.CreateAuthRequest()
+            Adapter ->> ConnMgr: SendAsync(authRequest)
+            ConnMgr ->> WS: SendAsync({op: "login", ...})
+            WS ->> OKX: Authentication Request
+            OKX -->> WS: Auth Response
+            WS ->> MsgProc: ProcessMessage(authResponse)
+
+            Note over Adapter, Cache: INITIALIZE DATA PROCESSING
+            Adapter ->> MsgProc: Initialize(marketDataCache)
+            WS ->> WS: MessageReceived Event
+            WS -->> MsgProc: OnWebSocketMessage()
+            MsgProc ->> MsgProc: Parse & Route Message
+            MsgProc ->> Cache: Update(MarketDataEvent)
         end
+
+        Note over Orch, Worker: WORKER LIFECYCLE
+
+        loop For Each Worker Configuration
+            alt Worker Not Running
+                Orch ->> Worker: new MarketWorker(config, cache)
+                Orch ->> WM: AddWorkerAsync(workerId, instance)
+                Worker ->> Worker: StartAsync()
+
+                Note over Worker, OKX: SUBSCRIBE TO MARKET DATA
+                Worker ->> Adapter: SubscribeAsync(symbol)
+                Adapter ->> SubMgr: SubscribeAsync("books", symbol)
+                SubMgr ->> ConnMgr: SendAsync(subscribeRequest)
+                ConnMgr ->> WS: SendAsync({op: "subscribe"})
+                WS ->> OKX: Subscribe to Order Book
+                OKX -->> WS: Subscription Confirmed
+
+                Note over Worker: START PROCESSING LOOP
+                Worker ->> Worker: ProcessMarketDataAsync()
+                loop Processing Loop (Every ProcessingInterval)
+                    Worker ->> Cache: GetData(symbol, marketType)
+                    Cache -->> Worker: MarketData (if available)
+
+                    alt Pipeline Configured (Future)
+                        Worker ->> Pipeline: ExecuteAsync(context)
+                        Pipeline ->> Pipeline: Step 1: Validate Data
+                        Pipeline ->> Pipeline: Step 2: Risk Check
+                        Pipeline ->> Strategy: Step 3: AnalyzeAsync(marketData)
+                        Strategy -->> Pipeline: Signal (Buy/Sell/NoAction)
+
+                        alt Signal is Buy or Sell
+                            Pipeline ->> Pipeline: Step 4: Prepare Order
+                            Pipeline ->> Pipeline: Step 5: Final Validation
+                            Pipeline ->> HTTP: Step 6: PlaceOrderAsync()
+                            HTTP ->> OKX: POST /api/v5/trade/order
+                            OKX -->> HTTP: Order Response
+                            HTTP -->> Pipeline: Order Result
+                            Pipeline ->> DB: Save Order Result
+                        end
+                    else Basic Processing (Current)
+                        Worker ->> Worker: Log Data Received
+                    end
+
+                    Worker ->> Worker: UpdateLastProcessedAt()
+                    Worker ->> Worker: Delay(ProcessingInterval)
+                end
+            else Worker Should Stop
+                Orch ->> WM: GetWorker(workerId)
+                WM -->> Orch: WorkerInstance
+                Orch ->> Worker: StopAsync()
+                Worker ->> Worker: Cancel Processing Loop
+                Worker ->> Adapter: UnsubscribeAsync(symbol)
+                Adapter ->> SubMgr: UnsubscribeAsync("books", symbol)
+                SubMgr ->> WS: SendAsync({op: "unsubscribe"})
+                Orch ->> WM: RemoveWorkerAsync(workerId)
+            end
+        end
+
+        Note over OKX, Worker: REAL-TIME MARKET DATA FLOW
+        loop Market Data Stream
+            OKX ->> WS: Order Book Update
+            WS ->> MsgProc: ProcessMessage(bookData)
+            MsgProc ->> MsgProc: Validate & Parse
+            MsgProc ->> Cache: Update(MarketDataEvent)
+            Note right of Cache: Data available for<br/>next Worker poll
+        end
+
+        Note over WS, ConnMgr: CONNECTION FAILURE HANDLING
+        alt Connection Lost
+            WS --x OKX: Connection Dropped
+            WS ->> ConnMgr: StateChanged(Disconnected)
+            ConnMgr ->> ConnMgr: StartReconnect()
+
+            loop Reconnection Attempts
+                ConnMgr ->> ConnMgr: Wait 5 seconds
+                ConnMgr ->> WS: ConnectAsync()
+                alt Success
+                    WS -->> ConnMgr: Connected
+                    ConnMgr ->> SubMgr: OnConnectionStateChanged()
+                    SubMgr ->> SubMgr: Resubscribe All
+                else Failed
+                    ConnMgr ->> ConnMgr: Continue Retry
+                end
+            end
+        end
+
+        Orch ->> Orch: Wait 10 seconds
     end
 
-    Note over WS, ConnMgr: CONNECTION FAILURE HANDLING
-    WS --x OKX: Connection Lost
-    WS ->> ConnMgr: StateChanged(Disconnected)
-    ConnMgr ->> ConnMgr: StartReconnect()
-    loop Reconnection Loop
-        ConnMgr ->> ConnMgr: Wait(5 seconds)
-        ConnMgr ->> WS: ConnectAsync()
-        alt Reconnection Success
-            WS -->> ConnMgr: Connected
-            ConnMgr ->> SubMgr: OnConnectionStateChanged(Connected)
-            SubMgr ->> SubMgr: Resubscribe All
-            SubMgr ->> ConnMgr: SendAsync(all subscriptions)
-        else Reconnection Failed
-            ConnMgr ->> ConnMgr: Continue Loop
-        end
+    Note over System, OKX: GRACEFUL SHUTDOWN
+    System ->> Orch: StopAsync (on shutdown)
+    Orch ->> WM: GetWorkers()
+    WM -->> Orch: All Active Workers
+    loop Each Worker
+        Orch ->> Worker: StopAsync()
     end
+    Orch ->> Adapter: DisconnectAsync()
+    Adapter ->> SubMgr: UnsubscribeAllAsync()
+    Adapter ->> ConnMgr: DisconnectAsync()
+    ConnMgr ->> HeartBeat: Stop()
+    ConnMgr ->> WS: DisconnectAsync()
+    WS ->> OKX: Close Connection

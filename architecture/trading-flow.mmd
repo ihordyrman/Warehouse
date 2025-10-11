@@ -1,47 +1,90 @@
 graph TB
-    Start([Worker Started]) --> Init[Initialize OKX Worker]
-    Init --> Connect[Connect to OKX]
-    Connect --> Auth[Authenticate with API Keys]
-    Auth --> WS[Open WebSocket Connection]
-    WS --> HTTP[Initialize HTTP Client]
-    HTTP --> Subscribe[Subscribe to Market Data]
-    Subscribe --> Stream[Start Data Stream]
-    Stream --> MarketData{New Market Data}
-    MarketData --> Cache[Update Market Cache]
-    Cache --> Context[Build Pipeline Context]
-    Context --> Pipeline[Enter Trading Pipeline]
-    Pipeline --> Step1[1. Data Validation]
-    Step1 --> Valid{Valid Data?}
-    Valid -->|No| Skip[Skip Processing]
-    Valid -->|Yes| Step2[2. Risk Management Check]
-    Step2 --> Risk{Within Risk Limits?}
-    Risk -->|No| Stop[Stop Processing]
-    Risk -->|Yes| Step3[3. Signal Generation]
-    Step3 --> Strategy[Execute Strategy Analysis]
+    Start([System Started]) --> Orchestrator[WorkerOrchestrator Service]
+    Orchestrator --> LoadConfig[Load Worker Configurations from DB]
+    LoadConfig --> CheckMarkets{For Each Market Type}
+
+    CheckMarkets --> InitAdapter[Initialize Market Adapter]
+    InitAdapter --> CreateConnection[Create/Reuse Market Connection]
+    CreateConnection --> ConnectWS[Connect WebSocket]
+    ConnectWS --> Auth[Authenticate with Credentials]
+    Auth --> Heartbeat[Start Heartbeat Service]
+    Heartbeat --> Subscribe[Subscribe to Market Data Channels]
+
+    Subscribe --> CreateWorker[Create MarketWorker Instance]
+    CreateWorker --> StartWorker[Start Worker Processing Loop]
+    StartWorker --> StreamData[Stream Market Data]
+
+    StreamData --> MarketData{New Market Data Event}
+    MarketData --> MessageProcessor[OkxMessageProcessor]
+    MessageProcessor --> ValidateMsg{Valid Message?}
+    ValidateMsg -->|No| DropMessage[Log & Drop]
+    ValidateMsg -->|Yes| UpdateCache[Update MarketDataCache]
+
+    UpdateCache --> WorkerProcess[Worker Processing Loop]
+    WorkerProcess --> GetData[Get Data from Cache]
+    GetData --> HasPipeline{Pipeline Configured?}
+
+    HasPipeline -->|No| BasicProcess[Basic Processing <br/>Current State]
+    HasPipeline -->|Yes| Pipeline[Enter Trading Pipeline]
+
+    Pipeline --> Step1[1. Data Validation Step]
+    Step1 --> ValidData{Valid Data?}
+    ValidData -->|No| Skip[Skip Processing]
+    ValidData -->|Yes| Step2[2. Risk Management Step]
+
+    Step2 --> RiskCheck{Within Risk Limits?}
+    RiskCheck -->|No| Stop[Stop Processing]
+    RiskCheck -->|Yes| Step3[3. Signal Generation Step]
+
+    Step3 --> Strategy[Execute Strategy.AnalyzeAsync]
     Strategy --> Signal{Trading Signal}
-    Signal -->|No Action| Wait[Wait for Next Data]
-    Signal -->|Buy/Sell| Step4[4. Order Preparation]
-    Step4 --> OrderCalc[Calculate Order Parameters]
-    OrderCalc --> Step5[5. Pre-Execution Validation]
-    Step5 --> Final{Final Check}
-    Final -->|Fail| Abort[Abort Order]
-    Final -->|Pass| Step6[6. Order Execution]
-    Step6 --> Send[Send Order to OKX]
-    Send --> Response{Order Response}
-    Response -->|Success| Success[Update Database]
-    Response -->|Failure| Retry{Retry?}
-    Retry -->|Yes| Send
-    Retry -->|No| Failed[Log Failure]
-    Success --> Notify[Notify Frontend]
-    Failed --> Notify
-    Abort --> Notify
-    Stop --> Notify
+    Signal -->|NoAction| Wait[Wait for Next Data]
+    Signal -->|Buy/Sell| Step4[4. Order Preparation Step]
+
+    Step4 --> CalcParams[Calculate Order Parameters<br/>Size, Price, Type]
+    CalcParams --> Step5[5. Pre-Execution Validation]
+
+    Step5 --> FinalCheck{Final Checks<br/>Balance, Limits}
+    FinalCheck -->|Fail| Abort[Abort Order]
+    FinalCheck -->|Pass| Step6[6. Order Execution Step]
+
+    Step6 --> HttpService[OkxHttpService]
+    HttpService --> SendOrder[Send Order via REST API]
+    SendOrder --> Response{Order Response}
+
+    Response -->|Success| RecordSuccess[Save to Database]
+    Response -->|Failure| RetryLogic{Retry Logic}
+    RetryLogic -->|Retry| SendOrder
+    RetryLogic -->|Give Up| RecordFailure[Log Failure]
+
+    RecordSuccess --> UpdateState[Update Worker State]
+    RecordFailure --> UpdateState
+    Abort --> UpdateState
+    Stop --> UpdateState
     Skip --> Wait
-    Wait --> MarketData
-    Notify --> Monitor[Monitor Position]
-    Monitor --> MarketData
-    style Start fill: #e1f5fe
-    style Pipeline fill: #fff3e0
-    style Signal fill: #f3e5f5
-    style Step6 fill: #e8f5e9
-    style Notify fill: #fce4ec
+    BasicProcess --> Wait
+    DropMessage --> MarketData
+
+    UpdateState --> NotifyFrontend[Notification]
+    NotifyFrontend --> Monitor[Monitor Position]
+    Monitor --> ProcessingDelay[Await Processing Interval]
+    ProcessingDelay --> MarketData
+    Wait --> ProcessingDelay
+
+    %% Parallel monitoring
+    Orchestrator --> MonitorLoop[Synchronization Loop<br/>Every 10 seconds]
+    MonitorLoop --> CheckWorkers{Check Worker Status}
+    CheckWorkers --> AddMissing[Start Missing Workers]
+    CheckWorkers --> RemoveExtra[Stop Extra Workers]
+    CheckWorkers --> UpdateSubs[Update Subscriptions]
+    AddMissing --> MonitorLoop
+    RemoveExtra --> MonitorLoop
+    UpdateSubs --> MonitorLoop
+
+    style Start fill:#e1f5fe
+    style Orchestrator fill:#fff3e0
+    style Pipeline fill:#f3e5f5
+    style Signal fill:#ffe0b2
+    style Step6 fill:#e8f5e9
+    style NotifyFrontend fill:#fce4ec
+    style MonitorLoop fill:#e0f2f1
