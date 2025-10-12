@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Backend;
 using Warehouse.Backend.Endpoints;
-using Warehouse.Backend.Markets.Okx;
 using Warehouse.Core;
 using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Domain;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

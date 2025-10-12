@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Warehouse.Backend.Markets.Okx;
 using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Markets.Services;

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Infrastructure.WebSockets;
+using Warehouse.Core.Markets.Concrete.Okx.Services;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Services;
 using Warehouse.Core.Shared.Services;
@@ -26,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<WebSocketClient>();
         services.AddScoped<ICredentialsProvider, DatabaseCredentialsProvider>();
         services.AddScoped<ICandlestickService, CandlestickService>();
+        services.AddScoped<IBalanceService, BalanceService>();
         services.AddSingleton<IWorkerManager, WorkerManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         return services;

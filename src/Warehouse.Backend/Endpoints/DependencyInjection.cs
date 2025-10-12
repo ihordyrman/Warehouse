@@ -66,6 +66,7 @@ public static class DependencyInjection
         app.MapMarketCredentialsEndpoints();
         app.MapWorkerEndpoints();
         app.MapPipelineStepEndpoints();
+        app.MapBalanceEndpoints();
 
         return app;
     }
