@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Warehouse.Core.Infrastructure.Common;
 using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Orders.Domain;
 using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Shared.Domain;
 using Warehouse.Core.Workers.Domain;
@@ -25,6 +26,8 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
     public DbSet<Candlestick> Candlesticks { get; set; }
 
     public DbSet<PipelineStep> PipelineSteps { get; set; }
+
+    public DbSet<Order> Orders { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,6 +88,26 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => x.WorkerDetailsId);
             entity.HasIndex(x => new { x.WorkerDetailsId, x.Order }).IsUnique();
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedOnAdd();
+            entity.Property(x => x.ExchangeOrderId).HasMaxLength(100);
+            entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.MarketType).IsRequired();
+            entity.Property(x => x.Side).IsRequired();
+            entity.Property(x => x.Type).IsRequired();
+            entity.Property(x => x.Status).IsRequired();
+            entity.Property(x => x.Quantity).HasPrecision(28, 10).IsRequired();
+            entity.Property(x => x.Price).HasPrecision(28, 10);
+            entity.Property(x => x.StopPrice).HasPrecision(28, 10);
+            entity.Property(x => x.Fee).HasPrecision(28, 10);
+            entity.Property(x => x.TakeProfit).HasPrecision(28, 10);
+            entity.Property(x => x.StopLoss).HasPrecision(28, 10);
+            entity.HasIndex(x => x.WorkerId);
+            entity.HasIndex(x => x.Symbol);
         });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
