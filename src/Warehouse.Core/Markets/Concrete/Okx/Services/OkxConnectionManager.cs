@@ -118,7 +118,7 @@ internal sealed class OkxConnectionManager : IDisposable
 
     private void OnStateChanged(object? sender, WebSocketState state)
     {
-        if (state == WebSocketState.Closed || state == WebSocketState.Aborted)
+        if (state is WebSocketState.Closed or WebSocketState.Aborted)
         {
             State = ConnectionState.Disconnected;
             StateChanged?.Invoke(this, State);

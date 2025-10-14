@@ -4,7 +4,7 @@ using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Markets.Contracts;
 
-public interface IBalanceService
+public interface IBalanceManager
 {
     Task<Result<Balance>> GetBalanceAsync(MarketType marketType, string currency, CancellationToken cancellationToken = default);
 

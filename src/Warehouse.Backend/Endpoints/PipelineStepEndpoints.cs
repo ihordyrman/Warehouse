@@ -199,7 +199,7 @@ public static class PipelineStepEndpoints
                     ValidationHelper.ValidateAndThrow(request);
 
                     PipelineStep? step = await db.PipelineSteps.FirstOrDefaultAsync(x => x.Id == id);
-                    if (step == null)
+                    if (step is null)
                     {
                         return TypedResults.NotFound();
                     }
@@ -244,7 +244,7 @@ public static class PipelineStepEndpoints
                 async Task<Results<Ok<PipelineStepResponse>, NotFound>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
                 {
                     PipelineStep? step = await db.PipelineSteps.FirstOrDefaultAsync(x => x.Id == id);
-                    if (step == null)
+                    if (step is null)
                     {
                         return TypedResults.NotFound();
                     }
@@ -278,7 +278,7 @@ public static class PipelineStepEndpoints
                 async Task<Results<NoContent, NotFound>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
                 {
                     PipelineStep? step = await db.PipelineSteps.FirstOrDefaultAsync(x => x.Id == id);
-                    if (step == null)
+                    if (step is null)
                     {
                         return TypedResults.NotFound();
                     }

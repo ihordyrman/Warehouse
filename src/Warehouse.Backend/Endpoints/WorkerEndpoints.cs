@@ -117,7 +117,7 @@ public static class WorkerEndpoints
                     ValidationHelper.ValidateAndThrow(request);
                     WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
 
-                    if (worker == null)
+                    if (worker is null)
                     {
                         return TypedResults.NotFound();
                     }
@@ -162,7 +162,7 @@ public static class WorkerEndpoints
                 {
                     WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
 
-                    if (worker == null)
+                    if (worker is null)
                     {
                         return TypedResults.NotFound();
                     }

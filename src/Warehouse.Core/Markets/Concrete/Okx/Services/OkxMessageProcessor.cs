@@ -20,7 +20,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
 
     public void ProcessMessage(WebSocketMessage message)
     {
-        if (message.Text == null)
+        if (message.Text is null)
         {
             return;
         }
@@ -34,7 +34,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
             }
 
             OkxSocketResponse? okxMessage = JsonSerializer.Deserialize<OkxSocketResponse>(message.Text, serializerOptions);
-            if (okxMessage == null)
+            if (okxMessage is null)
             {
                 logger.LogWarning("Failed to deserialize message: {Message}", message.Text);
                 return;
@@ -76,7 +76,7 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
         string symbol = message.Arguments!.InstrumentId!;
         OkxSocketBookData data = message.Data![0];
 
-        if (data.Asks == null || data.Bids == null)
+        if (data.Asks is null || data.Bids is null)
         {
             logger.LogWarning("Invalid market data for {Symbol}: missing asks or bids", symbol);
             return;

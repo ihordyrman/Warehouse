@@ -7,21 +7,17 @@ using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Markets.Concrete.Okx.Services;
 
-public class BalanceService : IBalanceService
+public class BalanceManager : IBalanceManager
 {
     private readonly IServiceProvider serviceProvider;
-    private readonly ILogger<BalanceService> logger;
+    private readonly ILogger<BalanceManager> logger;
     private readonly Dictionary<MarketType, IMarketBalanceProvider> providers = new();
 
-    public BalanceService(IServiceProvider serviceProvider, ILogger<BalanceService> logger)
+    public BalanceManager(IServiceProvider serviceProvider, ILogger<BalanceManager> logger)
     {
         this.serviceProvider = serviceProvider;
         this.logger = logger;
-        InitializeProviders();
-    }
 
-    private void InitializeProviders()
-    {
         IEnumerable<IMarketBalanceProvider> marketProviders = serviceProvider.GetServices<IMarketBalanceProvider>();
 
         foreach (IMarketBalanceProvider provider in marketProviders)
@@ -81,7 +77,7 @@ public class BalanceService : IBalanceService
                 return Result<AccountBalance>.Failure(snapshotResult.Error);
             }
 
-            if (snapshotResult.Value.AccountSummary == null)
+            if (snapshotResult.Value.AccountSummary is null)
             {
                 return Result<AccountBalance>.Failure(new Error("Account summary not available"));
             }

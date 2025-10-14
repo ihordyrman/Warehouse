@@ -73,7 +73,7 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
 
         OkxCandlestick[]? okxCandles = result.Value;
 
-        if (okxCandles == null || okxCandles.Length == 0)
+        if (okxCandles is null || okxCandles.Length == 0)
         {
             logger.LogInformation("No more candlesticks to fetch");
             yield break;

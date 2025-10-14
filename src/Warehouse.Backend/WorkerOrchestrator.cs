@@ -292,7 +292,7 @@ public class WorkerOrchestrator(
 
     private async Task StopWorkerAsync(WorkerInstance worker, int id)
     {
-        if (worker == null)
+        if (worker is null)
         {
             logger.LogWarning("Worker {WorkerId} not found during stop", id);
             return;

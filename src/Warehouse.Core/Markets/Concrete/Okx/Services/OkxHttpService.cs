@@ -212,7 +212,7 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
 
         string BuildRequestPath()
         {
-            if (parameters == null || parameters.Count == 0)
+            if (parameters is null || parameters.Count == 0)
             {
                 return endpoint;
             }

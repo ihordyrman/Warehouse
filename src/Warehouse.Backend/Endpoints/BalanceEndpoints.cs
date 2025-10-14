@@ -17,14 +17,14 @@ public static class BalanceEndpoints
 
         group.MapGet(
                 "/{marketType}",
-                async Task<Results<Ok<BalanceSnapshotResponse>, BadRequest<string>>> (IBalanceService balanceService, string marketType) =>
+                async Task<Results<Ok<BalanceSnapshotResponse>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
                 {
                     if (!Enum.TryParse(marketType, true, out MarketType market))
                     {
                         return TypedResults.BadRequest($"Invalid market type: {marketType}");
                     }
 
-                    Result<BalanceSnapshot> result = await balanceService.GetAllBalancesAsync(market);
+                    Result<BalanceSnapshot> result = await balanceManager.GetAllBalancesAsync(market);
 
                     if (!result.IsSuccess)
                     {
@@ -41,7 +41,7 @@ public static class BalanceEndpoints
         group.MapGet(
                 "/{marketType}/{currency}",
                 async Task<Results<Ok<BalanceResponse>, NotFound, BadRequest<string>>> (
-                    IBalanceService balanceService,
+                    IBalanceManager balanceManager,
                     string marketType,
                     string currency) =>
                 {
@@ -50,7 +50,7 @@ public static class BalanceEndpoints
                         return TypedResults.BadRequest($"Invalid market type: {marketType}");
                     }
 
-                    Result<Balance> result = await balanceService.GetBalanceAsync(market, currency.ToUpperInvariant());
+                    Result<Balance> result = await balanceManager.GetBalanceAsync(market, currency.ToUpperInvariant());
 
                     if (!result.IsSuccess)
                     {
@@ -69,14 +69,14 @@ public static class BalanceEndpoints
 
         group.MapGet(
                 "/{marketType}/account/summary",
-                async Task<Results<Ok<AccountBalanceResponse>, BadRequest<string>>> (IBalanceService balanceService, string marketType) =>
+                async Task<Results<Ok<AccountBalanceResponse>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
                 {
                     if (!Enum.TryParse(marketType, true, out MarketType market))
                     {
                         return TypedResults.BadRequest($"Invalid market type: {marketType}");
                     }
 
-                    Result<AccountBalance> result = await balanceService.GetAccountBalanceAsync(market);
+                    Result<AccountBalance> result = await balanceManager.GetAccountBalanceAsync(market);
 
                     if (!result.IsSuccess)
                     {
@@ -92,14 +92,14 @@ public static class BalanceEndpoints
 
         group.MapGet(
                 "/{marketType}/non-zero",
-                async Task<Results<Ok<List<BalanceResponse>>, BadRequest<string>>> (IBalanceService balanceService, string marketType) =>
+                async Task<Results<Ok<List<BalanceResponse>>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
                 {
                     if (!Enum.TryParse(marketType, true, out MarketType market))
                     {
                         return TypedResults.BadRequest($"Invalid market type: {marketType}");
                     }
 
-                    Result<List<Balance>> result = await balanceService.GetNonZeroBalancesAsync(market);
+                    Result<List<Balance>> result = await balanceManager.GetNonZeroBalancesAsync(market);
 
                     if (!result.IsSuccess)
                     {

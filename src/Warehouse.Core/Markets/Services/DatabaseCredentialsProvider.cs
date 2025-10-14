@@ -18,7 +18,7 @@ public class DatabaseCredentialsProvider(IServiceScopeFactory scopeFactory, ILog
         MarketCredentials? credentials = await dbContext.MarketCredentials.Include(x => x.MarketDetails)
             .FirstOrDefaultAsync(x => x.MarketDetails.Type == marketType, cancellationToken);
 
-        if (credentials == null)
+        if (credentials is null)
         {
             throw new InvalidOperationException($"No credentials found for {marketType}");
         }

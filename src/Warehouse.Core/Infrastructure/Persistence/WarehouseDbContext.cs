@@ -98,7 +98,6 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
             entity.Property(x => x.MarketType).IsRequired();
             entity.Property(x => x.Side).IsRequired();
-            entity.Property(x => x.Type).IsRequired();
             entity.Property(x => x.Status).IsRequired();
             entity.Property(x => x.Quantity).HasPrecision(28, 10).IsRequired();
             entity.Property(x => x.Price).HasPrecision(28, 10);

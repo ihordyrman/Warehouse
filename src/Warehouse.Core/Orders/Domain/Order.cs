@@ -17,8 +17,6 @@ public class Order : AuditEntity
 
     public OrderSide Side { get; set; }
 
-    public OrderType Type { get; set; }
-
     public OrderStatus Status { get; set; }
 
     public decimal Quantity { get; set; }
