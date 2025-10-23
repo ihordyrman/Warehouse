@@ -117,4 +117,22 @@ public class BalanceManager : IBalanceManager
             return Result<List<Balance>>.Failure(new Error($"Failed to get non-zero balances: {ex.Message}"));
         }
     }
+
+    public async Task<Result<decimal>> GetTotalUsdtValueAsync(MarketType marketType, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (providers.TryGetValue(marketType, out IMarketBalanceProvider? provider))
+            {
+                return await provider.GetTotalUsdtValueAsync(cancellationToken);
+            }
+
+            return Result<decimal>.Failure(new Error($"No balance provider registered for {marketType}"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get total USDT value for {MarketType}", marketType);
+            return Result<decimal>.Failure(new Error($"Failed to get total USDT value: {ex.Message}"));
+        }
+    }
 }

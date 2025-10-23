@@ -13,4 +13,6 @@ public interface IBalanceManager
     Task<Result<AccountBalance>> GetAccountBalanceAsync(MarketType marketType, CancellationToken cancellationToken = default);
 
     Task<Result<List<Balance>>> GetNonZeroBalancesAsync(MarketType marketType, CancellationToken cancellationToken = default);
+
+    Task<Result<decimal>> GetTotalUsdtValueAsync(MarketType marketType, CancellationToken cancellationToken = default);
 }

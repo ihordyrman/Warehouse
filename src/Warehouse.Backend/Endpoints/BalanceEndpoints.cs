@@ -114,6 +114,29 @@ public static class BalanceEndpoints
             .Produces<List<BalanceResponse>>()
             .Produces<string>(400);
 
+        group.MapGet(
+                "/{marketType}/total-usdt",
+                async Task<Results<Ok<TotalValueResponse>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
+                {
+                    if (!Enum.TryParse(marketType, true, out MarketType market))
+                    {
+                        return TypedResults.BadRequest($"Invalid market type: {marketType}");
+                    }
+
+                    Result<decimal> result = await balanceManager.GetTotalUsdtValueAsync(market);
+
+                    if (!result.IsSuccess)
+                    {
+                        return TypedResults.BadRequest(result.Error.Message);
+                    }
+
+                    return TypedResults.Ok(new TotalValueResponse { TotalUsdtValue = result.Value });
+                })
+            .WithName("GetTotalUsdtValue")
+            .WithSummary("Get total value of all balances in USDT equivalent")
+            .Produces<TotalValueResponse>()
+            .Produces<string>(400);
+
         return group;
     }
 }

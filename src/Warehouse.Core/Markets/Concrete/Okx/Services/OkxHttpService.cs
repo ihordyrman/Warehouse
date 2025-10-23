@@ -131,6 +131,17 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         return await SendRequestAsync<OkxOrderBook[]>("GET", endpoint, parameters);
     }
 
+    public async Task<Result<OkxAssetsValuation[]>> GetAssetsValuationAsync(string valuationCurrency = "USDT")
+    {
+        const string endpoint = "/api/v5/asset/asset-valuation";
+        var parameters = new Dictionary<string, string>
+        {
+            ["ccy"] = valuationCurrency
+        };
+
+        return await SendRequestAsync<OkxAssetsValuation[]>("GET", endpoint, parameters);
+    }
+
     public async Task<Result<OkxCandlestick[]>> GetCandlesticksAsync(
         string instId,
         string? bar = null,

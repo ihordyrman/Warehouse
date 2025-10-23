@@ -73,17 +73,17 @@ public static class OrderEndpoints
                     UpdateOrderRequest serviceRequest = request.ToServiceRequest();
                     Result<Order> result = await orderManager.UpdateOrderAsync(id, serviceRequest);
 
-                    if (!result.IsSuccess)
+                    if (result.IsSuccess)
                     {
-                        if (result.Error.Message.Contains("not found"))
-                        {
-                            return TypedResults.NotFound();
-                        }
-
-                        return TypedResults.BadRequest(result.Error.Message);
+                        return TypedResults.Ok(OrderResponse.FromDomain(result.Value));
                     }
 
-                    return TypedResults.Ok(OrderResponse.FromDomain(result.Value));
+                    if (result.Error.Message.Contains("not found"))
+                    {
+                        return TypedResults.NotFound();
+                    }
+
+                    return TypedResults.BadRequest(result.Error.Message);
                 })
             .WithName("UpdateOrder")
             .WithSummary("Update an existing order")
@@ -97,17 +97,17 @@ public static class OrderEndpoints
                 {
                     Result<Order> result = await orderManager.ExecuteOrderAsync(id);
 
-                    if (!result.IsSuccess)
+                    if (result.IsSuccess)
                     {
-                        if (result.Error.Message.Contains("not found"))
-                        {
-                            return TypedResults.NotFound();
-                        }
-
-                        return TypedResults.BadRequest(result.Error.Message);
+                        return TypedResults.Ok(OrderResponse.FromDomain(result.Value));
                     }
 
-                    return TypedResults.Ok(OrderResponse.FromDomain(result.Value));
+                    if (result.Error.Message.Contains("not found"))
+                    {
+                        return TypedResults.NotFound();
+                    }
+
+                    return TypedResults.BadRequest(result.Error.Message);
                 })
             .WithName("ExecuteOrder")
             .WithSummary("Execute order on the exchange")

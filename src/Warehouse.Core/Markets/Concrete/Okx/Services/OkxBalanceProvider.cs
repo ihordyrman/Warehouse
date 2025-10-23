@@ -96,6 +96,28 @@ public class OkxBalanceProvider(OkxHttpService okxHttpService, ILogger<OkxBalanc
         }
     }
 
+    public async Task<Result<decimal>> GetTotalUsdtValueAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Result<OkxAssetsValuation[]> portfolioResult = await okxHttpService.GetAssetsValuationAsync();
+
+            if (portfolioResult.IsSuccess)
+            {
+                logger.LogInformation("Successfully retrieved total portfolio value: {Value} USDT", portfolioResult.Value);
+                return Result<decimal>.Success(portfolioResult.Value.Sum(x => ParseDecimal(x.TotalBalance)));
+            }
+
+            logger.LogWarning("Failed to get total portfolio value from OKX: {Error}", portfolioResult.Error.Message);
+            return Result<decimal>.Failure(new Error("Failed to get total USDT value"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get total USDT value");
+            return Result<decimal>.Failure(new Error($"Failed to get total USDT value: {ex.Message}"));
+        }
+    }
+
     private static Balance MapFundingBalance(OkxFundingBalance funding)
         => new()
         {
