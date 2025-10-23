@@ -1,18 +1,40 @@
 ﻿<Solution>
-    <Folder Name="/docker/">
-        <File Path="docker\docker-compose.yaml" />
-    </Folder>
-    <Folder Name="/items/">
-        <File Path="README.md" />
-        <File Path=".gitignore" />
-        <File Path=".editorconfig" />
-        <File Path="sync.sh" />
-    </Folder>
-    <Folder Name="/src/">
-        <Project Path="src\Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
-        <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" Type="Classic C#" />
-    </Folder>
-    <Folder Name="/tools/">
-        <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" Type="Classic C#" />
-    </Folder>
+  <Folder Name="/docker/">
+    <File Path="docker\docker-compose.yaml" />
+  </Folder>
+  <Folder Name="/items/">
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+    <File Path=".editorconfig" />
+    <File Path="sync.sh" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src\Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
+    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/src/Warehouse.Frontend/">
+    <File Path="src\Warehouse.Frontend\index.html" />
+    <File Path="src\Warehouse.Frontend\package.json" />
+    <File Path="src\Warehouse.Frontend\package-lock.json" />
+    <File Path="src\Warehouse.Frontend\postcss.config.js" />
+    <File Path="src\Warehouse.Frontend\tailwind.config.js" />
+    <File Path="src\Warehouse.Frontend\vite.config.js" />
+  </Folder>
+  <Folder Name="/src/Warehouse.Frontend/src/">
+    <File Path="src\Warehouse.Frontend\src\App.vue" />
+    <File Path="src\Warehouse.Frontend\src\main.js" />
+  </Folder>
+  <Folder Name="/src/Warehouse.Frontend/src/assets/">
+    <File Path="src\Warehouse.Frontend\src\assets\main.css" />
+  </Folder>
+  <Folder Name="/src/Warehouse.Frontend/src/components/">
+    <File Path="src\Warehouse.Frontend\src\components\AccountCard.vue" />
+    <File Path="src\Warehouse.Frontend\src\components\WorkerCard.vue" />
+  </Folder>
+  <Folder Name="/src/Warehouse.Frontend/src/services/">
+    <File Path="src\Warehouse.Frontend\src\services\api.js" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" Type="Classic C#" />
+  </Folder>
 </Solution>

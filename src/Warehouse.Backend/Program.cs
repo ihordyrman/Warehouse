@@ -14,9 +14,19 @@ builder.Services.AddApi(builder.Environment);
 builder.Services.AddCoreDependencies();
 builder.Services.AddOkxSupport(builder.Configuration);
 builder.Services.AddHostedService<WorkerOrchestrator>();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 WebApplication app = builder.Build();
 
+app.UseCors();
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>

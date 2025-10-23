@@ -57,3 +57,5 @@ nunit-*.xml
 *.DotSettings
 *.DotSettings.user
 **/key-*.xml
+
+**/node_modules
