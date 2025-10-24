@@ -14,7 +14,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddOkxSupport(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<MarketCredentials>(configuration.GetSection(nameof(MarketCredentials)));
+        services.Configure<MarketAccount>(configuration.GetSection(nameof(MarketAccount)));
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<OkxHeartbeatService>();
         services.AddScoped<OkxHttpService>();

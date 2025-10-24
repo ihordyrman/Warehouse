@@ -15,9 +15,9 @@ namespace Warehouse.Core.Infrastructure.Persistence;
 
 public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvider? dataProtection) : DbContext(options)
 {
-    private readonly IDataProtector protector = dataProtection?.CreateProtector("Warehouse.Credentials") ?? null!;
+    private readonly IDataProtector protector = dataProtection?.CreateProtector("Warehouse.Accounts") ?? null!;
 
-    public DbSet<MarketCredentials> MarketCredentials { get; set; }
+    public DbSet<MarketAccount> MarketAccounts { get; set; }
 
     public DbSet<MarketDetails> MarketDetails { get; set; }
 
@@ -32,7 +32,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
-        modelBuilder.Entity<MarketCredentials>(entity =>
+        modelBuilder.Entity<MarketAccount>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
@@ -46,9 +46,9 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasOne<MarketCredentials>(x => x.Credentials)
+            entity.HasOne<MarketAccount>(x => x.Credentials)
                 .WithOne(x => x.MarketDetails)
-                .HasForeignKey<MarketCredentials>(x => x.MarketId);
+                .HasForeignKey<MarketAccount>(x => x.MarketId);
         });
 
         modelBuilder.Entity<Candlestick>(entity =>
@@ -80,7 +80,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
                     x => JsonSerializer.Serialize(x, (JsonSerializerOptions)null!),
                     x => JsonSerializer.Deserialize<Dictionary<string, string>>(x, (JsonSerializerOptions)null!) ??
                          new Dictionary<string, string>())
-                .HasColumnType("nvarchar(max)")
+                .HasColumnType("jsonb")
                 .HasDefaultValue(new Dictionary<string, string>());
             entity.HasOne(x => x.WorkerDetails)
                 .WithMany(x => x.PipelineSteps)

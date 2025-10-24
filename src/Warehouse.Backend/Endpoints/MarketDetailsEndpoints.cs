@@ -20,9 +20,9 @@ public static class MarketEndpoints
                 "/",
                 async (WarehouseDbContext db) =>
                 {
-                    List<MarketResponse> marketsWithCredentials =
+                    List<MarketResponse> marketsWithAccount =
                         await db.MarketDetails.AsNoTracking().Select(x => x.AsDto()).ToListAsync();
-                    return TypedResults.Ok(marketsWithCredentials);
+                    return TypedResults.Ok(marketsWithAccount);
                 })
             .WithName("GetAllMarkets")
             .WithSummary("Get all markets")
@@ -123,9 +123,9 @@ public static class MarketEndpoints
                     int id,
                     ILoggerFactory loggerFactory) =>
                 {
-                    if (await db.MarketCredentials.AnyAsync(x => x.MarketId == id))
+                    if (await db.MarketAccounts.AnyAsync(x => x.MarketId == id))
                     {
-                        throw new ValidationException("Cannot delete market that have associated credentials");
+                        throw new ValidationException("Cannot delete market that have associated accounts");
                     }
 
                     try
@@ -147,23 +147,23 @@ public static class MarketEndpoints
             .Produces<string>(400);
 
         group.MapGet(
-                "/{id:int}/credentials",
-                async Task<Results<Ok<MarketCredentialsResponse>, NotFound>> (WarehouseDbContext db, int id) =>
+                "/{id:int}/account",
+                async Task<Results<Ok<MarketAccountResponse>, NotFound>> (WarehouseDbContext db, int id) =>
                 {
-                    MarketCredentialsResponse? credentials = await db.MarketCredentials.AsNoTracking()
+                    MarketAccountResponse? account = await db.MarketAccounts.AsNoTracking()
                         .Where(x => x.MarketId == id)
                         .Select(x => x.AsDto())
                         .FirstOrDefaultAsync();
 
-                    return credentials switch
+                    return account switch
                     {
                         null => TypedResults.NotFound(),
-                        _ => TypedResults.Ok(credentials)
+                        _ => TypedResults.Ok(account)
                     };
                 })
-            .WithName("GetMarketCredentialsByMarketId")
-            .WithSummary("Get all credentials for a specific market")
-            .Produces<List<MarketCredentialsResponse>>()
+            .WithName("GetMarketAccountByMarketId")
+            .WithSummary("Get account for a specific market")
+            .Produces<List<MarketAccountResponse>>()
             .Produces(404);
 
         return group;

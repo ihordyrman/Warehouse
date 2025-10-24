@@ -51,6 +51,35 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Orders",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WorkerId = table.Column<int>(type: "integer", nullable: true),
+                    MarketType = table.Column<int>(type: "integer", nullable: false),
+                    ExchangeOrderId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Side = table.Column<int>(type: "integer", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Quantity = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    StopPrice = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    Fee = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    PlacedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ExecutedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CancelledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    TakeProfit = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    StopLoss = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Orders", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "WorkerDetails",
                 columns: table => new
                 {
@@ -68,7 +97,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MarketCredentials",
+                name: "MarketAccounts",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -82,9 +111,9 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MarketCredentials", x => x.Id);
+                    table.PrimaryKey("PK_MarketAccounts", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MarketCredentials_MarketDetails_MarketId",
+                        name: "FK_MarketAccounts_MarketDetails_MarketId",
                         column: x => x.MarketId,
                         principalTable: "MarketDetails",
                         principalColumn: "Id",
@@ -127,8 +156,8 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 column: "Timestamp");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MarketCredentials_MarketId",
-                table: "MarketCredentials",
+                name: "IX_MarketAccounts_MarketId",
+                table: "MarketAccounts",
                 column: "MarketId",
                 unique: true);
 
@@ -137,6 +166,16 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 table: "MarketDetails",
                 column: "Type",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_Symbol",
+                table: "Orders",
+                column: "Symbol");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_WorkerId",
+                table: "Orders",
+                column: "WorkerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PipelineSteps_WorkerDetailsId",
@@ -157,7 +196,10 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 name: "Candlesticks");
 
             migrationBuilder.DropTable(
-                name: "MarketCredentials");
+                name: "MarketAccounts");
+
+            migrationBuilder.DropTable(
+                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "PipelineSteps");

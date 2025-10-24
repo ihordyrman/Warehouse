@@ -166,8 +166,9 @@ export default {
         WorkerCard
     },
     setup() {
-        const accounts = ref([])
+        const markets = ref([])
         const workers = ref([])
+        const accounts = ref([])
         const showOnlyEnabled = ref(false)
         const loading = ref({
             accounts: false,
@@ -181,7 +182,7 @@ export default {
         let refreshInterval = null
 
         const activeAccountsCount = computed(() =>
-                accounts.value.filter(a => a.enabled).length
+                accounts.value.length
         )
 
         const runningWorkersCount = computed(() =>
@@ -189,7 +190,7 @@ export default {
         )
 
         const totalBalance = computed(() =>
-                accounts.value.reduce((sum, acc) => sum + (acc.balance?.total || 0), 0)
+                markets.value.reduce((sum, acc) => sum + (acc.balance?.total || 0), 0)
         )
 
         const formatTotalBalance = computed(() =>
@@ -224,28 +225,23 @@ export default {
 
             try {
                 const response = await marketAPI.getMarkets()
-                accounts.value = response.data || []
+                const accountsResponse = await marketAPI.getAccounts()
+                markets.value = response.data || []
+                accounts.value = accountsResponse.data || []
 
-                for (const account of accounts.value) {
+                for (const market of markets.value) {
                     try {
-                        const credResponse = await marketAPI.getMarketCredentials(account.id)
-                        account.hasCredentials = !!credResponse.data
-                    } catch {
-                        account.hasCredentials = false
-                    }
-
-                    try {
-                        const balanceResponse = await balanceAPI.getTotalUsdtValue(account.type);
+                        const balanceResponse = await balanceAPI.getTotalUsdtValue(market.type);
                         const totalUsdt = balanceResponse.data.totalUsdtValue || 0;
 
-                        account.balance = {
-                            available: totalUsdt, // Using total as available since we only get total
+                        market.balance = {
+                            available: totalUsdt,
                             inOrders: 0,
                             total: totalUsdt
                         }
                     } catch (err) {
-                        console.error(`Error fetching balance for ${account.marketType}:`, err)
-                        account.balance = {
+                        console.error(`Error fetching balance for ${market.marketType}:`, err)
+                        market.balance = {
                             available: 0,
                             inOrders: 0,
                             total: 0
@@ -305,7 +301,7 @@ export default {
         })
 
         return {
-            accounts,
+            accounts: markets,
             workers,
             filteredWorkers,
             showOnlyEnabled,

@@ -12,7 +12,7 @@ namespace Warehouse.Core.Markets.Concrete.Okx;
 public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 {
     private readonly OkxConnectionManager connectionManager;
-    private readonly MarketCredentials credentials;
+    private readonly MarketAccount account;
     private readonly ReaderWriterLockSlim dataLock = new(LockRecursionPolicy.NoRecursion);
     private readonly ILogger<OkxMarketAdapter> logger;
     private readonly OkxMessageProcessor messageProcessor;
@@ -31,7 +31,7 @@ public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         logger = loggerFactory.CreateLogger<OkxMarketAdapter>();
 
         IServiceScope scope = scopeFactory.CreateScope();
-        credentials = scope.ServiceProvider.GetService<ICredentialsProvider>()!.GetCredentialsAsync(MarketType.Okx)
+        account = scope.ServiceProvider.GetService<ICredentialsProvider>()!.GetCredentialsAsync(MarketType.Okx)
             .GetAwaiter()
             .GetResult();
 
@@ -81,7 +81,7 @@ public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
                 return false;
             }
 
-            if (credentials.ApiKey != null)
+            if (account.ApiKey != null)
             {
                 await AuthenticateAsync(cancellationToken);
             }
@@ -128,7 +128,7 @@ public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
 
     private async Task AuthenticateAsync(CancellationToken cancellationToken)
     {
-        object authRequest = OkxAuthService.CreateAuthRequest(credentials);
+        object authRequest = OkxAuthService.CreateAuthRequest(account);
         await connectionManager.SendAsync(authRequest, cancellationToken);
         logger.LogInformation("Authentication request sent");
     }

@@ -67,7 +67,7 @@ static async Task EnsureDbReadinessAsync(WebApplication app)
 
 static async Task EnsureCredentialsPopulated(IConfiguration configuration, WarehouseDbContext dbContext)
 {
-    if (await dbContext.MarketCredentials.AnyAsync())
+    if (await dbContext.MarketAccounts.AnyAsync())
     {
         return;
     }
@@ -88,7 +88,7 @@ static async Task EnsureCredentialsPopulated(IConfiguration configuration, Wareh
         dbContext.MarketDetails.Add(market);
     }
 
-    var marketCredentials = new MarketCredentials
+    var marketCredentials = new MarketAccount
     {
         ApiKey = apiKey,
         Passphrase = passPhrase,
@@ -96,6 +96,6 @@ static async Task EnsureCredentialsPopulated(IConfiguration configuration, Wareh
         MarketDetails = market
     };
 
-    dbContext.MarketCredentials.Add(marketCredentials);
+    dbContext.MarketAccounts.Add(marketCredentials);
     await dbContext.SaveChangesAsync();
 }

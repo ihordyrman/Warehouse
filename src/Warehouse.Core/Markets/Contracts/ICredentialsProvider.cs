@@ -4,9 +4,9 @@ namespace Warehouse.Core.Markets.Contracts;
 
 public interface ICredentialsProvider
 {
-    Task<MarketCredentials> GetCredentialsAsync(MarketType marketType, CancellationToken cancellationToken = default);
+    Task<MarketAccount> GetCredentialsAsync(MarketType marketType, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<MarketCredentials>> GetAllCredentialsAsync(
+    Task<IReadOnlyList<MarketAccount>> GetAllCredentialsAsync(
         MarketType? marketType = null,
         CancellationToken cancellationToken = default);
 }

@@ -2,7 +2,7 @@
 
 namespace Warehouse.Core.Markets.Domain;
 
-public class MarketCredentials : AuditEntity
+public class MarketAccount : AuditEntity
 {
     public int Id { get; init; }
 

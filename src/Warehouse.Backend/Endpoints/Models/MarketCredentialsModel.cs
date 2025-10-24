@@ -3,7 +3,7 @@ using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Backend.Endpoints.Models;
 
-public abstract class BaseMarketCredentialsModel
+public abstract class BaseMarketAccountModel
 {
     [Required(ErrorMessage = "Market ID is required")]
     [Range(1, int.MaxValue, ErrorMessage = "Market ID must be greater than 0")]
@@ -22,35 +22,35 @@ public abstract class BaseMarketCredentialsModel
     public string? SecretKey { get; init; } = string.Empty;
 }
 
-public class MarketCredentialsResponse : BaseMarketCredentialsModel
+public class MarketAccountResponse : BaseMarketAccountModel
 {
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "ID must be greater than 0")]
     public int? Id { get; init; }
 }
 
-public class CreateMarketCredentialsRequest : BaseMarketCredentialsModel;
+public class CreateMarketAccountRequest : BaseMarketAccountModel;
 
-public class UpdateMarketCredentialsRequest : BaseMarketCredentialsModel;
+public class UpdateMarketAccountRequest : BaseMarketAccountModel;
 
-public static class MarketCredentialsMappingExtensions
+public static class MarketAccountMappingExtensions
 {
-    public static MarketCredentials AsEntity(this CreateMarketCredentialsRequest credentialsResponse, int marketId)
+    public static MarketAccount AsEntity(this CreateMarketAccountRequest accountResponse, int marketId)
         => new()
         {
             MarketId = marketId,
-            ApiKey = credentialsResponse.ApiKey!,
-            Passphrase = credentialsResponse.Passphrase!,
-            SecretKey = credentialsResponse.SecretKey!
+            ApiKey = accountResponse.ApiKey!,
+            Passphrase = accountResponse.Passphrase!,
+            SecretKey = accountResponse.SecretKey!
         };
 
-    public static MarketCredentialsResponse AsDto(this MarketCredentials marketCredentials)
+    public static MarketAccountResponse AsDto(this MarketAccount marketAccount)
         => new()
         {
-            Id = marketCredentials.Id,
-            MarketId = marketCredentials.MarketId,
-            ApiKey = marketCredentials.ApiKey,
-            Passphrase = marketCredentials.Passphrase,
-            SecretKey = marketCredentials.SecretKey
+            Id = marketAccount.Id,
+            MarketId = marketAccount.MarketId,
+            ApiKey = marketAccount.ApiKey,
+            Passphrase = marketAccount.Passphrase,
+            SecretKey = marketAccount.SecretKey
         };
 }

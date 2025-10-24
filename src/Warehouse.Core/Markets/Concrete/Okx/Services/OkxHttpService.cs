@@ -17,7 +17,7 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         TypeInfoResolver = OkxJsonContext.Default
     };
 
-    private MarketCredentials? Credentials { get; set; }
+    private MarketAccount? Credentials { get; set; }
 
     public async Task<Result<OkxBalanceDetail[]>> GetBalanceAsync(string? currency = null)
     {

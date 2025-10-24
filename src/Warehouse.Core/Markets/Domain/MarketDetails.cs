@@ -8,5 +8,5 @@ public class MarketDetails : AuditEntity
 
     public MarketType Type { get; init; }
 
-    public MarketCredentials? Credentials { get; init; }
+    public MarketAccount? Credentials { get; init; }
 }

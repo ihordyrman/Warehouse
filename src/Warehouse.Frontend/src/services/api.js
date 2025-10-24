@@ -16,7 +16,7 @@ apiClient.interceptors.response.use(response => response, error => {
 export const marketAPI = {
     getMarkets: () => apiClient.get('/market'),
     getMarketById: (id) => apiClient.get(`/market/${id}`),
-    getMarketCredentials: (marketId) => apiClient.get(`/market/${marketId}/credentials`),
+    getAccounts: () => apiClient.get(`/account`),
 }
 
 export const balanceAPI = {

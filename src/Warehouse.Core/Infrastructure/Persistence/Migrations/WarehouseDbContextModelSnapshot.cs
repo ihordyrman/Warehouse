@@ -22,7 +22,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketCredentials", b =>
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketAccount", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -59,7 +59,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.HasIndex("MarketId")
                         .IsUnique();
 
-                    b.ToTable("MarketCredentials");
+                    b.ToTable("MarketAccounts");
                 });
 
             modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketDetails", b =>
@@ -85,6 +85,84 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("MarketDetails");
+                });
+
+            modelBuilder.Entity("Warehouse.Core.Orders.Domain.Order", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExchangeOrderId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("ExecutedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Fee")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<int>("MarketType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PlacedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<int>("Side")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("StopLoss")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<decimal?>("StopPrice")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal?>("TakeProfit")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("WorkerId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Symbol");
+
+                    b.HasIndex("WorkerId");
+
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Warehouse.Core.Pipelines.Domain.PipelineStep", b =>
@@ -220,11 +298,11 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("WorkerDetails");
                 });
 
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketCredentials", b =>
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketAccount", b =>
                 {
                     b.HasOne("Warehouse.Core.Markets.Domain.MarketDetails", "MarketDetails")
                         .WithOne("Credentials")
-                        .HasForeignKey("Warehouse.Core.Markets.Domain.MarketCredentials", "MarketId")
+                        .HasForeignKey("Warehouse.Core.Markets.Domain.MarketAccount", "MarketId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

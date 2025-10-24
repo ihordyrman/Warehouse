@@ -14,7 +14,7 @@ public class CreateWorkerRequest
 
     [Required(ErrorMessage = "Symbol is required")]
     [StringLength(20, MinimumLength = 3, ErrorMessage = "Symbol must be between 3 and 20 characters")]
-    [RegularExpression(@"^[A-Z0-9-/]+$", ErrorMessage = "Symbol must contain only uppercase letters, numbers, hyphens, and slashes")]
+    [RegularExpression("^[A-Z0-9-/]+$", ErrorMessage = "Symbol must contain only uppercase letters, numbers, hyphens, and slashes")]
     public string Symbol { get; set; } = string.Empty;
 }
 
@@ -26,7 +26,7 @@ public class UpdateWorkerRequest
     public MarketType? Type { get; set; }
 
     [StringLength(20, MinimumLength = 3, ErrorMessage = "Symbol must be between 3 and 20 characters")]
-    [RegularExpression(@"^[A-Z0-9-/]+$", ErrorMessage = "Symbol must contain only uppercase letters, numbers, hyphens, and slashes")]
+    [RegularExpression("^[A-Z0-9-/]+$", ErrorMessage = "Symbol must contain only uppercase letters, numbers, hyphens, and slashes")]
     public string? Symbol { get; set; }
 }
 
