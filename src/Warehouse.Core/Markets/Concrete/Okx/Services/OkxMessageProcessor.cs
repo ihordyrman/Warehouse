@@ -16,8 +16,6 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
         TypeInfoResolver = OkxJsonContext.Default
     };
 
-    private long sequenceNumber;
-
     public void ProcessMessage(WebSocketMessage message)
     {
         if (message.Text is null)
@@ -82,7 +80,6 @@ internal sealed class OkxMessageProcessor(ILogger<OkxMessageProcessor> logger, I
             return;
         }
 
-        marketDataCache.Update(
-            new MarketDataEvent(symbol, MarketType.Okx, Interlocked.Increment(ref sequenceNumber), data.Asks, data.Bids));
+        marketDataCache.Update(new MarketDataEvent(symbol, MarketType.Okx, data.Asks, data.Bids));
     }
 }

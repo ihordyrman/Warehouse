@@ -23,7 +23,6 @@ export const balanceAPI = {
     getBalance: (marketType) => apiClient.get(`/balance/${marketType}`),
     getAccountSummary: (marketType) => apiClient.get(`/balance/${marketType}/account/summary`),
     getCurrencyBalance: (marketType, currency) => apiClient.get(`/balance/${marketType}/${currency}`),
-    getNonZeroBalances: (marketType) => apiClient.get(`/balance/${marketType}/non-zero`),
     getTotalUsdtValue: (marketType) => apiClient.get(`/balance/${marketType}/total-usdt`),
 }
 
@@ -31,7 +30,6 @@ export const workerAPI = {
     getWorkers: () => apiClient.get('/worker'),
     getEnabledWorkers: () => apiClient.get('/worker/enabled'),
     getWorkerById: (id) => apiClient.get(`/worker/${id}`),
-    toggleWorker: (id, enabled) => apiClient.patch(`/worker/${id}/toggle`, {enabled}),
 }
 
 export default {

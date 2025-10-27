@@ -214,7 +214,7 @@ public class OrderManager : IOrderManager
             x => x.ExchangeOrderId == exchangeOrderId && x.MarketType == marketType,
             cancellationToken);
 
-    public async Task<List<Order>> GetOrdersByWorkerAsync(
+    public async Task<List<Order>> GetOrdersAsync(
         int workerId,
         OrderStatus? status = null,
         CancellationToken cancellationToken = default)

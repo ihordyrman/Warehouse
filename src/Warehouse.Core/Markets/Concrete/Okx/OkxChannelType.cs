@@ -3,6 +3,5 @@
 public enum OkxChannelType
 {
     Public,
-    Private,
-    Business
+    Private
 }

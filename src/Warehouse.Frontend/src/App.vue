@@ -271,19 +271,6 @@ export default {
             }
         }
 
-        const handleWorkerToggle = async (workerId, enabled) => {
-            try {
-                await workerAPI.toggleWorker(workerId, enabled)
-                const worker = workers.value.find(w => w.id === workerId)
-                if (worker) {
-                    worker.enabled = enabled
-                }
-            } catch (err) {
-                console.error('Error toggling worker:', err)
-                alert('Failed to toggle worker status')
-            }
-        }
-
         const refreshData = async () => {
             await Promise.all([fetchAccounts(), fetchWorkers()])
         }
@@ -314,7 +301,6 @@ export default {
             systemStatusClass,
             fetchAccounts,
             fetchWorkers,
-            handleWorkerToggle,
             refreshData
         }
     }

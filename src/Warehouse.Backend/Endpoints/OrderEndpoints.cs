@@ -146,7 +146,7 @@ public static class OrderEndpoints
                 "/worker/{workerId:int}",
                 async Task<Ok<List<OrderResponse>>> (IOrderManager orderManager, int workerId, [FromQuery] OrderStatus? status) =>
                 {
-                    List<Order> orders = await orderManager.GetOrdersByWorkerAsync(workerId, status);
+                    List<Order> orders = await orderManager.GetOrdersAsync(workerId, status);
                     var response = orders.Select(OrderResponse.FromDomain).ToList();
                     return TypedResults.Ok(response);
                 })

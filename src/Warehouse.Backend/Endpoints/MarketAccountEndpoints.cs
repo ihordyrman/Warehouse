@@ -136,28 +136,6 @@ public static class MarketAccountEndpoints
             .Produces(404)
             .Produces<string>(400);
 
-        group.MapDelete(
-                "/{id:int}",
-                async Task<Results<NotFound, Ok, BadRequest>> (WarehouseDbContext db, int id, ILoggerFactory loggerFactory) =>
-                {
-                    try
-                    {
-                        int rowsAffected = await db.MarketAccounts.Where(x => x.MarketId == id).ExecuteDeleteAsync();
-                        return rowsAffected == 0 ? TypedResults.NotFound() : TypedResults.Ok();
-                    }
-                    catch (DbUpdateException ex)
-                    {
-                        ILogger logger = loggerFactory.CreateLogger("MarketAccountAPI.Delete");
-                        logger.LogError(ex, "Failed to delete market account for MarketId: {MarketId}", id);
-                        return TypedResults.BadRequest();
-                    }
-                })
-            .WithName("DeleteMarketCredential")
-            .WithSummary("Delete market account")
-            .Produces(200)
-            .Produces(404)
-            .Produces<string>(400);
-
         return group;
     }
 }

@@ -6,9 +6,9 @@ public class BalanceSnapshot
 {
     public MarketType MarketType { get; init; }
 
-    public Dictionary<string, Balance> Spot { get; init; } = [];
+    public Dictionary<string, Balance> Spot { get; } = [];
 
-    public Dictionary<string, Balance> Funding { get; init; } = [];
+    public Dictionary<string, Balance> Funding { get; } = [];
 
     public AccountBalance? AccountSummary { get; set; }
 

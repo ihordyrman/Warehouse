@@ -13,15 +13,15 @@ public class CreateOrderRequest
 
     public required OrderSide Side { get; init; }
 
-    public required decimal Quantity { get; set; }
+    public required decimal Quantity { get; init; }
 
-    public decimal? Price { get; set; }
+    public decimal? Price { get; init; }
 
-    public decimal? StopPrice { get; set; }
+    public decimal? StopPrice { get; init; }
 
-    public decimal? TakeProfit { get; set; }
+    public decimal? TakeProfit { get; init; }
 
-    public decimal? StopLoss { get; set; }
+    public decimal? StopLoss { get; init; }
 
     public DateTime? ExpireTime { get; set; }
 }

@@ -3,7 +3,6 @@
 public enum WorkerState
 {
     Running,
-    Paused,
     Stopped,
     Error
 }

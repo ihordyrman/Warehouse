@@ -42,7 +42,7 @@ public static class WorkerEndpoints
             .Produces(404);
 
         group.MapGet(
-                "/by-market/{marketType}",
+                "/{marketType}",
                 async Task<Results<Ok<List<WorkerResponse>>, BadRequest<ValidationProblemDetails>>> (
                         WarehouseDbContext db,
                         string marketType)

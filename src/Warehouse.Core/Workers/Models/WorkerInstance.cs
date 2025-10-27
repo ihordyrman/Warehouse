@@ -19,8 +19,6 @@ public class WorkerInstance
 
     public bool IsHealthy { get; set; } = true;
 
-    public string? LastError { get; set; }
-
     public DateTime LastStatusUpdate { get; set; } = DateTime.UtcNow;
 
     public DateTime LastHealthCheck { get; set; } = DateTime.UtcNow;
@@ -31,7 +29,5 @@ public enum WorkerInstanceStatus
     Starting,
     Running,
     Stopping,
-    Stopped,
-    Error,
-    Paused
+    Stopped
 }

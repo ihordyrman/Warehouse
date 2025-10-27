@@ -9,6 +9,4 @@ public class WebSocketMessage
     public byte[]? Binary { get; init; }
 
     public WebSocketMessageType Type { get; init; }
-
-    public DateTime ReceivedAt { get; init; } = DateTime.UtcNow;
 }

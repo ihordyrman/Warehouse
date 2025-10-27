@@ -2,4 +2,4 @@
 
 namespace Warehouse.Core.Markets.Models;
 
-public sealed record MarketDataEvent(string Symbol, MarketType Source, long SequenceNumber, string[][] Asks, string[][] Bids);
+public sealed record MarketDataEvent(string Symbol, MarketType Source, string[][] Asks, string[][] Bids);

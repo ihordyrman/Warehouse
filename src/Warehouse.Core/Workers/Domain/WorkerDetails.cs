@@ -16,5 +16,5 @@ public class WorkerDetails : AuditEntity
 
     public string Symbol { get; set; } = string.Empty;
 
-    public List<PipelineStep> PipelineSteps { get; set; } = new();
+    public List<PipelineStep> PipelineSteps { get; set; } = [];
 }

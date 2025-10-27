@@ -91,30 +91,6 @@ public static class BalanceEndpoints
             .Produces<string>(400);
 
         group.MapGet(
-                "/{marketType}/non-zero",
-                async Task<Results<Ok<List<BalanceResponse>>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
-                {
-                    if (!Enum.TryParse(marketType, true, out MarketType market))
-                    {
-                        return TypedResults.BadRequest($"Invalid market type: {marketType}");
-                    }
-
-                    Result<List<Balance>> result = await balanceManager.GetNonZeroBalancesAsync(market);
-
-                    if (!result.IsSuccess)
-                    {
-                        return TypedResults.BadRequest(result.Error.Message);
-                    }
-
-                    var response = result.Value.Select(BalanceResponse.FromDomain).ToList();
-                    return TypedResults.Ok(response);
-                })
-            .WithName("GetNonZeroBalances")
-            .WithSummary("Get all non-zero balances for a specific market")
-            .Produces<List<BalanceResponse>>()
-            .Produces<string>(400);
-
-        group.MapGet(
                 "/{marketType}/total-usdt",
                 async Task<Results<Ok<TotalValueResponse>, BadRequest<string>>> (IBalanceManager balanceManager, string marketType) =>
                 {

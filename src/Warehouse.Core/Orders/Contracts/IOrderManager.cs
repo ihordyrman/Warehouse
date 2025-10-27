@@ -16,7 +16,7 @@ public interface IOrderManager
 
     Task<Order?> GetOrderAsync(long orderId, CancellationToken cancellationToken = default);
 
-    Task<List<Order>> GetOrdersByWorkerAsync(int workerId, OrderStatus? status = null, CancellationToken cancellationToken = default);
+    Task<List<Order>> GetOrdersAsync(int workerId, OrderStatus? status = null, CancellationToken cancellationToken = default);
 
     Task<List<Order>> GetOrderHistoryAsync(
         int skip = 0,

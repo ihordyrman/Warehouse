@@ -7,6 +7,5 @@ public enum OrderStatus
     PartiallyFilled,
     Filled,
     Cancelled,
-    Rejected,
     Failed
 }
