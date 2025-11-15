@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Warehouse.Core.Markets.Domain;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public abstract class BaseMarketAccountModel
 {

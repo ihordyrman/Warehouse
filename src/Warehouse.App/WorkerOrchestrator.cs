@@ -9,7 +9,7 @@ using Warehouse.Core.Workers.Domain;
 using Warehouse.Core.Workers.Models;
 using Warehouse.Core.Workers.Services;
 
-namespace Warehouse.Backend;
+namespace Warehouse.App;
 
 public class WorkerOrchestrator(
     IServiceScopeFactory scopeFactory,

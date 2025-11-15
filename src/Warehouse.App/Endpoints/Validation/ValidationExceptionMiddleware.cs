@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Warehouse.Backend.Endpoints.Validation;
+namespace Warehouse.App.Endpoints.Validation;
 
 public class ValidationExceptionMiddleware(RequestDelegate next, ILogger<ValidationExceptionMiddleware> logger)
 {

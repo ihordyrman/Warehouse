@@ -20,7 +20,7 @@ public static class DependencyInjection
     {
         services.AddDataProtection(x => x.ApplicationDiscriminator = "Warehouse")
             .PersistKeysToFileSystem(new DirectoryInfo(Directory.GetCurrentDirectory()))
-            .SetApplicationName("Warehouse.Backend")
+            .SetApplicationName("Warehouse.App")
             .SetDefaultKeyLifetime(TimeSpan.FromDays(365));
 
         // todo: while in local development

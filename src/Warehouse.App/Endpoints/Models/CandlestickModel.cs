@@ -1,7 +1,7 @@
 ﻿using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Shared.Domain;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public abstract class CandlestickModel
 {

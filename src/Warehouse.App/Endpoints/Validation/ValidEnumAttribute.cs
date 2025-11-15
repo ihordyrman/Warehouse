@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Warehouse.Backend.Endpoints.Validation;
+namespace Warehouse.App.Endpoints.Validation;
 
 public class ValidEnumAttribute(Type enumType) : ValidationAttribute
 {

@@ -9,8 +9,8 @@
     <File Path="sync.sh" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src\Warehouse.Backend\Warehouse.Backend.csproj" Type="Classic C#" />
-    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" Type="Classic C#" />
+    <Project Path="src\Warehouse.App\Warehouse.App.csproj" Type="C#" />
+    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" Type="C#" />
   </Folder>
   <Folder Name="/src/Warehouse.Frontend/">
     <File Path="src\Warehouse.Frontend\index.html" />
@@ -35,6 +35,6 @@
     <File Path="src\Warehouse.Frontend\src\services\api.js" />
   </Folder>
   <Folder Name="/tools/">
-    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" Type="Classic C#" />
+    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" Type="C#" />
   </Folder>
 </Solution>

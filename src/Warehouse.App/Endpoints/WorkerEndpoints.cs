@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.Backend.Endpoints.Models;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Models;
+using Warehouse.App.Endpoints.Validation;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Workers.Domain;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class WorkerEndpoints
 {

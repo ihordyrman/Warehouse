@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.Backend;
-using Warehouse.Backend.Endpoints;
+using Warehouse.App;
+using Warehouse.App.Endpoints;
 using Warehouse.Core;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
@@ -14,6 +14,7 @@ builder.Services.AddApi(builder.Environment);
 builder.Services.AddCoreDependencies();
 builder.Services.AddOkxSupport(builder.Configuration);
 builder.Services.AddHostedService<WorkerOrchestrator>();
+builder.Services.AddRazorPages();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -27,6 +28,7 @@ builder.Services.AddCors(options =>
 WebApplication app = builder.Build();
 
 app.UseCors();
+
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>
@@ -50,7 +52,14 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 });
 
 await EnsureDbReadinessAsync(app);
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseStatusCodePages();
+app.UseHttpLogging();
+app.UseRateLimiter();
 app.AddApi();
+app.MapRazorPages();
 app.Run();
 
 static async Task EnsureDbReadinessAsync(WebApplication app)

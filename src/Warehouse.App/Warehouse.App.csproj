@@ -6,9 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <UserSecretsId>90b1b531-55ba-4a18-a28e-d7ed7e5f201d</UserSecretsId>
-        <PackageId>Warehouse.Backend</PackageId>
-        <AssemblyName>Warehouse.Backend</AssemblyName>
-        <RootNamespace>Warehouse.Backend</RootNamespace>
+        <PackageId>Warehouse.App</PackageId>
     </PropertyGroup>
 
     <ItemGroup>

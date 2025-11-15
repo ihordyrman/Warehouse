@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Warehouse.Backend.Endpoints.Models;
+using Warehouse.App.Endpoints.Models;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Shared.Domain;
 using Warehouse.Core.Shared.Services;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class CandlestickEndpoints
 {

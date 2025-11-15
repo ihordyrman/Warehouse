@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Validation;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class DependencyInjection
 {
@@ -56,9 +56,6 @@ public static class DependencyInjection
 
     public static IApplicationBuilder AddApi(this WebApplication app)
     {
-        app.UseStatusCodePages();
-        app.UseHttpLogging();
-        app.UseRateLimiter();
         app.MapScalarApiReference();
         app.MapOpenApi();
         app.UseMiddleware<ValidationExceptionMiddleware>();

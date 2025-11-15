@@ -1,6 +1,6 @@
 ﻿using Warehouse.Core.Markets.Models;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public class BalanceResponse
 {

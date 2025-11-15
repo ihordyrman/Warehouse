@@ -2,7 +2,7 @@
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Workers.Domain;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public class CreateWorkerRequest
 {

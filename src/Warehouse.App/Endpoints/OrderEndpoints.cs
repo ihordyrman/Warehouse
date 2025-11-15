@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Warehouse.Backend.Endpoints.Models;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Models;
+using Warehouse.App.Endpoints.Validation;
 using Warehouse.Core.Orders.Contracts;
 using Warehouse.Core.Orders.Domain;
 using Warehouse.Core.Orders.Models;
 using Warehouse.Core.Shared;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class OrderEndpoints
 {

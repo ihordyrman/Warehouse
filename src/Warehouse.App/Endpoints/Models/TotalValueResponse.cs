@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Backend.Endpoints.Models;
+﻿namespace Warehouse.App.Endpoints.Models;
 
 public class TotalValueResponse
 {

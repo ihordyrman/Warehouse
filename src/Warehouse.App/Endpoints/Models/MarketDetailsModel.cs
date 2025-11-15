@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Validation;
 using Warehouse.Core.Markets.Domain;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public abstract class BaseMarketModel
 {

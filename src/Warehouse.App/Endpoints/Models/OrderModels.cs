@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Validation;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Orders.Domain;
 using Warehouse.Core.Orders.Models;
 
-namespace Warehouse.Backend.Endpoints.Models;
+namespace Warehouse.App.Endpoints.Models;
 
 public abstract class BaseOrderModel
 {

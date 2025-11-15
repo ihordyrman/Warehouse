@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Warehouse.Backend.Endpoints.Models;
-using Warehouse.Backend.Endpoints.Validation;
+using Warehouse.App.Endpoints.Models;
+using Warehouse.App.Endpoints.Validation;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Pipelines.Domain;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class PipelineStepEndpoints
 {

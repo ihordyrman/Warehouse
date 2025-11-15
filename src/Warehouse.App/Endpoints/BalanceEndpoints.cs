@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Warehouse.Backend.Endpoints.Models;
+using Warehouse.App.Endpoints.Models;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Markets.Models;
 using Warehouse.Core.Shared;
 
-namespace Warehouse.Backend.Endpoints;
+namespace Warehouse.App.Endpoints;
 
 public static class BalanceEndpoints
 {
