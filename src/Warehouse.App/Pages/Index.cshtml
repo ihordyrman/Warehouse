@@ -1,0 +1,17 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div hx-get="/dashboard"
+     hx-trigger="load, every 30s"
+     hx-swap="innerHTML">
+    <div class="flex justify-center items-center py-12">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600">Loading dashboard...</p>
+        </div>
+    </div>
+</div>
+

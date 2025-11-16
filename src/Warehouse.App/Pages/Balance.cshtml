@@ -1,0 +1,18 @@
+@page "{marketType}"
+@model Warehouse.App.Pages.BalanceModel
+@{
+    Layout = null;
+}
+
+<div class="flex justify-between text-sm">
+    <span class="text-gray-500">Available:</span>
+    <span class="font-medium text-gray-900">@Model.Available.ToString("C")</span>
+</div>
+<div class="flex justify-between text-sm">
+    <span class="text-gray-500">In Orders:</span>
+    <span class="font-medium text-gray-900">@Model.InOrders.ToString("C")</span>
+</div>
+<div class="flex justify-between text-sm font-semibold pt-2 border-t">
+    <span class="text-gray-700">Total:</span>
+    <span class="text-gray-900">@Model.Total.ToString("C")</span>
+</div>

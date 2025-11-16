@@ -19,9 +19,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -59,7 +57,7 @@ app.UseStatusCodePages();
 app.UseHttpLogging();
 app.UseRateLimiter();
 app.AddApi();
-app.MapRazorPages();
+app.MapRazorPages().WithStaticAssets();
 app.Run();
 
 static async Task EnsureDbReadinessAsync(WebApplication app)

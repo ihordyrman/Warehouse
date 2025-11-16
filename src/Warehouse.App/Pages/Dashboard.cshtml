@@ -1,0 +1,153 @@
+@page
+@model Warehouse.App.Pages.DashboardModel
+@{
+    Layout = null;
+}
+
+<!-- System Overview -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 p-3 bg-blue-100 rounded-lg">
+                <i class="fas fa-shield-alt text-2xl text-blue-600"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Active Accounts</p>
+                <p class="text-2xl font-semibold text-gray-900">@Model.ActiveAccountsCount</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 p-3 bg-green-100 rounded-lg">
+                <i class="fas fa-play-circle text-2xl text-green-600"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Running Workers</p>
+                <p class="text-2xl font-semibold text-gray-900">@Model.RunningWorkersCount</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 p-3 bg-purple-100 rounded-lg">
+                <i class="fas fa-dollar-sign text-2xl text-purple-600"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Total Balance</p>
+                <p class="text-2xl font-semibold text-gray-900">@Model.TotalBalance.ToString("C")</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accounts Section -->
+<section class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">Market Accounts</h2>
+        <a href="/Accounts/Create" class="btn-primary text-sm">
+            <i class="fas fa-plus mr-2"></i>Add Account
+        </a>
+    </div>
+
+    @if (!Model.Markets.Any())
+    {
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-inbox text-4xl mb-2"></i>
+            <p>No accounts configured. Add your first exchange account to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="accounts-grid">
+            @foreach (var market in Model.Markets)
+            {
+                <div class="card" id="account-@market.Id">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">@market.Name</h3>
+                            <span
+                                class="text-sm px-2 py-1 rounded @(market.Type == "OKX" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600")">
+                                @market.Type
+                            </span>
+                        </div>
+                        <span class="badge @(market.Enabled ? "badge-success" : "bg-gray-100 text-gray-600")">
+                            @(market.Enabled ? "Active" : "Inactive")
+                        </span>
+                    </div>
+
+                    <div class="space-y-3">
+                        @if (market.HasCredentials)
+                        {
+                            <div class="text-sm text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-1"></i>
+                                API Credentials Configured
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-exclamation-circle text-yellow-500 mr-1"></i>
+                                No API Credentials
+                            </div>
+                        }
+
+                        <div class="pt-3 border-t border-gray-200">
+                            <div class="text-sm text-gray-600">Balance Information</div>
+                            <div class="mt-2 space-y-1"
+                                 hx-get="/balance/@market.Type"
+                                 hx-trigger="load, every 60s"
+                                 hx-swap="innerHTML">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-2 pt-2">
+                            <a href="/Accounts/Details?id=@market.Id" class="text-blue-600 hover:text-blue-800 text-sm">
+                                <i class="fas fa-info-circle mr-1"></i>Details
+                            </a>
+                            <a href="/Accounts/Edit?id=@market.Id" class="text-gray-600 hover:text-gray-800 text-sm">
+                                <i class="fas fa-edit mr-1"></i>Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<!-- Workers Section -->
+<section>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">Trading Workers</h2>
+        <div class="flex items-center space-x-4">
+            <label class="flex items-center">
+                <input type="checkbox"
+                       id="show-only-enabled"
+                       hx-get="/workers?onlyEnabled=true"
+                       hx-target="#workers-grid"
+                       hx-swap="outerHTML"
+                       class="mr-2">
+                <span class="text-sm text-gray-700">Show only enabled</span>
+            </label>
+            <a href="/Workers/Create" class="btn-primary text-sm">
+                <i class="fas fa-plus mr-2"></i>Add Worker
+            </a>
+        </div>
+    </div>
+
+    <div id="workers-grid"
+         hx-get="/workers"
+         hx-trigger="load, every 30s"
+         hx-swap="outerHTML">
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
+            <p>Loading workers...</p>
+        </div>
+    </div>
+</section>

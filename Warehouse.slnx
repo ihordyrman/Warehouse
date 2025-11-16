@@ -9,32 +9,10 @@
     <File Path="sync.sh" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src\Warehouse.App\Warehouse.App.csproj" Type="C#" />
-    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" Type="C#" />
-  </Folder>
-  <Folder Name="/src/Warehouse.Frontend/">
-    <File Path="src\Warehouse.Frontend\index.html" />
-    <File Path="src\Warehouse.Frontend\package.json" />
-    <File Path="src\Warehouse.Frontend\package-lock.json" />
-    <File Path="src\Warehouse.Frontend\postcss.config.js" />
-    <File Path="src\Warehouse.Frontend\tailwind.config.js" />
-    <File Path="src\Warehouse.Frontend\vite.config.js" />
-  </Folder>
-  <Folder Name="/src/Warehouse.Frontend/src/">
-    <File Path="src\Warehouse.Frontend\src\App.vue" />
-    <File Path="src\Warehouse.Frontend\src\main.js" />
-  </Folder>
-  <Folder Name="/src/Warehouse.Frontend/src/assets/">
-    <File Path="src\Warehouse.Frontend\src\assets\main.css" />
-  </Folder>
-  <Folder Name="/src/Warehouse.Frontend/src/components/">
-    <File Path="src\Warehouse.Frontend\src\components\AccountCard.vue" />
-    <File Path="src\Warehouse.Frontend\src\components\WorkerCard.vue" />
-  </Folder>
-  <Folder Name="/src/Warehouse.Frontend/src/services/">
-    <File Path="src\Warehouse.Frontend\src\services\api.js" />
+    <Project Path="src\Warehouse.App\Warehouse.App.csproj" />
+    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" />
   </Folder>
   <Folder Name="/tools/">
-    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" Type="C#" />
+    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" />
   </Folder>
 </Solution>

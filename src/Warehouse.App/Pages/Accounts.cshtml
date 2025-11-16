@@ -1,0 +1,267 @@
+@page
+@model AccountsModel
+@{
+    ViewData["Title"] = "Market Accounts";
+}
+
+<div x-data="accountsApp()" x-init="init()">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Market Accounts</h1>
+            <p class="text-gray-600">Manage your exchange accounts and API credentials</p>
+        </div>
+        <a asp-page="/Accounts/Create" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>Add New Account
+        </a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card mb-6">
+        <div class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" x-model="searchTerm" placeholder="Search by name..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="min-w-[150px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select x-model="filterType"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Types</option>
+                    <option value="Live">Live</option>
+                    <option value="Demo">Demo</option>
+                </select>
+            </div>
+            <div class="min-w-[150px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select x-model="filterStatus"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Status</option>
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Account
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Credentials
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Balance
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Updated
+                    </th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                <template x-for="account in filteredAccounts" :key="account.id">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-exchange-alt text-blue-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900" x-text="account.name"></div>
+                                    <div class="text-sm text-gray-500" x-text="'ID: ' + account.id"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                      :class="account.type === 'Live' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'"
+                                      x-text="account.type">
+                                </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                      :class="account.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                      x-text="account.enabled ? 'Enabled' : 'Disabled'">
+                                </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div x-show="account.hasCredentials" class="flex items-center text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                <span class="text-sm">Configured</span>
+                            </div>
+                            <div x-show="!account.hasCredentials" class="flex items-center text-yellow-600">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <span class="text-sm">Not Set</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900" x-text="formatCurrency(account.balance)"></div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                            x-text="formatDateTime(account.updatedAt)">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-end space-x-2">
+                                <button @@click="toggleAccount(account.id, !account.enabled)"
+                                        class="text-indigo-600 hover:text-indigo-900">
+                                    <i class="fas" :class="account.enabled ? 'fa-pause' : 'fa-play'"></i>
+                                </button>
+                                <a :href="'/Accounts/Edit?id=' + account.id"
+                                   class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a :href="'/Accounts/Details?id=' + account.id"
+                                   class="text-gray-600 hover:text-gray-900">
+                                    <i class="fas fa-info-circle"></i>
+                                </a>
+                                <button @@click="deleteAccount(account.id)"
+                                        class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+
+            <div x-show="filteredAccounts.length === 0" class="text-center py-12 text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>No accounts found matching your criteria</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500">Total Accounts</div>
+            <div class="text-2xl font-semibold text-gray-900" x-text="accounts.length"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500">Active Accounts</div>
+            <div class="text-2xl font-semibold text-green-600" x-text="activeCount"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500">Configured APIs</div>
+            <div class="text-2xl font-semibold text-blue-600" x-text="configuredCount"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500">Total Balance</div>
+            <div class="text-2xl font-semibold text-purple-600" x-text="formatCurrency(totalBalance)"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function accountsApp() {
+            return {
+                accounts: @Html.Raw(Json.Serialize(Model.Accounts)),
+                searchTerm: '',
+                filterType: '',
+                filterStatus: '',
+
+                get filteredAccounts() {
+                    return this.accounts.filter(account => {
+                        const matchesSearch = account.name.toLowerCase().includes(this.searchTerm.toLowerCase());
+                        const matchesType = !this.filterType || account.type === this.filterType;
+                        const matchesStatus = !this.filterStatus ||
+                            (this.filterStatus === 'enabled' && account.enabled) ||
+                            (this.filterStatus === 'disabled' && !account.enabled);
+                        return matchesSearch && matchesType && matchesStatus;
+                    });
+                },
+
+                get activeCount() {
+                    return this.accounts.filter(a => a.enabled).length;
+                },
+
+                get configuredCount() {
+                    return this.accounts.filter(a => a.hasCredentials).length;
+                },
+
+                get totalBalance() {
+                    return this.accounts.reduce((sum, a) => sum + a.balance, 0);
+                },
+
+                init() {
+                    // Set up auto-refresh every 60 seconds
+                    setInterval(() => this.refreshData(), 60000);
+                },
+
+                async refreshData() {
+                    try {
+                        const response = await fetch('/api/accounts/list');
+                        if (response.ok) {
+                            this.accounts = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Failed to refresh accounts:', error);
+                    }
+                },
+
+                async toggleAccount(accountId, enabled) {
+                    try {
+                        const response = await fetch(`/api/accounts/${accountId}/toggle`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({enabled})
+                        });
+
+                        if (response.ok) {
+                            const account = this.accounts.find(a => a.id === accountId);
+                            if (account) account.enabled = enabled;
+                        }
+                    } catch (error) {
+                        console.error('Failed to toggle account:', error);
+                    }
+                },
+
+                async deleteAccount(accountId) {
+                    if (!confirm('Are you sure you want to delete this account?')) return;
+
+                    try {
+                        const response = await fetch(`/api/accounts/${accountId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            this.accounts = this.accounts.filter(a => a.id !== accountId);
+                        }
+                    } catch (error) {
+                        console.error('Failed to delete account:', error);
+                    }
+                },
+
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(amount);
+                },
+
+                formatDateTime(date) {
+                    if (!date) return 'Never';
+                    return new Date(date).toLocaleString();
+                }
+            };
+        }
+    </script>
+}

@@ -1,0 +1,13 @@
+@page
+@model Warehouse.App.Pages.SystemStatusModel
+@{
+    Layout = null;
+}
+
+<span id="system-status"
+      class="badge @Model.StatusClass"
+      hx-get="/system-status"
+      hx-trigger="every 30s"
+      hx-swap="outerHTML">
+    @Model.StatusText
+</span>
