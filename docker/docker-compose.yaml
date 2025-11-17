@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17.6-alpine
+    image: postgres:18.1-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -15,8 +15,8 @@ services:
   warehouse-backend:
     build:
       context: ../
-      dockerfile: Warehouse.Backend/Dockerfile
-    image: dyrman/warehouse-backend:latest
+      dockerfile: Warehouse.App/Dockerfile
+    image: dyrman/warehouse-app:latest
     networks:
       - warehouse-network
 

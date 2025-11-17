@@ -19,13 +19,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="..\.dockerignore">
-            <Link>.dockerignore</Link>
-        </Content>
+        <ProjectReference Include="..\Warehouse.Core\Warehouse.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Warehouse.Core\Warehouse.Core.csproj" />
+      <Content Include="..\..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>

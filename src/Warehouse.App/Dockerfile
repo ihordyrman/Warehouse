@@ -7,17 +7,18 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Warehouse.Backend/Warehouse.Backend.csproj", "Warehouse.Backend/"]
-RUN dotnet restore "Warehouse.Backend/Warehouse.Backend.csproj"
+COPY ["src/Warehouse.App/Warehouse.App.csproj", "src/Warehouse.App/"]
+COPY ["src/Warehouse.Core/Warehouse.Core.csproj", "src/Warehouse.Core/"]
+RUN dotnet restore "src/Warehouse.App/Warehouse.App.csproj"
 COPY . .
-WORKDIR "/src/Warehouse.Backend"
-RUN dotnet build "./Warehouse.Backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/src/Warehouse.App"
+RUN dotnet build "./Warehouse.App.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Warehouse.Backend.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Warehouse.App.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Warehouse.Backend.dll"]
+ENTRYPOINT ["dotnet", "Warehouse.App.dll"]

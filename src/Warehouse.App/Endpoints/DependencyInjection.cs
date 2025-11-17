@@ -63,7 +63,6 @@ public static class DependencyInjection
         app.MapMarketAccountEndpoints();
         app.MapWorkerEndpoints();
         app.MapPipelineStepEndpoints();
-        app.MapBalanceEndpoints();
         app.MapOrderEndpoints();
         app.MapCandlestickEndpoints();
 

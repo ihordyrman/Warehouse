@@ -1,10 +1,13 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Warehouse.Core.Markets.Contracts;
+using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Markets.Models;
+using Warehouse.Core.Shared;
 
 namespace Warehouse.App.Pages;
 
-public class BalanceModel(IHttpClientFactory httpClientFactory, IConfiguration configuration) : PageModel
+public class BalanceModel(IBalanceManager balanceManager) : PageModel
 {
     public decimal Available { get; set; }
 
@@ -14,46 +17,20 @@ public class BalanceModel(IHttpClientFactory httpClientFactory, IConfiguration c
 
     public async Task<IActionResult> OnGetAsync(string marketType)
     {
-        HttpClient client = httpClientFactory.CreateClient();
-        string baseUrl = configuration["ApiBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}";
-
         try
         {
-            // Get account balance summary
-            HttpResponseMessage summaryResponse = await client.GetAsync($"{baseUrl}/balance/{marketType}/account/summary");
-            if (summaryResponse.IsSuccessStatusCode)
+            if (!Enum.TryParse(marketType, true, out MarketType market))
             {
-                string json = await summaryResponse.Content.ReadAsStringAsync();
-                AccountBalanceResponse? summary = JsonSerializer.Deserialize<AccountBalanceResponse>(
-                    json,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                if (summary != null)
-                {
-                    Available = summary.TotalAvailable;
-                    InOrders = summary.TotalInOrders;
-                    Total = summary.TotalBalance;
-                    return Page();
-                }
+                return Page();
             }
 
-            // Fallback to total USDT value
-            HttpResponseMessage totalResponse = await client.GetAsync($"{baseUrl}/balance/{marketType}/total-usdt");
-            if (totalResponse.IsSuccessStatusCode)
+            Result<AccountBalance> result = await balanceManager.GetAccountBalanceAsync(market);
+            if (result.IsSuccess)
             {
-                string json = await totalResponse.Content.ReadAsStringAsync();
-                TotalUsdtResponse? totalData = JsonSerializer.Deserialize<TotalUsdtResponse>(
-                    json,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                Total = totalData?.TotalUsdtValue ?? 0;
-                Available = Total;
+                Available = result.Value.AvailableBalance;
+                Total = result.Value.TotalEquity;
+                InOrders = result.Value.UsedMargin;
+                return Page();
             }
         }
         catch (Exception ex)
@@ -62,15 +39,6 @@ public class BalanceModel(IHttpClientFactory httpClientFactory, IConfiguration c
         }
 
         return Page();
-    }
-
-    private class AccountBalanceResponse
-    {
-        public decimal TotalBalance { get; set; }
-
-        public decimal TotalAvailable { get; set; }
-
-        public decimal TotalInOrders { get; set; }
     }
 
     private class TotalUsdtResponse
