@@ -1,13 +1,10 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.App.Endpoints.Models;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Shared;
-using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.App.Pages;
 
@@ -48,16 +45,13 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
                 }
             }
 
-            // Fetch workers
             int workers = await db.WorkerDetails.CountAsync();
 
-            // Calculate totals
-            ActiveAccountsCount = Markets.Count(m => m.Enabled);
+            ActiveAccountsCount = Markets.Count(x => x.Enabled);
             RunningWorkersCount = workers;
         }
         catch (Exception ex)
         {
-            // Log error but don't fail the page
             Console.WriteLine($"Error loading dashboard data: {ex.Message}");
         }
 

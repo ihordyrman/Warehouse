@@ -1,0 +1,78 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Domain;
+
+namespace Warehouse.App.Pages;
+
+public class AccountsCreateModel(WarehouseDbContext db) : PageModel
+{
+    [BindProperty]
+    public CreateAccountInput Input { get; set; } = new();
+
+    public List<MarketType> MarketTypes { get; set; } = [];
+
+    public void OnGet() => MarketTypes = Enum.GetValues<MarketType>().ToList();
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        if (!ModelState.IsValid)
+        {
+            MarketTypes = Enum.GetValues<MarketType>().ToList();
+            return Page();
+        }
+
+        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Type == Input.Type);
+
+        if (market == null)
+        {
+            market = new MarketDetails
+            {
+                Type = Input.Type,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.MarketDetails.Add(market);
+        }
+        else if (market.Credentials != null)
+        {
+            ModelState.AddModelError("Input.Type", $"Account for {Input.Type} already exists. Please edit the existing account.");
+            MarketTypes = Enum.GetValues<MarketType>().ToList();
+            return Page();
+        }
+
+        var account = new MarketAccount
+        {
+            MarketDetails = market,
+            ApiKey = Input.ApiKey,
+            SecretKey = Input.SecretKey,
+            Passphrase = Input.Passphrase ?? string.Empty,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        db.MarketAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        return RedirectToPage("/Accounts");
+    }
+
+    public class CreateAccountInput
+    {
+        [Required]
+        public MarketType Type { get; set; }
+
+        [Required]
+        [Display(Name = "API Key")]
+        public string ApiKey { get; set; } = string.Empty;
+
+        [Required]
+        [Display(Name = "Secret Key")]
+        public string SecretKey { get; set; } = string.Empty;
+
+        [Display(Name = "Passphrase")]
+        public string? Passphrase { get; set; }
+    }
+}

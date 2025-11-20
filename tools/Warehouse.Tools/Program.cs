@@ -76,7 +76,7 @@ static async Task ExportDataAsync(ServiceProvider serviceProvider)
 
     string startStr = startDate?.ToString("yyyyMMdd") ?? "beginning";
     string endStr = endDate?.ToString("yyyyMMdd") ?? "latest";
-    string filename = $"{choice}_1m_{startStr}_to_{endStr}.csv";
+    var filename = $"{choice}_1m_{startStr}_to_{endStr}.csv";
 
     await AnsiConsole.Status()
         .StartAsync(
@@ -94,7 +94,7 @@ static async Task ExportDataAsync(ServiceProvider serviceProvider)
                 csv.WriteHeader<Candlestick>();
                 csv.NextRecord();
 
-                int count = 0;
+                var count = 0;
 
                 await foreach (Candlestick candlestick in candlestickService!.GetCandlesticksAsync(
                                    instrument,
@@ -154,7 +154,7 @@ static async Task ImportDataAsync(ServiceProvider serviceProvider)
             new SelectionPrompt<string>().Title("[green]Select an limit range:[/]").AddChoices("10", "100", "1000"));
 
         var httpClient = new HttpClient();
-        int totalImported = 0;
+        var totalImported = 0;
         var start = new DateTime(2025, 01, 01);
         DateTime currentDate = start;
         ICandlestickService? candlestickService = serviceProvider.GetService<ICandlestickService>();

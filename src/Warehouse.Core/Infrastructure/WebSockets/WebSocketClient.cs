@@ -213,7 +213,7 @@ public sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSocke
                 int totalLength = chunks.Sum(c => c.length);
                 messageData = new byte[totalLength];
 
-                int position = 0;
+                var position = 0;
                 foreach ((byte[] array, int length) in chunks)
                 {
                     Array.Copy(array, 0, messageData, position, length);

@@ -1,8 +1,15 @@
 @page
 @model Warehouse.App.Pages.WorkersModel
 @{
+    ViewData["Title"] = "Workers";
     Layout = null;
 }
+
+<div class="flex justify-end mb-6">
+    <a asp-page="/WorkersCreate" class="btn-primary">
+        <i class="fas fa-plus mr-2"></i>Add Worker
+    </a>
+</div>
 
 <div id="workers-grid">
     @if (!Model.Workers.Any())
@@ -17,51 +24,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach (WorkersModel.WorkerInfo worker in Model.Workers)
             {
-                <div class="card worker-card" id="worker-@worker.Id">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900">@worker.Symbol</h3>
-                            <span class="text-sm text-gray-500">@worker.MarketType</span>
-                        </div>
-                        <button hx-post="/worker/@worker.Id/toggle"
-                                hx-vals='{"enabled": "@(!worker.Enabled)"}'
-                                hx-target="#worker-@worker.Id"
-                                hx-swap="outerHTML"
-                                class="px-3 py-1 rounded-md text-sm font-medium transition-colors @(worker.Enabled ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200")">
-                            @(worker.Enabled ? "Enabled" : "Disabled")
-                        </button>
-                    </div>
-
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Strategy:</span>
-                            <span class="text-gray-900">@(worker.Strategy ?? "Not configured")</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Interval:</span>
-                            <span class="text-gray-900">@(worker.Interval ?? "1m")</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Last Run:</span>
-                            <span class="text-gray-900">@FormatDateTime(worker.LastRun)</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Status:</span>
-                            <span class="@(worker.Enabled ? "text-green-600" : "text-gray-600")">
-                                @(worker.Enabled ? "Running" : "Idle")
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end space-x-2 mt-4 pt-4 border-t">
-                        <a href="/Workers/Details?id=@worker.Id" class="text-blue-600 hover:text-blue-800 text-sm">
-                            <i class="fas fa-chart-line mr-1"></i>Stats
-                        </a>
-                        <a href="/Workers/Edit?id=@worker.Id" class="text-gray-600 hover:text-gray-800 text-sm">
-                            <i class="fas fa-cog mr-1"></i>Configure
-                        </a>
-                    </div>
-                </div>
+                <partial name="_WorkerCard" model="worker"/>
             }
         </div>
     }

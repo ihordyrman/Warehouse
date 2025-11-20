@@ -46,9 +46,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasOne<MarketAccount>(x => x.Credentials)
-                .WithOne(x => x.MarketDetails)
-                .HasForeignKey<MarketAccount>(x => x.MarketId);
+            entity.HasOne<MarketAccount>(x => x.Credentials).WithOne(x => x.MarketDetails).HasForeignKey<MarketAccount>(x => x.MarketId);
         });
 
         modelBuilder.Entity<Candlestick>(entity =>

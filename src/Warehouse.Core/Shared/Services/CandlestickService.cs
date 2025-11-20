@@ -39,7 +39,7 @@ public class CandlestickService(WarehouseDbContext dbContext, ILogger<Candlestic
         {
             var groupedCandles = candleList.GroupBy(x => new { x.Symbol, x.MarketType, x.Timeframe }).ToList();
 
-            int totalSaved = 0;
+            var totalSaved = 0;
 
             foreach (var group in groupedCandles)
             {

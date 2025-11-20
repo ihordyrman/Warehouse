@@ -1,0 +1,154 @@
+@page
+@model Warehouse.App.Pages.WorkersDetailsModel
+@{
+    ViewData["Title"] = "Worker Details";
+}
+
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center">
+                <a asp-page="/Workers" class="text-gray-600 hover:text-gray-900 mr-2">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-900">Worker Details</h1>
+            </div>
+            @if (Model.Worker != null)
+            {
+                <div class="flex space-x-2">
+                    <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id" class="btn-secondary">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Worker != null)
+    {
+        <div class="card mb-6">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">@Model.Worker.Symbol</h2>
+                    <p class="text-gray-500">Worker ID: @Model.Worker.Id</p>
+                </div>
+                <span
+                    class="px-4 py-2 rounded-md text-sm font-medium @(Model.Worker.Enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")">
+                    @(Model.Worker.Enabled ? "Enabled" : "Disabled")
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Basic Information</h3>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm text-gray-500">Market Type</dt>
+                            <dd class="text-base font-medium text-gray-900 mt-1">
+                                <span class="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 text-blue-800">
+                                    <i class="fas fa-exchange-alt mr-2"></i>@Model.Worker.Type
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-gray-500">Symbol</dt>
+                            <dd class="text-base font-medium text-gray-900 mt-1">@Model.Worker.Symbol</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-gray-500">Status</dt>
+                            <dd class="text-base font-medium mt-1">
+                                @if (Model.Worker.Enabled)
+                                {
+                                    <span class="text-green-600">
+                                        <i class="fas fa-check-circle mr-1"></i>Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-600">
+                                        <i class="fas fa-pause-circle mr-1"></i>Inactive
+                                    </span>
+                                }
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Configuration</h3>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm text-gray-500">Worker ID</dt>
+                            <dd class="text-base font-medium text-gray-900 mt-1">@Model.Worker.Id</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-gray-500">Market Configuration</dt>
+                            <dd class="text-base font-medium text-gray-900 mt-1">
+                                @Model.Worker.Type / @Model.Worker.Symbol
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm text-gray-500">Created</dt>
+                            <dd class="text-base font-medium text-gray-900 mt-1">
+                                @Model.Worker.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                            </dd>
+                        </div>
+                        @if (Model.Worker.UpdatedAt.HasValue)
+                        {
+                            <div>
+                                <dt class="text-sm text-gray-500">Last Updated</dt>
+                                <dd class="text-base font-medium text-gray-900 mt-1">
+                                    @Model.Worker.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")
+                                </dd>
+                            </div>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline Steps Section -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-project-diagram mr-2"></i>Pipeline Steps
+                    @if (Model.Worker.PipelineStepsCount > 0)
+                    {
+                        <span class="text-sm font-normal text-gray-500">(@Model.Worker.PipelineStepsCount configured)</span>
+                    }
+                </h3>
+                <a href="/worker/@Model.Worker.Id/pipeline-steps" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-cog mr-1"></i>Configure Pipeline
+                </a>
+            </div>
+            @if (Model.Worker.PipelineStepsCount == 0)
+            {
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-info-circle text-2xl mb-2"></i>
+                    <p>No pipeline steps configured yet</p>
+                    <p class="text-sm mt-1">Click "Configure Pipeline" to set up trading strategies</p>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-8 text-gray-600">
+                    <i class="fas fa-check-circle text-green-600 text-2xl mb-2"></i>
+                    <p>@Model.Worker.PipelineStepsCount pipeline step(s) configured</p>
+                    <p class="text-sm mt-1 text-gray-500">Click "Configure Pipeline" to view and edit</p>
+                </div>
+            }
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-6 flex justify-between items-center">
+            <a asp-page="/Workers" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-arrow-left mr-1"></i>Back to Workers
+            </a>
+            <div class="flex space-x-3">
+                <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id" class="btn-secondary">
+                    <i class="fas fa-edit mr-2"></i>Edit Worker
+                </a>
+            </div>
+        </div>
+    }
+</div>

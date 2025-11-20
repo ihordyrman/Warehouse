@@ -45,7 +45,7 @@ public class OrderManager : IOrderManager
                 StopPrice = request.StopPrice,
                 TakeProfit = request.TakeProfit,
                 StopLoss = request.StopLoss,
-                Status = OrderStatus.Pending,
+                Status = OrderStatus.Pending
             };
 
             dbContext.Orders.Add(order);
@@ -214,10 +214,7 @@ public class OrderManager : IOrderManager
             x => x.ExchangeOrderId == exchangeOrderId && x.MarketType == marketType,
             cancellationToken);
 
-    public async Task<List<Order>> GetOrdersAsync(
-        int workerId,
-        OrderStatus? status = null,
-        CancellationToken cancellationToken = default)
+    public async Task<List<Order>> GetOrdersAsync(int workerId, OrderStatus? status = null, CancellationToken cancellationToken = default)
     {
         IQueryable<Order> query = dbContext.Orders.Where(x => x.WorkerId == workerId);
 

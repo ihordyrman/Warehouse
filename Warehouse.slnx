@@ -1,18 +1,18 @@
 ﻿<Solution>
-  <Folder Name="/docker/">
-    <File Path="docker\docker-compose.yaml" />
-  </Folder>
-  <Folder Name="/items/">
-    <File Path="README.md" />
-    <File Path=".gitignore" />
-    <File Path=".editorconfig" />
-    <File Path="sync.sh" />
-  </Folder>
-  <Folder Name="/src/">
-    <Project Path="src\Warehouse.App\Warehouse.App.csproj" />
-    <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" />
-  </Folder>
-  <Folder Name="/tools/">
-    <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" />
-  </Folder>
+    <Folder Name="/docker/">
+        <File Path="docker\docker-compose.yaml" />
+    </Folder>
+    <Folder Name="/items/">
+        <File Path="README.md" />
+        <File Path=".gitignore" />
+        <File Path=".editorconfig" />
+        <File Path="sync.sh" />
+    </Folder>
+    <Folder Name="/src/">
+        <Project Path="src\Warehouse.App\Warehouse.App.csproj" />
+        <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" />
+    </Folder>
+    <Folder Name="/tools/">
+        <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" />
+    </Folder>
 </Solution>

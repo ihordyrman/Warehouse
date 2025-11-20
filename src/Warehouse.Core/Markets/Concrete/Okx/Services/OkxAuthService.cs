@@ -8,7 +8,7 @@ public class OkxAuthService
 {
     public static object CreateAuthRequest(MarketAccount config)
     {
-        string timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
+        var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
         string sign = GenerateSignature(timestamp, config.SecretKey);
 
         return new

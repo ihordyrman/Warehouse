@@ -42,7 +42,7 @@
         }
     </style>
 
-    @await RenderSectionAsync("Styles", required: false)
+    @await RenderSectionAsync("Styles", false)
 </head>
 <body class="min-h-screen bg-gray-50">
 <!-- Header -->
@@ -84,7 +84,7 @@
     @RenderBody()
 </main>
 
-@await RenderSectionAsync("Scripts", required: false)
+@await RenderSectionAsync("Scripts", false)
 
 <script>
     // Configure HTMX

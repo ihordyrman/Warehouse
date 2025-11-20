@@ -61,7 +61,7 @@ public class OkxSynchronizationWorker(IServiceScopeFactory scopeFactory, ILogger
     {
         logger.LogInformation("Starting candlestick sync for {Symbol} from {FromDate}", symbol, fromDate);
 
-        string before = new DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString();
+        var before = new DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString();
 
         Result<OkxCandlestick[]> result = await okxHttpService.GetCandlesticksAsync(symbol, Timeframe, before: before, limit: BatchSize);
 

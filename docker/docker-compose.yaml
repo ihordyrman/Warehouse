@@ -12,14 +12,6 @@ services:
     networks:
       - warehouse-network
 
-  warehouse-backend:
-    build:
-      context: ../
-      dockerfile: Warehouse.App/Dockerfile
-    image: dyrman/warehouse-app:latest
-    networks:
-      - warehouse-network
-
 volumes:
   postgres_data:
 

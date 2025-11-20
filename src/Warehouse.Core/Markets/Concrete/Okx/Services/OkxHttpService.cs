@@ -118,7 +118,7 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         using HttpClient httpClient = httpClientFactory.CreateClient("Okx");
 
         string requestPath = BuildRequestPath();
-        string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         string signature = OkxAuthService.GenerateSignature(timestamp, Credentials.SecretKey, method, requestPath);
 
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature);

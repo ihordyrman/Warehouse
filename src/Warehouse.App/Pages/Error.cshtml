@@ -11,20 +11,20 @@
                 <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
             </div>
         </div>
-        
+
         <h1 class="text-2xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h1>
-        
+
         @if (Model.ShowRequestId)
         {
             <p class="text-sm text-gray-500 mb-4">
                 <strong>Request ID:</strong> <code class="text-red-600">@Model.RequestId</code>
             </p>
         }
-        
+
         <p class="text-gray-700 mb-6">
             An error occurred while processing your request. Please try again later or contact support if the problem persists.
         </p>
-        
+
         <div class="flex justify-center space-x-4">
             <a asp-page="/Index" class="btn-primary">
                 <i class="fas fa-home mr-2"></i>Go to Dashboard

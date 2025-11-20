@@ -21,7 +21,7 @@ internal sealed class OkxSubscriptionManager
 
     public async Task<bool> SubscribeAsync(string channel, string symbol, CancellationToken cancellationToken = default)
     {
-        string key = $"{channel}:{symbol}";
+        var key = $"{channel}:{symbol}";
 
         await subscriptionLock.WaitAsync(cancellationToken);
         try
@@ -63,7 +63,7 @@ internal sealed class OkxSubscriptionManager
 
     public async Task<bool> UnsubscribeAsync(string channel, string symbol, CancellationToken cancellationToken = default)
     {
-        string key = $"{channel}:{symbol}";
+        var key = $"{channel}:{symbol}";
 
         await subscriptionLock.WaitAsync(cancellationToken);
         try

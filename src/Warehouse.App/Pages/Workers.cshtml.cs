@@ -1,44 +1,70 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.App.Pages;
 
-public class WorkersModel(IHttpClientFactory httpClientFactory, IConfiguration configuration) : PageModel
+[IgnoreAntiforgeryToken]
+public class WorkersModel(WarehouseDbContext db) : PageModel
 {
     public List<WorkerInfo> Workers { get; set; } = [];
 
     public bool OnlyEnabled { get; set; }
 
-    public async Task<IActionResult> OnGetAsync(bool onlyEnabled = false)
+    public async Task OnGetAsync(bool onlyEnabled = false)
     {
         OnlyEnabled = onlyEnabled;
-        HttpClient client = httpClientFactory.CreateClient();
-        string baseUrl = configuration["ApiBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}";
 
-        try
+        IQueryable<WorkerDetails> query = db.WorkerDetails.AsNoTracking();
+
+        if (onlyEnabled)
         {
-            string endpoint = onlyEnabled ? "/worker/enabled" : "/worker";
-            HttpResponseMessage response = await client.GetAsync($"{baseUrl}{endpoint}");
+            query = query.Where(x => x.Enabled);
+        }
 
-            if (response.IsSuccessStatusCode)
+        List<WorkerDetails> workers = await query.ToListAsync();
+
+        Workers = workers.Select(x => new WorkerInfo
             {
-                string json = await response.Content.ReadAsStringAsync();
-                Workers = JsonSerializer.Deserialize<List<WorkerInfo>>(
-                              json,
-                              new JsonSerializerOptions
-                              {
-                                  PropertyNameCaseInsensitive = true
-                              }) ??
-                          new List<WorkerInfo>();
-            }
-        }
-        catch (Exception ex)
+                Id = x.Id,
+                Symbol = x.Symbol,
+                MarketType = x.Type.ToString(),
+                Enabled = x.Enabled,
+                Strategy = null, // TODO: Add strategy info when available
+                Interval = null, // TODO: Add interval info when available
+                LastRun = null,  // TODO: Add last run info when available
+                LastExecutedAt = x.UpdatedAt
+            })
+            .ToList();
+    }
+
+    public async Task<IActionResult> OnPostToggleAsync([FromQuery] int id, [FromQuery] bool enabled)
+    {
+        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
+
+        if (worker == null)
         {
-            Console.WriteLine($"Error loading workers: {ex.Message}");
+            return NotFound();
         }
 
-        return Page();
+        worker.Enabled = enabled;
+        await db.SaveChangesAsync();
+
+        var updatedWorker = new WorkerInfo
+        {
+            Id = worker.Id,
+            Symbol = worker.Symbol,
+            MarketType = worker.Type.ToString(),
+            Enabled = worker.Enabled,
+            Strategy = null,
+            Interval = null,
+            LastRun = null,
+            LastExecutedAt = worker.UpdatedAt
+        };
+
+        return Partial("_WorkerCard", updatedWorker);
     }
 
     public class WorkerInfo

@@ -28,7 +28,7 @@ public class ErrorModel(ILogger<ErrorModel> logger, IWebHostEnvironment environm
             return;
         }
 
-        IExceptionHandlerFeature? exceptionFeature = HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        IExceptionHandlerFeature? exceptionFeature = HttpContext.Features.Get<IExceptionHandlerFeature>();
         if (exceptionFeature == null)
         {
             return;

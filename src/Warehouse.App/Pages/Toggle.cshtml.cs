@@ -1,70 +1,38 @@
-using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.App.Pages;
 
-public class ToggleModel(IHttpClientFactory httpClientFactory, IConfiguration configuration) : PageModel
+public class ToggleModel(WarehouseDbContext db) : PageModel
 {
     public WorkerInfo? Worker { get; set; }
 
-    public async Task<IActionResult> OnPostAsync(int id, bool enabled)
+    public async Task<IActionResult> OnPostAsync(int id, [FromForm] bool enabled)
     {
-        HttpClient client = httpClientFactory.CreateClient();
-        string baseUrl = configuration["ApiBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}";
+        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
 
-        try
+        if (worker == null)
         {
-            // Toggle the worker state
-            var toggleRequest = new { enabled };
-            string json = JsonSerializer.Serialize(toggleRequest);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Note: Using the existing endpoint pattern from your API
-            HttpResponseMessage toggleResponse = await client.PostAsync($"{baseUrl}/api/workers/{id}/toggle", content);
-
-            if (!toggleResponse.IsSuccessStatusCode)
-            {
-                // If the toggle endpoint doesn't exist, try the PUT endpoint to update the worker
-                HttpResponseMessage workerResponse = await client.GetAsync($"{baseUrl}/worker/{id}");
-                if (workerResponse.IsSuccessStatusCode)
-                {
-                    string workerJson = await workerResponse.Content.ReadAsStringAsync();
-                    WorkerInfo? worker = JsonSerializer.Deserialize<WorkerInfo>(
-                        workerJson,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-
-                    if (worker != null)
-                    {
-                        worker.Enabled = enabled;
-                        string updateJson = JsonSerializer.Serialize(worker);
-                        var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
-                        await client.PutAsync($"{baseUrl}/worker/{id}", updateContent);
-                    }
-                }
-            }
-
-            // Fetch the updated worker data
-            HttpResponseMessage response = await client.GetAsync($"{baseUrl}/worker/{id}");
-            if (response.IsSuccessStatusCode)
-            {
-                string workerJson = await response.Content.ReadAsStringAsync();
-                Worker = JsonSerializer.Deserialize<WorkerInfo>(
-                    workerJson,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-            }
+            return NotFound();
         }
-        catch (Exception ex)
+
+        worker.Enabled = enabled;
+        await db.SaveChangesAsync();
+
+        Worker = new WorkerInfo
         {
-            Console.WriteLine($"Error toggling worker {id}: {ex.Message}");
-        }
+            Id = worker.Id,
+            Symbol = worker.Symbol,
+            MarketType = worker.Type.ToString(),
+            Enabled = worker.Enabled,
+            Strategy = null, // TODO: Add strategy info when available
+            Interval = null, // TODO: Add interval info when available
+            LastRun = null,
+            LastExecutedAt = worker.UpdatedAt
+        };
 
         return Page();
     }
