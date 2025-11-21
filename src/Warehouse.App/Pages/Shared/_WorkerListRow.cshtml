@@ -1,0 +1,86 @@
+@model WorkersModel.WorkerInfo
+
+<tr class="hover:bg-gray-50 transition-colors" id="worker-@Model.Id">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+            <div class="text-sm font-medium text-gray-900">@Model.Symbol</div>
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span
+            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full @(Model.MarketType == "Okx" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800")">
+            @Model.MarketType
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span
+            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full @(Model.Enabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+            @(Model.Enabled ? "Enabled" : "Disabled")
+        </span>
+    </td>
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            @if (Model.Tags.Any())
+            {
+                @foreach (string tag in Model.Tags)
+                {
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        @tag
+                    </span>
+                }
+            }
+            else
+            {
+                <span class="text-xs text-gray-400">No tags</span>
+            }
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        @if (Model.LastExecutedAt.HasValue)
+        {
+            @Model.LastExecutedAt.Value.ToString("MMM dd, HH:mm")
+        }
+        else
+        {
+            <span class="text-gray-400">Never</span>
+        }
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div class="flex items-center justify-end space-x-3">
+            <button type="button"
+                    hx-post="/Workers?handler=Toggle&amp;id=@Model.Id&amp;enabled=@(!Model.Enabled)"
+                    hx-target="#worker-@Model.Id"
+                    hx-swap="outerHTML"
+                    class="text-indigo-600 hover:text-indigo-900"
+                    title="@(Model.Enabled ? "Disable" : "Enable") worker">
+                <i class="fas @(Model.Enabled ? "fa-pause" : "fa-play")"></i>
+                <span class="sr-only">@(Model.Enabled ? "Disable" : "Enable")</span>
+            </button>
+
+            <a href="/WorkersEdit?id=@Model.Id"
+               class="text-blue-600 hover:text-blue-900 inline-flex items-center"
+               title="Edit worker">
+                <i class="fas fa-edit mr-1"></i>
+                <span>Edit</span>
+            </a>
+
+            <a href="/WorkersDetails?id=@Model.Id"
+               class="text-gray-600 hover:text-gray-900 inline-flex items-center"
+               title="View details">
+                <i class="fas fa-info-circle mr-1"></i>
+                <span>Details</span>
+            </a>
+
+            <button type="button"
+                    hx-post="/Workers?handler=Delete&amp;id=@Model.Id"
+                    hx-confirm="Are you sure you want to delete this worker?"
+                    hx-target="#workers-table-body"
+                    hx-swap="innerHTML"
+                    class="text-red-600 hover:text-red-900"
+                    title="Delete worker">
+                <i class="fas fa-trash"></i>
+                <span class="sr-only">Delete</span>
+            </button>
+        </div>
+    </td>
+</tr>

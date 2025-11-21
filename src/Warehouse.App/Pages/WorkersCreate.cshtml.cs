@@ -34,11 +34,19 @@ public class WorkersCreateModel(WarehouseDbContext db) : PageModel
             return Page();
         }
 
+        List<string> tags = string.IsNullOrWhiteSpace(Input.TagsInput) ? [] :
+            Input.TagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
         var worker = new WorkerDetails
         {
             Type = Input.Type,
             Symbol = symbolUpper,
-            Enabled = Input.Enabled
+            Enabled = Input.Enabled,
+            Tags = tags
         };
 
         db.WorkerDetails.Add(worker);
@@ -54,5 +62,7 @@ public class WorkersCreateModel(WarehouseDbContext db) : PageModel
         public MarketType Type { get; set; }
 
         public string Symbol { get; set; } = string.Empty;
+
+        public string TagsInput { get; set; } = string.Empty;
     }
 }

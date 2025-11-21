@@ -5,6 +5,7 @@ using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Shared;
+using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.App.Pages;
 
@@ -45,10 +46,22 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
                 }
             }
 
-            int workers = await db.WorkerDetails.CountAsync();
+            List<WorkerDetails> workers = await db.WorkerDetails.AsNoTracking().ToListAsync();
+            Workers = workers.Select(x => new WorkerInfo
+                {
+                    Id = x.Id,
+                    Symbol = x.Symbol,
+                    MarketType = x.Type.ToString(),
+                    Enabled = x.Enabled,
+                    Tags = x.Tags,
+                    Strategy = null,
+                    Interval = null,
+                    LastRun = null
+                })
+                .ToList();
 
             ActiveAccountsCount = Markets.Count(x => x.Enabled);
-            RunningWorkersCount = workers;
+            RunningWorkersCount = workers.Count;
         }
         catch (Exception ex)
         {
@@ -80,6 +93,8 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
         public string MarketType { get; set; } = "";
 
         public bool Enabled { get; set; }
+
+        public List<string> Tags { get; set; } = [];
 
         public string? Strategy { get; set; }
 

@@ -16,7 +16,8 @@
             @if (Model.Worker != null)
             {
                 <div class="flex space-x-2">
-                    <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id" class="btn-secondary">
+                    <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id"
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
                         <i class="fas fa-edit mr-2"></i>Edit
                     </a>
                 </div>
@@ -145,7 +146,8 @@
                 <i class="fas fa-arrow-left mr-1"></i>Back to Workers
             </a>
             <div class="flex space-x-3">
-                <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id" class="btn-secondary">
+                <a asp-page="/WorkersEdit" asp-route-id="@Model.Worker.Id"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
                     <i class="fas fa-edit mr-2"></i>Edit Worker
                 </a>
             </div>

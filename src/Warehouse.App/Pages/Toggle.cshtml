@@ -12,7 +12,8 @@
                 <h3 class="text-lg font-semibold text-gray-900">@Model.Worker.Symbol</h3>
                 <span class="text-sm text-gray-500">@Model.Worker.MarketType</span>
             </div>
-            <button hx-post="/worker/@Model.Worker.Id/toggle"
+            <button type="button"
+                    hx-post="/worker/@Model.Worker.Id/toggle"
                     hx-vals='{"enabled": "@(!Model.Worker.Enabled)"}'
                     hx-target="#worker-@Model.Worker.Id"
                     hx-swap="outerHTML"

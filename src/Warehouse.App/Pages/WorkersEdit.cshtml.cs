@@ -32,7 +32,8 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
         {
             Enabled = worker.Enabled,
             Type = worker.Type,
-            Symbol = worker.Symbol
+            Symbol = worker.Symbol,
+            TagsInput = string.Join(", ", worker.Tags)
         };
 
         return Page();
@@ -68,9 +69,17 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
             }
         }
 
+        List<string> tags = string.IsNullOrWhiteSpace(Input.TagsInput) ? [] :
+            Input.TagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
         worker.Enabled = Input.Enabled;
         worker.Type = Input.Type;
         worker.Symbol = symbolUpper;
+        worker.Tags = tags;
 
         await db.SaveChangesAsync();
 
@@ -84,5 +93,7 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
         public MarketType Type { get; set; }
 
         public string Symbol { get; set; } = string.Empty;
+
+        public string TagsInput { get; set; } = string.Empty;
     }
 }

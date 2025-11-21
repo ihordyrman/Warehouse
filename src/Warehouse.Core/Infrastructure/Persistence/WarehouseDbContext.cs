@@ -41,6 +41,14 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Passphrase).HasMaxLength(500).HasConversion(encryptedConverter);
         });
 
+        modelBuilder.Entity<WorkerDetails>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
+            entity.Property(x => x.Type).IsRequired();
+            entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+        });
+
         modelBuilder.Entity<MarketDetails>(entity =>
         {
             entity.HasKey(x => x.Id);
