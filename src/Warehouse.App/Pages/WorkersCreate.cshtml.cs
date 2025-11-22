@@ -52,7 +52,7 @@ public class WorkersCreateModel(WarehouseDbContext db) : PageModel
         db.WorkerDetails.Add(worker);
         await db.SaveChangesAsync();
 
-        return RedirectToPage("/Workers");
+        return RedirectToPage("/Dashboard");
     }
 
     public class CreateWorkerInput

@@ -13,6 +13,8 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
 {
     public List<MarketInfo> Markets { get; set; } = [];
 
+    public List<string> Tags { get; set; } = [];
+
     public int ActiveAccountsCount { get; set; }
 
     public int RunningWorkersCount { get; set; }
@@ -27,6 +29,11 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
 
             ActiveAccountsCount = Markets.Count(x => x.Enabled);
             RunningWorkersCount = await db.WorkerDetails.CountAsync();
+            Tags = await db.WorkerDetails
+                .SelectMany(x => x.Tags)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
         }
         catch (Exception ex)
         {

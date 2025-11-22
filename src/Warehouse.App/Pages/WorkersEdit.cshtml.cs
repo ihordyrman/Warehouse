@@ -83,7 +83,7 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
 
         await db.SaveChangesAsync();
 
-        return RedirectToPage("/Workers");
+        return RedirectToPage("/Dashboard");
     }
 
     public class EditWorkerInput
