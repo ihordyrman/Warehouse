@@ -53,7 +53,7 @@ await EnsureDbReadinessAsync(app);
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseStatusCodePages();
+app.UseStatusCodePagesWithReExecute("/NotFound");
 app.UseHttpLogging();
 app.UseRateLimiter();
 app.AddApi();
