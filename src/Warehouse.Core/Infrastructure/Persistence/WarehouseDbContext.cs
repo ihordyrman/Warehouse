@@ -23,6 +23,8 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 
     public DbSet<WorkerDetails> WorkerDetails { get; set; }
 
+    public DbSet<Position> Positions { get; set; }
+
     public DbSet<Candlestick> Candlesticks { get; set; }
 
     public DbSet<PipelineStep> PipelineSteps { get; set; }
@@ -47,6 +49,20 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
             entity.Property(x => x.Type).IsRequired();
             entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<Position>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.EntryPrice).HasPrecision(28, 10);
+            entity.Property(x => x.Quantity).HasPrecision(28, 10);
+            entity.Property(x => x.ExitPrice).HasPrecision(28, 10);
+            entity.HasIndex(x => new { x.WorkerId, x.Status });
+            entity.HasOne<WorkerDetails>(x => x.WorkerDetails)
+                .WithMany()
+                .HasForeignKey(x => x.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MarketDetails>(entity =>

@@ -12,6 +12,4 @@ public interface IPipelineStep<in TContext>
     Dictionary<string, string> Parameters { get; }
 
     Task<PipelineStepResult> ExecuteAsync(TContext context, CancellationToken cancellationToken = default);
-
-    Task OnErrorAsync(TContext context, Exception exception, CancellationToken cancellationToken = default);
 }
