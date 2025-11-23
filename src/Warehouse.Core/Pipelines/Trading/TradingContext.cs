@@ -12,7 +12,7 @@ public class TradingContext : IPipelineContext
 
     public bool IsCancelled { get; set; }
 
-    public required int WorkerId { get; init; }
+    public required int PipelineId { get; init; }
 
     public MarketData? CurrentMarketData { get; set; }
 

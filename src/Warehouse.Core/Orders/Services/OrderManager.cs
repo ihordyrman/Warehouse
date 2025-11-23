@@ -36,7 +36,7 @@ public class OrderManager : IOrderManager
         {
             var order = new Order
             {
-                WorkerId = request.WorkerId,
+                PipelineId = request.PipelineId,
                 MarketType = request.MarketType,
                 Symbol = request.Symbol,
                 Side = request.Side,
@@ -216,7 +216,7 @@ public class OrderManager : IOrderManager
 
     public async Task<List<Order>> GetOrdersAsync(int workerId, OrderStatus? status = null, CancellationToken cancellationToken = default)
     {
-        IQueryable<Order> query = dbContext.Orders.Where(x => x.WorkerId == workerId);
+        IQueryable<Order> query = dbContext.Orders.Where(x => x.PipelineId == workerId);
 
         if (status.HasValue)
         {
@@ -264,9 +264,9 @@ public class OrderManager : IOrderManager
             return await query.OrderByDescending(x => x.CreatedAt).Skip(skip).Take(take).ToListAsync(cancellationToken);
         }
 
-        if (filter.WorkerId.HasValue)
+        if (filter.PipelineId.HasValue)
         {
-            query = query.Where(x => x.WorkerId == filter.WorkerId.Value);
+            query = query.Where(x => x.PipelineId == filter.PipelineId.Value);
         }
 
         if (filter.MarketType.HasValue)

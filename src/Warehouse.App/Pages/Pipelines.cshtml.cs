@@ -2,14 +2,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
-using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
 [IgnoreAntiforgeryToken]
-public class WorkersModel(WarehouseDbContext db) : PageModel
+public class PipelinesModel(WarehouseDbContext db) : PageModel
 {
-    public List<WorkerInfo> Workers { get; set; } = [];
+    public List<PipelineInfo> Pipelines { get; set; } = [];
 
     public List<string> AllTags { get; set; } = [];
 
@@ -30,11 +31,11 @@ public class WorkersModel(WarehouseDbContext db) : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        await LoadWorkersAsync();
+        await LoadPipelinesAsync();
 
         if (Request.Headers.ContainsKey("HX-Request"))
         {
-            return Partial("_WorkerListRows", Workers);
+            return Partial("_PipelineListRows", Pipelines);
         }
 
         return Page();
@@ -42,46 +43,46 @@ public class WorkersModel(WarehouseDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostToggleAsync([FromQuery] int id, [FromQuery] bool enabled)
     {
-        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker == null)
+        if (pipeline == null)
         {
             return NotFound();
         }
 
-        worker.Enabled = enabled;
+        pipeline.Enabled = enabled;
         await db.SaveChangesAsync();
 
-        var updatedWorker = new WorkerInfo
+        var updatedPipeline = new PipelineInfo
         {
-            Id = worker.Id,
-            Symbol = worker.Symbol,
-            MarketType = worker.Type.ToString(),
-            Enabled = worker.Enabled,
-            Tags = worker.Tags,
-            LastExecutedAt = worker.UpdatedAt
+            Id = pipeline.Id,
+            Symbol = pipeline.Symbol,
+            MarketType = pipeline.MarketType.ToString(),
+            Enabled = pipeline.Enabled,
+            Tags = pipeline.Tags,
+            LastExecutedAt = pipeline.UpdatedAt
         };
 
-        return Partial("_WorkerListRow", updatedWorker);
+        return Partial("_PipelineListRow", updatedPipeline);
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker != null)
+        if (pipeline != null)
         {
-            db.WorkerDetails.Remove(worker);
+            db.PipelineConfigurations.Remove(pipeline);
             await db.SaveChangesAsync();
         }
 
-        await LoadWorkersAsync();
-        return Partial("_WorkerListRows", Workers);
+        await LoadPipelinesAsync();
+        return Partial("_PipelineListRows", Pipelines);
     }
 
-    private async Task LoadWorkersAsync()
+    private async Task LoadPipelinesAsync()
     {
-        IQueryable<WorkerDetails> query = db.WorkerDetails.AsNoTracking();
+        IQueryable<Pipeline> query = db.PipelineConfigurations.AsNoTracking();
 
         if (!string.IsNullOrEmpty(SearchTerm))
         {
@@ -95,7 +96,7 @@ public class WorkersModel(WarehouseDbContext db) : PageModel
 
         if (!string.IsNullOrEmpty(FilterAccount))
         {
-            query = query.Where(x => x.Type.ToString() == FilterAccount);
+            query = query.Where(x => x.MarketType.ToString() == FilterAccount);
         }
 
         if (!string.IsNullOrEmpty(FilterStatus))
@@ -104,35 +105,35 @@ public class WorkersModel(WarehouseDbContext db) : PageModel
             query = query.Where(x => x.Enabled == isEnabled);
         }
 
-        List<WorkerDetails> workers = await query.ToListAsync();
+        List<Pipeline> pipelines = await query.ToListAsync();
 
-        workers = SortBy switch
+        pipelines = SortBy switch
         {
-            "symbol-desc" => workers.OrderByDescending(x => x.Symbol).ToList(),
-            "account" => workers.OrderBy(x => x.Type).ToList(),
-            "account-desc" => workers.OrderByDescending(x => x.Type).ToList(),
-            "status" => workers.OrderBy(x => x.Enabled).ToList(),
-            "status-desc" => workers.OrderByDescending(x => x.Enabled).ToList(),
-            "updated" => workers.OrderBy(x => x.UpdatedAt).ToList(),
-            "updated-desc" => workers.OrderByDescending(x => x.UpdatedAt).ToList(),
-            _ => workers.OrderBy(x => x.Symbol).ToList()
+            "symbol-desc" => pipelines.OrderByDescending(x => x.Symbol).ToList(),
+            "account" => pipelines.OrderBy(x => x.MarketType).ToList(),
+            "account-desc" => pipelines.OrderByDescending(x => x.MarketType).ToList(),
+            "status" => pipelines.OrderBy(x => x.Enabled).ToList(),
+            "status-desc" => pipelines.OrderByDescending(x => x.Enabled).ToList(),
+            "updated" => pipelines.OrderBy(x => x.UpdatedAt).ToList(),
+            "updated-desc" => pipelines.OrderByDescending(x => x.UpdatedAt).ToList(),
+            _ => pipelines.OrderBy(x => x.Symbol).ToList()
         };
 
-        Workers = workers.Select(x => new WorkerInfo
+        Pipelines = pipelines.Select(x => new PipelineInfo
             {
                 Id = x.Id,
                 Symbol = x.Symbol,
-                MarketType = x.Type.ToString(),
+                MarketType = x.MarketType.ToString(),
                 Enabled = x.Enabled,
                 Tags = x.Tags,
                 LastExecutedAt = x.UpdatedAt
             })
             .ToList();
 
-        AllTags = await db.WorkerDetails.AsNoTracking().SelectMany(x => x.Tags).Distinct().OrderBy(x => x).ToListAsync();
+        AllTags = await db.PipelineConfigurations.AsNoTracking().SelectMany(x => x.Tags).Distinct().OrderBy(x => x).ToListAsync();
     }
 
-    public class WorkerInfo
+    public class PipelineInfo
     {
         public int Id { get; set; }
 

@@ -9,7 +9,6 @@ using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Orders.Domain;
 using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Shared.Domain;
-using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.Core.Infrastructure.Persistence;
 
@@ -21,7 +20,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 
     public DbSet<MarketDetails> MarketDetails { get; set; }
 
-    public DbSet<WorkerDetails> WorkerDetails { get; set; }
+    public DbSet<Pipeline> PipelineConfigurations { get; set; }
 
     public DbSet<Position> Positions { get; set; }
 
@@ -43,12 +42,18 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Passphrase).HasMaxLength(500).HasConversion(encryptedConverter);
         });
 
-        modelBuilder.Entity<WorkerDetails>(entity =>
+        modelBuilder.Entity<Pipeline>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
-            entity.Property(x => x.Type).IsRequired();
+            entity.Property(x => x.MarketType).IsRequired();
             entity.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.Tags)
+                .HasConversion(
+                    x => JsonSerializer.Serialize(x, (JsonSerializerOptions)null!),
+                    x => JsonSerializer.Deserialize<List<string>>(x, (JsonSerializerOptions)null!) ?? new List<string>())
+                .HasColumnType("jsonb")
+                .HasDefaultValue(new List<string>());
         });
 
         modelBuilder.Entity<Position>(entity =>
@@ -58,10 +63,10 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.EntryPrice).HasPrecision(28, 10);
             entity.Property(x => x.Quantity).HasPrecision(28, 10);
             entity.Property(x => x.ExitPrice).HasPrecision(28, 10);
-            entity.HasIndex(x => new { x.WorkerId, x.Status });
-            entity.HasOne<WorkerDetails>(x => x.WorkerDetails)
+            entity.HasIndex(x => new { x.PipelineId, x.Status });
+            entity.HasOne<Pipeline>(x => x.Pipeline)
                 .WithMany()
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.PipelineId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -70,7 +75,9 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasOne<MarketAccount>(x => x.Credentials).WithOne(x => x.MarketDetails).HasForeignKey<MarketAccount>(x => x.MarketId);
+            entity.HasOne<MarketAccount>(x => x.Credentials)
+                .WithOne(x => x.MarketDetails)
+                .HasForeignKey<MarketAccount>(x => x.MarketId);
         });
 
         modelBuilder.Entity<Candlestick>(entity =>
@@ -104,12 +111,12 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
                          new Dictionary<string, string>())
                 .HasColumnType("jsonb")
                 .HasDefaultValue(new Dictionary<string, string>());
-            entity.HasOne(x => x.WorkerDetails)
-                .WithMany(x => x.PipelineSteps)
-                .HasForeignKey(x => x.WorkerDetailsId)
+            entity.HasOne(x => x.Pipeline)
+                .WithMany(x => x.Steps)
+                .HasForeignKey(x => x.PipelineDetailsId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(x => x.WorkerDetailsId);
-            entity.HasIndex(x => new { x.WorkerDetailsId, x.Order }).IsUnique();
+            entity.HasIndex(x => x.PipelineDetailsId);
+            entity.HasIndex(x => new { x.PipelineDetailsId, x.Order }).IsUnique();
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -127,7 +134,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Fee).HasPrecision(28, 10);
             entity.Property(x => x.TakeProfit).HasPrecision(28, 10);
             entity.Property(x => x.StopLoss).HasPrecision(28, 10);
-            entity.HasIndex(x => x.WorkerId);
+            entity.HasIndex(x => x.PipelineId);
             entity.HasIndex(x => x.Symbol);
         });
 

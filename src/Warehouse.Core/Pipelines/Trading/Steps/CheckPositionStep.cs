@@ -23,7 +23,7 @@ public class CheckPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipe
 
         // do we have an open position for this worker?
         Position? openPosition = await db.Positions.FirstOrDefaultAsync(
-            x => x.WorkerId == context.WorkerId && x.Status == PositionStatus.Open,
+            x => x.PipelineId == context.PipelineId && x.Status == PositionStatus.Open,
             cancellationToken);
 
         if (openPosition is null)

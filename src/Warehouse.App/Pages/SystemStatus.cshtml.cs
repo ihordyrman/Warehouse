@@ -15,9 +15,9 @@ public class SystemStatusModel(WarehouseDbContext db) : PageModel
     {
         try
         {
-            bool hasEnabledWorkers = await db.WorkerDetails.AsNoTracking().AnyAsync(x => x.Enabled);
+            bool hasEnabledPipelines = await db.PipelineConfigurations.AsNoTracking().AnyAsync(x => x.Enabled);
 
-            if (hasEnabledWorkers)
+            if (hasEnabledPipelines)
             {
                 StatusText = "Online";
                 StatusClass = "bg-green-100 text-green-800";

@@ -1,53 +1,53 @@
-@page "/worker/{id:int}/toggle"
+@page "/pipeline/{id:int}/toggle"
 @model Warehouse.App.Pages.ToggleModel
 @{
     Layout = null;
 }
 
-@if (Model.Worker != null)
+@if (Model.Pipeline != null)
 {
-    <div class="card worker-card" id="worker-@Model.Worker.Id">
+    <div class="card pipeline-card" id="pipeline-@Model.Pipeline.Id">
         <div class="flex justify-between items-start mb-4">
             <div>
-                <h3 class="text-lg font-semibold text-gray-900">@Model.Worker.Symbol</h3>
-                <span class="text-sm text-gray-500">@Model.Worker.MarketType</span>
+                <h3 class="text-lg font-semibold text-gray-900">@Model.Pipeline.Symbol</h3>
+                <span class="text-sm text-gray-500">@Model.Pipeline.MarketType</span>
             </div>
             <button type="button"
-                    hx-post="/worker/@Model.Worker.Id/toggle"
-                    hx-vals='{"enabled": "@(!Model.Worker.Enabled)"}'
-                    hx-target="#worker-@Model.Worker.Id"
+                    hx-post="/pipeline/@Model.Pipeline.Id/toggle"
+                    hx-vals='{"enabled": "@(!Model.Pipeline.Enabled)"}'
+                    hx-target="#pipeline-@Model.Pipeline.Id"
                     hx-swap="outerHTML"
-                    class="px-3 py-1 rounded-md text-sm font-medium transition-colors @(Model.Worker.Enabled ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200")">
-                @(Model.Worker.Enabled ? "Enabled" : "Disabled")
+                    class="px-3 py-1 rounded-md text-sm font-medium transition-colors @(Model.Pipeline.Enabled ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200")">
+                @(Model.Pipeline.Enabled ? "Enabled" : "Disabled")
             </button>
         </div>
 
         <div class="space-y-2 text-sm">
             <div class="flex justify-between">
                 <span class="text-gray-500">Strategy:</span>
-                <span class="text-gray-900">@(Model.Worker.Strategy ?? "Not configured")</span>
+                <span class="text-gray-900">@(Model.Pipeline.Strategy ?? "Not configured")</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">Interval:</span>
-                <span class="text-gray-900">@(Model.Worker.Interval ?? "1m")</span>
+                <span class="text-gray-900">@(Model.Pipeline.Interval ?? "1m")</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">Last Run:</span>
-                <span class="text-gray-900">@FormatDateTime(Model.Worker.LastRun)</span>
+                <span class="text-gray-900">@FormatDateTime(Model.Pipeline.LastRun)</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">Status:</span>
-                <span class="@(Model.Worker.Enabled ? "text-green-600" : "text-gray-600")">
-                    @(Model.Worker.Enabled ? "Running" : "Idle")
+                <span class="@(Model.Pipeline.Enabled ? "text-green-600" : "text-gray-600")">
+                    @(Model.Pipeline.Enabled ? "Running" : "Idle")
                 </span>
             </div>
         </div>
 
         <div class="flex justify-end space-x-2 mt-4 pt-4 border-t">
-            <a href="/Workers/Details?id=@Model.Worker.Id" class="text-blue-600 hover:text-blue-800 text-sm">
+            <a href="/Pipelines/Details?id=@Model.Pipeline.Id" class="text-blue-600 hover:text-blue-800 text-sm">
                 <i class="fas fa-chart-line mr-1"></i>Stats
             </a>
-            <a href="/Workers/Edit?id=@Model.Worker.Id" class="text-gray-600 hover:text-gray-800 text-sm">
+            <a href="/Pipelines/Edit?id=@Model.Pipeline.Id" class="text-gray-600 hover:text-gray-800 text-sm">
                 <i class="fas fa-cog mr-1"></i>Configure
             </a>
         </div>

@@ -24,7 +24,7 @@ public class BalanceViewModel
     public decimal Total { get; set; }
 }
 
-public class WorkerViewModel
+public class PipelineViewModel
 {
     public int Id { get; set; }
 
@@ -47,11 +47,11 @@ public class DashboardViewModel
 {
     public List<AccountViewModel> Accounts { get; set; } = new();
 
-    public List<WorkerViewModel> Workers { get; set; } = new();
+    public List<PipelineViewModel> Pipelines { get; set; } = new();
 
     public int ActiveAccountsCount { get; set; }
 
-    public int RunningWorkersCount { get; set; }
+    public int RunningPipelinesCount { get; set; }
 
     public decimal TotalBalance { get; set; }
 }

@@ -59,7 +59,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
     {
         var request = new CreateOrderRequest
         {
-            WorkerId = context.WorkerId,
+            PipelineId = context.PipelineId,
             Side = OrderSide.Sell,
             Quantity = context.Quantity!.Value,
             MarketType = context.MarketType,
@@ -80,7 +80,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
         }
 
         Position? position = await db.Positions.FirstOrDefaultAsync(
-            x => x.WorkerId == context.WorkerId && x.Symbol == context.Symbol && x.Status == PositionStatus.Open,
+            x => x.PipelineId == context.PipelineId && x.Symbol == context.Symbol && x.Status == PositionStatus.Open,
             cancellationToken);
 
         if (position is not null)
@@ -112,7 +112,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
         decimal quantity = tradeAmount / context.CurrentPrice;
         var request = new CreateOrderRequest
         {
-            WorkerId = context.WorkerId,
+            PipelineId = context.PipelineId,
             Side = OrderSide.Buy,
             Quantity = quantity,
             MarketType = context.MarketType,
@@ -134,7 +134,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
 
         var position = new Position
         {
-            WorkerId = context.WorkerId,
+            PipelineId = context.PipelineId,
             Symbol = context.Symbol,
             EntryPrice = context.CurrentPrice,
             Quantity = quantity,

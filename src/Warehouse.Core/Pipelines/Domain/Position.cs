@@ -1,5 +1,4 @@
 ﻿using Warehouse.Core.Shared.Domain;
-using Warehouse.Core.Workers.Domain;
 
 namespace Warehouse.Core.Pipelines.Domain;
 
@@ -7,9 +6,9 @@ public class Position : AuditEntity
 {
     public int Id { get; set; }
 
-    public int WorkerId { get; set; }
+    public int PipelineId { get; set; }
 
-    public WorkerDetails WorkerDetails { get; set; } = null!;
+    public Pipeline Pipeline { get; set; } = null!;
 
     public string Symbol { get; set; } = string.Empty;
 

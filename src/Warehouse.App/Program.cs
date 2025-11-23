@@ -1,20 +1,16 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Warehouse.App;
-using Warehouse.App.Endpoints;
 using Warehouse.Core;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Domain;
-using Warehouse.Core.Workers;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddApi(builder.Environment);
 builder.Services.AddCoreDependencies();
 builder.Services.AddOkxSupport(builder.Configuration);
-builder.Services.AddHostedService<WorkerOrchestrator>();
 builder.Services.AddRazorPages();
 builder.Services.AddCors(options =>
 {
@@ -22,6 +18,15 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
+});
+
+builder.Services.AddHttpLogging(x =>
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        x.CombineLogs = true;
+        x.LoggingFields = HttpLoggingFields.ResponseBody | HttpLoggingFields.ResponseHeaders;
+    }
 });
 
 WebApplication app = builder.Build();
@@ -56,8 +61,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseStatusCodePagesWithReExecute("/NotFound");
 app.UseHttpLogging();
-app.UseRateLimiter();
-app.AddApi();
 app.MapRazorPages().WithStaticAssets();
 app.Run();
 

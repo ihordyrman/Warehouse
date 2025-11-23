@@ -9,8 +9,6 @@ using Warehouse.Core.Markets.Services;
 using Warehouse.Core.Orders.Contracts;
 using Warehouse.Core.Orders.Services;
 using Warehouse.Core.Shared.Services;
-using Warehouse.Core.Workers.Contracts;
-using Warehouse.Core.Workers.Services;
 
 namespace Warehouse.Core;
 
@@ -32,7 +30,6 @@ public static class DependencyInjection
         services.AddScoped<ICandlestickService, CandlestickService>();
         services.AddScoped<IBalanceManager, BalanceManager>();
         services.AddScoped<IOrderManager, OrderManager>();
-        services.AddSingleton<IWorkerManager, WorkerManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         return services;
     }

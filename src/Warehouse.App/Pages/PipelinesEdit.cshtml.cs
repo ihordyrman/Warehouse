@@ -3,37 +3,38 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Domain;
-using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
-public class WorkersEditModel(WarehouseDbContext db) : PageModel
+public class PipelinesEditModel(WarehouseDbContext db) : PageModel
 {
     [BindProperty]
-    public EditWorkerInput Input { get; set; } = new();
+    public EditPipelineInput Input { get; set; } = new();
 
     public List<MarketType> MarketTypes { get; set; } = [];
 
-    public int WorkerId { get; set; }
+    public int PipelineId { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        WorkerId = id;
+        PipelineId = id;
         MarketTypes = Enum.GetValues<MarketType>().ToList();
 
-        WorkerDetails? worker = await db.WorkerDetails.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker == null)
+        if (pipeline == null)
         {
             return NotFound();
         }
 
-        Input = new EditWorkerInput
+        Input = new EditPipelineInput
         {
-            Enabled = worker.Enabled,
-            Type = worker.Type,
-            Symbol = worker.Symbol,
-            TagsInput = string.Join(", ", worker.Tags)
+            Enabled = pipeline.Enabled,
+            Type = pipeline.MarketType,
+            Symbol = pipeline.Symbol,
+            TagsInput = string.Join(", ", pipeline.Tags)
         };
 
         return Page();
@@ -41,7 +42,7 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
-        WorkerId = id;
+        PipelineId = id;
 
         if (!ModelState.IsValid)
         {
@@ -49,21 +50,21 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
             return Page();
         }
 
-        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker == null)
+        if (pipeline == null)
         {
             return NotFound();
         }
 
         string symbolUpper = Input.Symbol.ToUpperInvariant();
-        if (worker.Type != Input.Type || worker.Symbol != symbolUpper)
+        if (pipeline.MarketType != Input.Type || pipeline.Symbol != symbolUpper)
         {
-            bool exists = await db.WorkerDetails.AnyAsync(x => x.Id != id && x.Type == Input.Type && x.Symbol == symbolUpper);
+            bool exists = await db.PipelineConfigurations.AnyAsync(x => x.Id != id && x.MarketType == Input.Type && x.Symbol == symbolUpper);
 
             if (exists)
             {
-                ModelState.AddModelError("Input.Symbol", $"Worker for {Input.Type}/{Input.Symbol} already exists");
+                ModelState.AddModelError("Input.Symbol", $"Pipeline for {Input.Type}/{Input.Symbol} already exists");
                 MarketTypes = Enum.GetValues<MarketType>().ToList();
                 return Page();
             }
@@ -76,17 +77,17 @@ public class WorkersEditModel(WarehouseDbContext db) : PageModel
                 .Distinct()
                 .ToList();
 
-        worker.Enabled = Input.Enabled;
-        worker.Type = Input.Type;
-        worker.Symbol = symbolUpper;
-        worker.Tags = tags;
+        pipeline.Enabled = Input.Enabled;
+        pipeline.MarketType = Input.Type;
+        pipeline.Symbol = symbolUpper;
+        pipeline.Tags = tags;
 
         await db.SaveChangesAsync();
 
         return RedirectToPage("/Dashboard");
     }
 
-    public class EditWorkerInput
+    public class EditPipelineInput
     {
         public bool Enabled { get; set; }
 

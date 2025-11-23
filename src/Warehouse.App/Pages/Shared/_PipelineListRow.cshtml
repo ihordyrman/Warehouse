@@ -1,6 +1,6 @@
-@model WorkersModel.WorkerInfo
+@model PipelinesModel.PipelineInfo
 
-<tr class="hover:bg-gray-50 transition-colors" id="worker-@Model.Id">
+<tr class="hover:bg-gray-50 transition-colors" id="pipeline-@Model.Id">
     <td class="px-6 py-4 whitespace-nowrap">
         <div class="flex items-center">
             <div class="text-sm font-medium text-gray-900">@Model.Symbol</div>
@@ -48,23 +48,23 @@
     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <div class="flex items-center justify-end space-x-3">
             <button type="button"
-                    hx-post="/Workers?handler=Toggle&amp;id=@Model.Id&amp;enabled=@(!Model.Enabled)"
-                    hx-target="#worker-@Model.Id"
+                    hx-post="/Pipelines?handler=Toggle&amp;id=@Model.Id&amp;enabled=@(!Model.Enabled)"
+                    hx-target="#pipeline-@Model.Id"
                     hx-swap="outerHTML"
                     class="text-indigo-600 hover:text-indigo-900"
-                    title="@(Model.Enabled ? "Disable" : "Enable") worker">
+                    title="@(Model.Enabled ? "Disable" : "Enable") pipeline">
                 <i class="fas @(Model.Enabled ? "fa-pause" : "fa-play")"></i>
                 <span class="sr-only">@(Model.Enabled ? "Disable" : "Enable")</span>
             </button>
 
-            <a href="/WorkersEdit?id=@Model.Id"
+            <a href="/PipelinesEdit?id=@Model.Id"
                class="text-blue-600 hover:text-blue-900 inline-flex items-center"
-               title="Edit worker">
+               title="Edit pipeline">
                 <i class="fas fa-edit mr-1"></i>
                 <span>Edit</span>
             </a>
 
-            <a href="/WorkersDetails?id=@Model.Id"
+            <a href="/PipelinesDetails?id=@Model.Id"
                class="text-gray-600 hover:text-gray-900 inline-flex items-center"
                title="View details">
                 <i class="fas fa-info-circle mr-1"></i>
@@ -72,12 +72,12 @@
             </a>
 
             <button type="button"
-                    hx-post="/Workers?handler=Delete&amp;id=@Model.Id"
-                    hx-confirm="Are you sure you want to delete this worker?"
-                    hx-target="#workers-table-body"
+                    hx-post="/Pipelines?handler=Delete&amp;id=@Model.Id"
+                    hx-confirm="Are you sure you want to delete this pipeline?"
+                    hx-target="#pipelines-table-body"
                     hx-swap="innerHTML"
                     class="text-red-600 hover:text-red-900"
-                    title="Delete worker">
+                    title="Delete pipeline">
                 <i class="fas fa-trash"></i>
                 <span class="sr-only">Delete</span>
             </button>

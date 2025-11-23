@@ -3,14 +3,15 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Domain;
-using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
-public class WorkersCreateModel(WarehouseDbContext db) : PageModel
+public class PipelinesCreateModel(WarehouseDbContext db) : PageModel
 {
     [BindProperty]
-    public CreateWorkerInput Input { get; set; } = new();
+    public CreatePipelineInput Input { get; set; } = new();
 
     public List<MarketType> MarketTypes { get; set; } = [];
 
@@ -25,11 +26,11 @@ public class WorkersCreateModel(WarehouseDbContext db) : PageModel
         }
 
         string symbolUpper = Input.Symbol.ToUpperInvariant();
-        bool exists = await db.WorkerDetails.AnyAsync(x => x.Type == Input.Type && x.Symbol == symbolUpper);
+        bool exists = await db.PipelineConfigurations.AnyAsync(x => x.MarketType == Input.Type && x.Symbol == symbolUpper);
 
         if (exists)
         {
-            ModelState.AddModelError("Input.Symbol", $"Worker for {Input.Type}/{Input.Symbol} already exists");
+            ModelState.AddModelError("Input.Symbol", $"Pipeline for {Input.Type}/{Input.Symbol} already exists");
             MarketTypes = Enum.GetValues<MarketType>().ToList();
             return Page();
         }
@@ -41,21 +42,21 @@ public class WorkersCreateModel(WarehouseDbContext db) : PageModel
                 .Distinct()
                 .ToList();
 
-        var worker = new WorkerDetails
+        var pipeline = new Pipeline
         {
-            Type = Input.Type,
+            MarketType = Input.Type,
             Symbol = symbolUpper,
             Enabled = Input.Enabled,
             Tags = tags
         };
 
-        db.WorkerDetails.Add(worker);
+        db.PipelineConfigurations.Add(pipeline);
         await db.SaveChangesAsync();
 
         return RedirectToPage("/Dashboard");
     }
 
-    public class CreateWorkerInput
+    public class CreatePipelineInput
     {
         public bool Enabled { get; set; } = false;
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -57,7 +56,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    WorkerId = table.Column<int>(type: "integer", nullable: true),
+                    PipelineId = table.Column<int>(type: "integer", nullable: true),
                     MarketType = table.Column<int>(type: "integer", nullable: false),
                     ExchangeOrderId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -81,21 +80,25 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "WorkerDetails",
+                name: "PipelineConfigurations",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Enabled = table.Column<bool>(type: "boolean", nullable: false),
-                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
                     Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Tags = table.Column<List<string>>(type: "text[]", nullable: false),
+                    MarketType = table.Column<int>(type: "integer", nullable: false),
+                    Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                    ExecutionInterval = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    LastExecutedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Tags = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WorkerDetails", x => x.Id);
+                    table.PrimaryKey("PK_PipelineConfigurations", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -129,7 +132,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    WorkerDetailsId = table.Column<int>(type: "integer", nullable: false),
+                    PipelineDetailsId = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
@@ -141,9 +144,9 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_PipelineSteps", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_PipelineSteps_WorkerDetails_WorkerDetailsId",
-                        column: x => x.WorkerDetailsId,
-                        principalTable: "WorkerDetails",
+                        name: "FK_PipelineSteps_PipelineConfigurations_PipelineDetailsId",
+                        column: x => x.PipelineDetailsId,
+                        principalTable: "PipelineConfigurations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -154,7 +157,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    WorkerId = table.Column<int>(type: "integer", nullable: false),
+                    PipelineId = table.Column<int>(type: "integer", nullable: false),
                     Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     EntryPrice = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
                     Quantity = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
@@ -170,9 +173,9 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_Positions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Positions_WorkerDetails_WorkerId",
-                        column: x => x.WorkerId,
-                        principalTable: "WorkerDetails",
+                        name: "FK_Positions_PipelineConfigurations_PipelineId",
+                        column: x => x.PipelineId,
+                        principalTable: "PipelineConfigurations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -200,30 +203,30 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Orders_PipelineId",
+                table: "Orders",
+                column: "PipelineId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_Symbol",
                 table: "Orders",
                 column: "Symbol");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_WorkerId",
-                table: "Orders",
-                column: "WorkerId");
+                name: "IX_PipelineSteps_PipelineDetailsId",
+                table: "PipelineSteps",
+                column: "PipelineDetailsId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PipelineSteps_WorkerDetailsId",
+                name: "IX_PipelineSteps_PipelineDetailsId_Order",
                 table: "PipelineSteps",
-                column: "WorkerDetailsId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PipelineSteps_WorkerDetailsId_Order",
-                table: "PipelineSteps",
-                columns: new[] { "WorkerDetailsId", "Order" },
+                columns: new[] { "PipelineDetailsId", "Order" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Positions_WorkerId_Status",
+                name: "IX_Positions_PipelineId_Status",
                 table: "Positions",
-                columns: new[] { "WorkerId", "Status" });
+                columns: new[] { "PipelineId", "Status" });
         }
 
         /// <inheritdoc />
@@ -248,7 +251,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 name: "MarketDetails");
 
             migrationBuilder.DropTable(
-                name: "WorkerDetails");
+                name: "PipelineConfigurations");
         }
     }
 }

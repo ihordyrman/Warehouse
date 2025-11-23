@@ -2,42 +2,43 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
-using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
 public class ToggleModel(WarehouseDbContext db) : PageModel
 {
-    public WorkerInfo? Worker { get; set; }
+    public PipelineInfo? Pipeline { get; set; }
 
     public async Task<IActionResult> OnPostAsync(int id, [FromForm] bool enabled)
     {
-        WorkerDetails? worker = await db.WorkerDetails.FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker == null)
+        if (pipeline == null)
         {
             return NotFound();
         }
 
-        worker.Enabled = enabled;
+        pipeline.Enabled = enabled;
         await db.SaveChangesAsync();
 
-        Worker = new WorkerInfo
+        Pipeline = new PipelineInfo
         {
-            Id = worker.Id,
-            Symbol = worker.Symbol,
-            MarketType = worker.Type.ToString(),
-            Enabled = worker.Enabled,
+            Id = pipeline.Id,
+            Symbol = pipeline.Symbol,
+            MarketType = pipeline.MarketType.ToString(),
+            Enabled = pipeline.Enabled,
             Strategy = null, // TODO: Add strategy info when available
-            Interval = null, // TODO: Add interval info when available
-            LastRun = null,
-            LastExecutedAt = worker.UpdatedAt
+            Interval = pipeline.ExecutionInterval.ToString(),
+            LastRun = pipeline.LastExecutedAt,
+            LastExecutedAt = pipeline.UpdatedAt
         };
 
         return Page();
     }
 
-    public class WorkerInfo
+    public class PipelineInfo
     {
         public int Id { get; set; }
 

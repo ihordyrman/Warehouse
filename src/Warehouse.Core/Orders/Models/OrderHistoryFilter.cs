@@ -5,7 +5,7 @@ namespace Warehouse.Core.Orders.Models;
 
 public class OrderHistoryFilter
 {
-    public int? WorkerId { get; init; }
+    public int? PipelineId { get; init; }
 
     public MarketType? MarketType { get; init; }
 

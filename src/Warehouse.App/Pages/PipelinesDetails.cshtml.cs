@@ -3,38 +3,39 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Domain;
-using Warehouse.Core.Workers.Domain;
+using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
-public class WorkersDetailsModel(WarehouseDbContext db) : PageModel
+public class PipelinesDetailsModel(WarehouseDbContext db) : PageModel
 {
-    public WorkerDetailsInfo? Worker { get; set; }
+    public PipelineDetailsInfo? Pipeline { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        WorkerDetails? worker = await db.WorkerDetails.AsNoTracking().Include(x => x.PipelineSteps).FirstOrDefaultAsync(x => x.Id == id);
+        Pipeline? pipeline = await db.PipelineConfigurations.AsNoTracking().Include(x => x.Steps).FirstOrDefaultAsync(x => x.Id == id);
 
-        if (worker == null)
+        if (pipeline == null)
         {
             return NotFound();
         }
 
-        Worker = new WorkerDetailsInfo
+        Pipeline = new PipelineDetailsInfo
         {
-            Id = worker.Id,
-            Enabled = worker.Enabled,
-            Type = worker.Type,
-            Symbol = worker.Symbol,
-            CreatedAt = worker.CreatedAt,
-            UpdatedAt = worker.UpdatedAt,
-            PipelineStepsCount = worker.PipelineSteps.Count
+            Id = pipeline.Id,
+            Enabled = pipeline.Enabled,
+            Type = pipeline.MarketType,
+            Symbol = pipeline.Symbol,
+            CreatedAt = pipeline.CreatedAt,
+            UpdatedAt = pipeline.UpdatedAt,
+            PipelineStepsCount = pipeline.Steps.Count
         };
 
         return Page();
     }
 
-    public class WorkerDetailsInfo
+    public class PipelineDetailsInfo
     {
         public int Id { get; set; }
 

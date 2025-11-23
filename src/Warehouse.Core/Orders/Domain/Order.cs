@@ -7,7 +7,7 @@ public class Order : AuditEntity
 {
     public long Id { get; set; }
 
-    public int? WorkerId { get; set; }
+    public int? PipelineId { get; set; }
 
     public MarketType MarketType { get; set; }
 

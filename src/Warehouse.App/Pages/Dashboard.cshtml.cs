@@ -17,7 +17,7 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
 
     public int ActiveAccountsCount { get; set; }
 
-    public int RunningWorkersCount { get; set; }
+    public int RunningPipelinesCount { get; set; }
 
     public decimal TotalBalance { get; set; }
 
@@ -28,8 +28,8 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
             await LoadAccountsAsync();
 
             ActiveAccountsCount = Markets.Count(x => x.Enabled);
-            RunningWorkersCount = await db.WorkerDetails.CountAsync();
-            Tags = await db.WorkerDetails
+            RunningPipelinesCount = await db.PipelineConfigurations.CountAsync();
+            Tags = await db.PipelineConfigurations
                 .SelectMany(x => x.Tags)
                 .Distinct()
                 .OrderBy(x => x)

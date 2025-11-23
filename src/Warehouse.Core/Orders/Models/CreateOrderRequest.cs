@@ -5,7 +5,7 @@ namespace Warehouse.Core.Orders.Models;
 
 public class CreateOrderRequest
 {
-    public int? WorkerId { get; init; }
+    public int? PipelineId { get; init; }
 
     public required MarketType MarketType { get; init; }
 
