@@ -26,21 +26,4 @@ public class DatabaseCredentialsProvider(IServiceScopeFactory scopeFactory, ILog
         logger.LogDebug("Retrieved credentials for {Market}", marketType);
         return credentials;
     }
-
-    public async Task<IReadOnlyList<MarketAccount>> GetAllCredentialsAsync(
-        MarketType? marketType = null,
-        CancellationToken cancellationToken = default)
-    {
-        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-        WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
-
-        IQueryable<MarketAccount> query = dbContext.MarketAccounts.Include(x => x.MarketDetails).AsQueryable();
-
-        if (marketType.HasValue)
-        {
-            query = query.Where(x => x.MarketDetails.Type == marketType.Value);
-        }
-
-        return await query.ToListAsync(cancellationToken);
-    }
 }

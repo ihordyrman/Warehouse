@@ -125,6 +125,7 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp);
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-KEY", Credentials.ApiKey);
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", Credentials.Passphrase);
+        httpClient.DefaultRequestHeaders.Add("x-simulated-trading", Credentials.IsSandbox ? "1" : "0");
 
         try
         {

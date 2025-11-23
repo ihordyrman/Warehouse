@@ -1,4 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Contracts;
@@ -9,7 +12,7 @@ using Warehouse.Core.Workers.Domain;
 using Warehouse.Core.Workers.Models;
 using Warehouse.Core.Workers.Services;
 
-namespace Warehouse.App;
+namespace Warehouse.Core.Workers;
 
 public class WorkerOrchestrator(
     IServiceScopeFactory scopeFactory,

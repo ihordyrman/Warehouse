@@ -49,6 +49,7 @@ public class AccountsCreateModel(WarehouseDbContext db) : PageModel
             ApiKey = Input.ApiKey,
             SecretKey = Input.SecretKey,
             Passphrase = Input.Passphrase ?? string.Empty,
+            IsSandbox = Input.IsSandbox,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -74,5 +75,8 @@ public class AccountsCreateModel(WarehouseDbContext db) : PageModel
 
         [Display(Name = "Passphrase")]
         public string? Passphrase { get; set; }
+
+        [Display(Name = "Sandbox")]
+        public bool IsSandbox { get; set; }
     }
 }

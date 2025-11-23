@@ -32,7 +32,8 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
 
             SecretKey = market.Credentials?.SecretKey ?? string.Empty,
             Passphrase = market.Credentials?.Passphrase,
-            Enabled = market.Credentials != null
+            Enabled = market.Credentials != null,
+            IsSandbox = market.Credentials?.IsSandbox ?? false
         };
 
         return Page();
@@ -64,6 +65,7 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
                     ApiKey = Input.ApiKey,
                     SecretKey = Input.SecretKey,
                     Passphrase = Input.Passphrase ?? string.Empty,
+                    IsSandbox = Input.IsSandbox,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -74,6 +76,7 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
                 market.Credentials.ApiKey = Input.ApiKey;
                 market.Credentials.SecretKey = Input.SecretKey;
                 market.Credentials.Passphrase = Input.Passphrase ?? string.Empty;
+                market.Credentials.IsSandbox = Input.IsSandbox;
                 market.Credentials.UpdatedAt = DateTime.UtcNow;
             }
         }
@@ -122,5 +125,8 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
         public string? Passphrase { get; set; }
 
         public bool Enabled { get; set; }
+
+        [Display(Name = "Sandbox")]
+        public bool IsSandbox { get; set; }
     }
 }

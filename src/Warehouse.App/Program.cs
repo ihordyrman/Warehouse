@@ -7,6 +7,7 @@ using Warehouse.Core;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Workers;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -100,7 +101,8 @@ static async Task EnsureCredentialsPopulated(IConfiguration configuration, Wareh
         ApiKey = apiKey,
         Passphrase = passPhrase,
         SecretKey = secretKey,
-        MarketDetails = market
+        MarketDetails = market,
+        IsSandbox = true
     };
 
     dbContext.MarketAccounts.Add(marketCredentials);

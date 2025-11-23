@@ -48,6 +48,13 @@
                 </label>
             </div>
 
+            <div class="flex items-center">
+                <input asp-for="Input.IsSandbox" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
+                <label asp-for="Input.IsSandbox" class="ml-2 block text-sm text-gray-900">
+                    Sandbox
+                </label>
+            </div>
+
             <div class="pt-4 border-t border-gray-100 flex justify-end space-x-3">
                 <a href="/Accounts"
                    class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">Cancel</a>

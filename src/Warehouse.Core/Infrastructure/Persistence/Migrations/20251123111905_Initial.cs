@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -87,7 +88,8 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Enabled = table.Column<bool>(type: "boolean", nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
-                    Symbol = table.Column<string>(type: "text", nullable: false),
+                    Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Tags = table.Column<List<string>>(type: "text[]", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -106,6 +108,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     ApiKey = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Passphrase = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     SecretKey = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    IsSandbox = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -130,7 +133,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    Parameters = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "{}"),
+                    Parameters = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -140,6 +143,35 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_PipelineSteps_WorkerDetails_WorkerDetailsId",
                         column: x => x.WorkerDetailsId,
+                        principalTable: "WorkerDetails",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Positions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WorkerId = table.Column<int>(type: "integer", nullable: false),
+                    Symbol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    EntryPrice = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
+                    Quantity = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: false),
+                    BuyOrderId = table.Column<long>(type: "bigint", nullable: true),
+                    SellOrderId = table.Column<long>(type: "bigint", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    ExitPrice = table.Column<decimal>(type: "numeric(28,10)", precision: 28, scale: 10, nullable: true),
+                    ClosedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Positions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Positions_WorkerDetails_WorkerId",
+                        column: x => x.WorkerId,
                         principalTable: "WorkerDetails",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -187,6 +219,11 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 table: "PipelineSteps",
                 columns: new[] { "WorkerDetailsId", "Order" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Positions_WorkerId_Status",
+                table: "Positions",
+                columns: new[] { "WorkerId", "Status" });
         }
 
         /// <inheritdoc />
@@ -203,6 +240,9 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "PipelineSteps");
+
+            migrationBuilder.DropTable(
+                name: "Positions");
 
             migrationBuilder.DropTable(
                 name: "MarketDetails");

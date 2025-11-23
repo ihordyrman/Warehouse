@@ -39,6 +39,9 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsSandbox")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("MarketId")
                         .HasColumnType("integer");
 
@@ -210,6 +213,59 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("PipelineSteps");
                 });
 
+            modelBuilder.Entity("Warehouse.Core.Pipelines.Domain.Position", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long?>("BuyOrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("EntryPrice")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<decimal?>("ExitPrice")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(28, 10)
+                        .HasColumnType("numeric(28,10)");
+
+                    b.Property<long?>("SellOrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WorkerId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkerId", "Status");
+
+                    b.ToTable("Positions");
+                });
+
             modelBuilder.Entity("Warehouse.Core.Shared.Domain.Candlestick", b =>
                 {
                     b.Property<long>("Id")
@@ -320,6 +376,17 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("Warehouse.Core.Workers.Domain.WorkerDetails", "WorkerDetails")
                         .WithMany("PipelineSteps")
                         .HasForeignKey("WorkerDetailsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkerDetails");
+                });
+
+            modelBuilder.Entity("Warehouse.Core.Pipelines.Domain.Position", b =>
+                {
+                    b.HasOne("Warehouse.Core.Workers.Domain.WorkerDetails", "WorkerDetails")
+                        .WithMany()
+                        .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

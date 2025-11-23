@@ -15,4 +15,6 @@ public class MarketAccount : AuditEntity
     public string Passphrase { get; set; } = string.Empty;
 
     public string SecretKey { get; set; } = string.Empty;
+
+    public bool IsSandbox { get; set; } = false;
 }
