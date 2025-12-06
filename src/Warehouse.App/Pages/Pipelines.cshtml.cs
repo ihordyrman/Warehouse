@@ -89,10 +89,7 @@ public class PipelinesModel(WarehouseDbContext db) : PageModel
             query = query.Where(x => x.Symbol.Contains(SearchTerm));
         }
 
-        if (!string.IsNullOrEmpty(FilterTag))
-        {
-            query = query.Where(x => x.Tags.Contains(FilterTag));
-        }
+
 
         if (!string.IsNullOrEmpty(FilterAccount))
         {
@@ -106,6 +103,11 @@ public class PipelinesModel(WarehouseDbContext db) : PageModel
         }
 
         List<Pipeline> pipelines = await query.ToListAsync();
+
+        if (!string.IsNullOrEmpty(FilterTag))
+        {
+            pipelines = pipelines.Where(x => x.Tags.Contains(FilterTag)).ToList();
+        }
 
         pipelines = SortBy switch
         {
@@ -130,7 +132,8 @@ public class PipelinesModel(WarehouseDbContext db) : PageModel
             })
             .ToList();
 
-        AllTags = await db.PipelineConfigurations.AsNoTracking().SelectMany(x => x.Tags).Distinct().OrderBy(x => x).ToListAsync();
+        var allTags = await db.PipelineConfigurations.AsNoTracking().Select(x => x.Tags).ToListAsync();
+        AllTags = allTags.SelectMany(x => x).Distinct().OrderBy(x => x).ToList();
     }
 
     public class PipelineInfo

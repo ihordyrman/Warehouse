@@ -29,11 +29,12 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
 
             ActiveAccountsCount = Markets.Count(x => x.Enabled);
             RunningPipelinesCount = await db.PipelineConfigurations.CountAsync();
-            Tags = await db.PipelineConfigurations
-                .SelectMany(x => x.Tags)
+            var pipelines = await db.PipelineConfigurations.Select(x => x.Tags).ToListAsync();
+            Tags = pipelines
+                .SelectMany(x => x)
                 .Distinct()
                 .OrderBy(x => x)
-                .ToListAsync();
+                .ToList();
         }
         catch (Exception ex)
         {

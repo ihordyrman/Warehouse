@@ -84,7 +84,7 @@ public class PipelinesEditModel(WarehouseDbContext db) : PageModel
 
         await db.SaveChangesAsync();
 
-        return RedirectToPage("/Dashboard");
+        return RedirectToPage("/Pipelines");
     }
 
     public class EditPipelineInput

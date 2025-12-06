@@ -53,7 +53,7 @@ public class PipelinesCreateModel(WarehouseDbContext db) : PageModel
         db.PipelineConfigurations.Add(pipeline);
         await db.SaveChangesAsync();
 
-        return RedirectToPage("/Dashboard");
+        return RedirectToPage("/Pipelines");
     }
 
     public class CreatePipelineInput
