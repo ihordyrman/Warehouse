@@ -9,7 +9,7 @@ using Warehouse.Core.Markets.Domain;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCoreDependencies();
+builder.Services.AddCoreDependencies(builder.Configuration);
 builder.Services.AddOkxSupport(builder.Configuration);
 builder.Services.AddRazorPages();
 builder.Services.AddCors(options =>
