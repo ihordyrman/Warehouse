@@ -6,6 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Warehouse.Core.Infrastructure.WebSockets;
 
+/// <summary>
+///     Wrapper around ClientWebSocket for easier usage.
+///     Handles connection, messaging events, and cleanup.
+/// </summary>
 public interface IWebSocketClient : IDisposable
 {
     WebSocketState State { get; }
@@ -26,6 +30,9 @@ public interface IWebSocketClient : IDisposable
         where T : class;
 }
 
+/// <summary>
+///     Implementation of IWebSocketClient using System.Net.WebSockets.
+/// </summary>
 public sealed class WebSocketClient(ILogger<WebSocketClient> logger) : IWebSocketClient
 {
     private readonly ArrayPool<byte> arrayPool = ArrayPool<byte>.Shared;

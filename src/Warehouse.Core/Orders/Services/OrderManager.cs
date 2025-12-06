@@ -10,11 +10,14 @@ using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Orders.Services;
 
+/// <summary>
+///     Implementation of IOrderManager that uses EF Core for persistence and IMarketOrderProvider for execution.
+/// </summary>
 public class OrderManager : IOrderManager
 {
-    private readonly Dictionary<MarketType, IMarketOrderProvider> providers = [];
     private readonly WarehouseDbContext dbContext;
     private readonly ILogger<OrderManager> logger;
+    private readonly Dictionary<MarketType, IMarketOrderProvider> providers = [];
 
     public OrderManager(WarehouseDbContext dbContext, ILogger<OrderManager> logger, IServiceProvider serviceProvider)
     {
@@ -206,14 +209,6 @@ public class OrderManager : IOrderManager
     public async Task<Order?> GetOrderAsync(long orderId, CancellationToken cancellationToken = default)
         => await dbContext.Orders.FindAsync([orderId], cancellationToken);
 
-    public async Task<Order?> GetOrderByExchangeIdAsync(
-        string exchangeOrderId,
-        MarketType marketType,
-        CancellationToken cancellationToken = default)
-        => await dbContext.Orders.FirstOrDefaultAsync(
-            x => x.ExchangeOrderId == exchangeOrderId && x.MarketType == marketType,
-            cancellationToken);
-
     public async Task<List<Order>> GetOrdersAsync(int workerId, OrderStatus? status = null, CancellationToken cancellationToken = default)
     {
         IQueryable<Order> query = dbContext.Orders.Where(x => x.PipelineId == workerId);
@@ -224,31 +219,6 @@ public class OrderManager : IOrderManager
         }
 
         return await query.OrderByDescending(x => x.CreatedAt).ToListAsync(cancellationToken);
-    }
-
-    public async Task<decimal> GetTotalExposureAsync(MarketType? marketType = null, CancellationToken cancellationToken = default)
-    {
-        IQueryable<Order> query = dbContext.Orders.Where(x => x.Status == OrderStatus.Placed ||
-                                                              x.Status == OrderStatus.PartiallyFilled ||
-                                                              x.Status == OrderStatus.Filled);
-
-        if (marketType.HasValue)
-
-        {
-            query = query.Where(x => x.MarketType == marketType.Value);
-        }
-
-        List<Order> orders = await query.ToListAsync(cancellationToken);
-
-        decimal totalExposure = 0;
-        foreach (Order order in orders)
-        {
-            decimal quantity = order.Quantity;
-            decimal price = order.Price ?? 0;
-            totalExposure += quantity * price;
-        }
-
-        return totalExposure;
     }
 
     public async Task<List<Order>> GetOrderHistoryAsync(
@@ -300,5 +270,38 @@ public class OrderManager : IOrderManager
         }
 
         return await query.OrderByDescending(x => x.CreatedAt).Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
+
+    public async Task<Order?> GetOrderByExchangeIdAsync(
+        string exchangeOrderId,
+        MarketType marketType,
+        CancellationToken cancellationToken = default)
+        => await dbContext.Orders.FirstOrDefaultAsync(
+            x => x.ExchangeOrderId == exchangeOrderId && x.MarketType == marketType,
+            cancellationToken);
+
+    public async Task<decimal> GetTotalExposureAsync(MarketType? marketType = null, CancellationToken cancellationToken = default)
+    {
+        IQueryable<Order> query = dbContext.Orders.Where(x => x.Status == OrderStatus.Placed ||
+                                                              x.Status == OrderStatus.PartiallyFilled ||
+                                                              x.Status == OrderStatus.Filled);
+
+        if (marketType.HasValue)
+
+        {
+            query = query.Where(x => x.MarketType == marketType.Value);
+        }
+
+        List<Order> orders = await query.ToListAsync(cancellationToken);
+
+        decimal totalExposure = 0;
+        foreach (Order order in orders)
+        {
+            decimal quantity = order.Quantity;
+            decimal price = order.Price ?? 0;
+            totalExposure += quantity * price;
+        }
+
+        return totalExposure;
     }
 }

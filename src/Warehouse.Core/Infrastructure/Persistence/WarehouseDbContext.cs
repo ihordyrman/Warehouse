@@ -12,6 +12,10 @@ using Warehouse.Core.Shared.Domain;
 
 namespace Warehouse.Core.Infrastructure.Persistence;
 
+/// <summary>
+///     Main Entity Framework Core database context for the application.
+///     Contains all entity sets and model configurations.
+/// </summary>
 public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvider? dataProtection) : DbContext(options)
 {
     private readonly IDataProtector protector = dataProtection?.CreateProtector("Warehouse.Accounts") ?? null!;
@@ -64,10 +68,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.Property(x => x.Quantity).HasPrecision(28, 10);
             entity.Property(x => x.ExitPrice).HasPrecision(28, 10);
             entity.HasIndex(x => new { x.PipelineId, x.Status });
-            entity.HasOne<Pipeline>(x => x.Pipeline)
-                .WithMany()
-                .HasForeignKey(x => x.PipelineId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Pipeline>(x => x.Pipeline).WithMany().HasForeignKey(x => x.PipelineId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Market>(entity =>
@@ -75,9 +76,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasOne<MarketCredentials>(x => x.Credentials)
-                .WithOne(x => x.Market)
-                .HasForeignKey<MarketCredentials>(x => x.MarketId);
+            entity.HasOne<MarketCredentials>(x => x.Credentials).WithOne(x => x.Market).HasForeignKey<MarketCredentials>(x => x.MarketId);
         });
 
         modelBuilder.Entity<Candlestick>(entity =>
@@ -111,10 +110,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
                          new Dictionary<string, string>())
                 .HasColumnType("jsonb")
                 .HasDefaultValue(new Dictionary<string, string>());
-            entity.HasOne(x => x.Pipeline)
-                .WithMany(x => x.Steps)
-                .HasForeignKey(x => x.PipelineDetailsId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Pipeline).WithMany(x => x.Steps).HasForeignKey(x => x.PipelineDetailsId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => x.PipelineDetailsId);
             entity.HasIndex(x => new { x.PipelineDetailsId, x.Order }).IsUnique();
         });

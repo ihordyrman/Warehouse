@@ -4,6 +4,10 @@ using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Markets.Contracts;
 
+/// <summary>
+///     Provider for fetching balance information from a specific market.
+///     Used by IBalanceManager to aggregate balances.
+/// </summary>
 public interface IMarketBalanceProvider
 {
     MarketType MarketType { get; }

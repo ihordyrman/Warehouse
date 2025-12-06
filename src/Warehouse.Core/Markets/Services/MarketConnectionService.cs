@@ -8,19 +8,23 @@ using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.Core.Markets.Services;
 
+/// <summary>
+///     Background service that maintains connections to active markets.
+///     Manages lifecycle of connections, including connecting, disconnecting, and updating subscriptions based on active pipelines.
+/// </summary>
 public class MarketConnectionService(ILogger<MarketConnectionService> logger, IServiceScopeFactory serviceScopeFactory) : BackgroundService
 {
     private readonly SemaphoreSlim connectionLock = new(1, 1);
     private readonly Dictionary<MarketType, MarketConnection> marketConnections = [];
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        // periodic task that checks:
-        // 1. if we have worker for a specific market - we check if connection exists, if not we create it
-        // 2. if we have connection for a market but no workers - we disconnect
-        // 3. if we have connection for a market and workers - we check if subscriptions are up to date, if not we update them
-        return Task.CompletedTask;
-    }
+        =>
+
+            // periodic task that checks:
+            // 1. if we have worker for a specific market - we check if connection exists, if not we create it
+            // 2. if we have connection for a market but no workers - we disconnect
+            // 3. if we have connection for a market and workers - we check if subscriptions are up to date, if not we update them
+            Task.CompletedTask;
 
     private async Task UpdateSubscriptionsAsync(MarketConnection connection, List<Pipeline> pipelines, CancellationToken cancellationToken)
     {

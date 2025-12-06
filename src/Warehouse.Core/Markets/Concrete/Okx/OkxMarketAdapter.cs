@@ -31,7 +31,9 @@ public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
         logger = loggerFactory.CreateLogger<OkxMarketAdapter>();
 
         IServiceScope scope = scopeFactory.CreateScope();
-        credentials = scope.ServiceProvider.GetService<ICredentialsProvider>()!.GetCredentialsAsync(MarketType.Okx).GetAwaiter().GetResult();
+        credentials = scope.ServiceProvider.GetService<ICredentialsProvider>()!.GetCredentialsAsync(MarketType.Okx)
+            .GetAwaiter()
+            .GetResult();
 
         connectionManager = new OkxConnectionManager(webSocketClient, heartbeatService, loggerFactory.CreateLogger<OkxConnectionManager>());
         messageProcessor = new OkxMessageProcessor(loggerFactory.CreateLogger<OkxMessageProcessor>(), dataCache);

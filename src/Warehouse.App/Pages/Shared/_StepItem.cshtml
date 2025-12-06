@@ -1,0 +1,61 @@
+@model StepItemViewModel
+
+<div id="step-@Model.Id"
+     data-step-id="@Model.Id"
+     class="flex items-center gap-4 p-4 bg-white border rounded-lg shadow-sm @(Model.IsEnabled ? "" : "opacity-50")">
+
+    <!-- Step Order Badge -->
+    <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+        @Model.Order
+    </div>
+
+    <!-- Step Icon & Info -->
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+            <i class="fas @Model.Icon text-blue-600"></i>
+            <span class="font-medium text-gray-900">@Model.DisplayName</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                @(Model.Category == "Validation" ? "bg-green-100 text-green-800" : Model.Category == "Signal" || Model.Category == "SignalGeneration" ? "bg-purple-100 text-purple-800" : Model.Category == "Execution" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800")">
+                @Model.Category
+            </span>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.ParameterSummary))
+        {
+            <div class="text-sm text-gray-500 mt-1 truncate">
+                @Model.ParameterSummary
+            </div>
+        }
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+        <!-- Toggle Enabled -->
+        <button hx-post="?handler=ToggleStep&id=@Model.PipelineId&stepId=@Model.Id"
+                hx-target="#step-@Model.Id"
+                hx-swap="outerHTML"
+                class="p-2 rounded hover:bg-gray-100 transition-colors @(Model.IsEnabled ? "text-green-600" : "text-gray-400")"
+                title="@(Model.IsEnabled ? "Disable step" : "Enable step")">
+            <i class="fas @(Model.IsEnabled ? "fa-toggle-on" : "fa-toggle-off") text-xl"></i>
+        </button>
+
+        <!-- Configure -->
+        <button hx-get="?handler=StepEditor&id=@Model.PipelineId&stepId=@Model.Id"
+                hx-target="#modal-content"
+                hx-swap="innerHTML"
+                onclick="document.getElementById('step-modal').classList.remove('hidden')"
+                class="p-2 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                title="Configure step">
+            <i class="fas fa-cog"></i>
+        </button>
+
+        <!-- Delete -->
+        <button hx-delete="?handler=DeleteStep&id=@Model.PipelineId&stepId=@Model.Id"
+                hx-target="#step-@Model.Id"
+                hx-swap="outerHTML"
+                hx-confirm="Are you sure you want to delete this step?"
+                class="p-2 text-red-600 rounded hover:bg-red-50 transition-colors"
+                title="Delete step">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</div>

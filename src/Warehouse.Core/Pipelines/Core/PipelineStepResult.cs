@@ -1,5 +1,9 @@
 ﻿namespace Warehouse.Core.Pipelines.Core;
 
+/// <summary>
+///     Result of a single step execution.
+///     Determines if the pipeline should continue to the next step.
+/// </summary>
 public class PipelineStepResult
 {
     public bool ShouldContinue { get; init; } = true;

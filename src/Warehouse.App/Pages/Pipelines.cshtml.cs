@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Pipelines.Domain;
-using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 
@@ -89,8 +88,6 @@ public class PipelinesModel(WarehouseDbContext db) : PageModel
             query = query.Where(x => x.Symbol.Contains(SearchTerm));
         }
 
-
-
         if (!string.IsNullOrEmpty(FilterAccount))
         {
             query = query.Where(x => x.MarketType.ToString() == FilterAccount);
@@ -132,7 +129,7 @@ public class PipelinesModel(WarehouseDbContext db) : PageModel
             })
             .ToList();
 
-        var allTags = await db.PipelineConfigurations.AsNoTracking().Select(x => x.Tags).ToListAsync();
+        List<List<string>> allTags = await db.PipelineConfigurations.AsNoTracking().Select(x => x.Tags).ToListAsync();
         AllTags = allTags.SelectMany(x => x).Distinct().OrderBy(x => x).ToList();
     }
 

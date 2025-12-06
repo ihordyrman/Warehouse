@@ -69,7 +69,7 @@ public class AccountsModel(WarehouseDbContext db, IBalanceManager balanceManager
 
             if (!string.IsNullOrEmpty(FilterType))
             {
-                if (Enum.TryParse<MarketType>(FilterType, true, out MarketType typeEnum))
+                if (Enum.TryParse(FilterType, true, out MarketType typeEnum))
                 {
                     query = query.Where(x => x.Type == typeEnum);
                 }

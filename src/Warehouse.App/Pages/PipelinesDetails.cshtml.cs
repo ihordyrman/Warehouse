@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Pipelines.Domain;
-using Warehouse.Core.Pipelines.Domain;
 
 namespace Warehouse.App.Pages;
 

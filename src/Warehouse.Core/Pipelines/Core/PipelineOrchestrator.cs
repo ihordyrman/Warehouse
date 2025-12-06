@@ -4,10 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Pipelines.Builder;
 using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Parameters;
 
 namespace Warehouse.Core.Pipelines.Core;
 
+/// <summary>
+///     Manages the lifecycle of multiple pipeline executors.
+///     Monitors DB configuration and starts/stops executors accordingly.
+/// </summary>
 public interface IPipelineOrchestrator
 {
     Task SynchronizePipelinesAsync();
@@ -17,32 +23,15 @@ public interface IPipelineOrchestrator
     Task<bool> StopPipelineAsync(int pipelineId);
 }
 
+/// <summary>
+///     Background service that synchronizes running pipeline executors with the database configuration.
+/// </summary>
 public class PipelineOrchestrator(IServiceScopeFactory scopeFactory, ILogger<PipelineOrchestrator> logger)
     : BackgroundService, IPipelineOrchestrator
 {
-    private readonly ConcurrentDictionary<int, IPipelineExecutor> runningExecutors = new();
     private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(30));
+    private readonly ConcurrentDictionary<int, IPipelineExecutor> runningExecutors = new();
     private CancellationToken cancellationToken;
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        cancellationToken = stoppingToken;
-        logger.LogInformation("PipelineOrchestrator started");
-
-        await SynchronizePipelinesAsync();
-
-        while (await periodicTimer.WaitForNextTickAsync(stoppingToken))
-        {
-            try
-            {
-                await SynchronizePipelinesAsync();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error during pipeline synchronization");
-            }
-        }
-    }
 
     public async Task SynchronizePipelinesAsync()
     {
@@ -104,10 +93,41 @@ public class PipelineOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Pip
 
     public async Task<bool> StopPipelineAsync(int pipelineId) => await StopPipelineInternalAsync(pipelineId);
 
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        cancellationToken = stoppingToken;
+        logger.LogInformation("PipelineOrchestrator started");
+
+        await SynchronizePipelinesAsync();
+
+        while (await periodicTimer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                await SynchronizePipelinesAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during pipeline synchronization");
+            }
+        }
+    }
+
     private async Task<bool> StartPipelineInternalAsync(Pipeline pipeline, IServiceProvider serviceProvider)
     {
         try
         {
+            // Validate pipeline configuration before starting
+            IPipelineBuilder pipelineBuilder = serviceProvider.GetRequiredService<IPipelineBuilder>();
+            ValidationResult validationResult = pipelineBuilder.ValidatePipeline(pipeline);
+
+            if (!validationResult.IsValid)
+            {
+                var errors = string.Join(", ", validationResult.Errors.Select(e => e.Message));
+                logger.LogWarning("Pipeline {PipelineId} ({PipelineName}) failed validation: {Errors}", pipeline.Id, pipeline.Name, errors);
+                return false;
+            }
+
             var executor = new PipelineExecutor(serviceProvider, pipeline);
 
             if (!runningExecutors.TryAdd(pipeline.Id, executor))

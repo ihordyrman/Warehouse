@@ -9,9 +9,9 @@ namespace Warehouse.Core.Markets.Concrete.Okx.Services;
 
 public class BalanceManager : IBalanceManager
 {
-    private readonly IServiceProvider serviceProvider;
     private readonly ILogger<BalanceManager> logger;
     private readonly Dictionary<MarketType, IMarketBalanceProvider> providers = new();
+    private readonly IServiceProvider serviceProvider;
 
     public BalanceManager(IServiceProvider serviceProvider, ILogger<BalanceManager> logger)
     {

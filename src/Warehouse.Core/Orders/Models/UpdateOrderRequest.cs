@@ -1,5 +1,9 @@
 ﻿namespace Warehouse.Core.Orders.Models;
 
+/// <summary>
+///     Parameters for modifying an existing order.
+///     Only non-null values will be updated.
+/// </summary>
 public class UpdateOrderRequest
 {
     public decimal? Quantity { get; init; }

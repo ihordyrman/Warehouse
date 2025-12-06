@@ -10,7 +10,9 @@ using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Services;
 using Warehouse.Core.Orders.Contracts;
 using Warehouse.Core.Orders.Services;
+using Warehouse.Core.Pipelines.Builder;
 using Warehouse.Core.Pipelines.Core;
+using Warehouse.Core.Pipelines.Registry;
 using Warehouse.Core.Shared.Services;
 
 namespace Warehouse.Core;
@@ -41,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<IOrderManager, OrderManager>();
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IPipelineOrchestrator, PipelineOrchestrator>();
+        services.AddSingleton<IStepRegistry, StepRegistry>();
+        services.AddScoped<IPipelineBuilder, PipelineBuilder>();
         services.AddHostedService(sp => (PipelineOrchestrator)sp.GetRequiredService<IPipelineOrchestrator>());
 
         return services;

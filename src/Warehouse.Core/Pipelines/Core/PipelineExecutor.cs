@@ -1,10 +1,15 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Warehouse.Core.Pipelines.Builder;
 using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Pipelines.Trading;
 
 namespace Warehouse.Core.Pipelines.Core;
 
+/// <summary>
+///     Responsible for running a single pipeline configuration loop.
+///     Instantiates and executes steps sequentially.
+/// </summary>
 public interface IPipelineExecutor
 {
     int PipelineId { get; }
@@ -16,6 +21,10 @@ public interface IPipelineExecutor
     Task StopAsync();
 }
 
+/// <summary>
+///     Standard implementation of IPipelineExecutor.
+///     Runs steps in a continuous loop until stopped.
+/// </summary>
 public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configuration) : IPipelineExecutor
 {
     private CancellationTokenSource? cts;
@@ -72,23 +81,51 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
             {
                 await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
                 ILogger<PipelineExecutor> logger = scope.ServiceProvider.GetRequiredService<ILogger<PipelineExecutor>>();
+                IPipelineBuilder pipelineBuilder = scope.ServiceProvider.GetRequiredService<IPipelineBuilder>();
+
+                // Build step instances from configuration
+                IReadOnlyList<IPipelineStep<TradingContext>> steps = pipelineBuilder.BuildSteps(configuration, scope.ServiceProvider);
+
+                if (steps.Count == 0)
+                {
+                    logger.LogWarning("Pipeline {PipelineId} has no enabled steps, skipping execution", PipelineId);
+                    await Task.Delay(configuration.ExecutionInterval, ct);
+                    continue;
+                }
+
+                // Create execution context
                 var context = new TradingContext
                 {
                     PipelineId = PipelineId,
-                    Symbol = configuration.Symbol
+                    Symbol = configuration.Symbol,
+                    MarketType = configuration.MarketType
                 };
 
-                foreach (PipelineStep step in configuration.Steps.OrderBy(s => s.Order))
+                // Execute each step in order
+                foreach (IPipelineStep<TradingContext> step in steps)
                 {
                     logger.LogDebug("Executing step {StepName} for pipeline {PipelineId}", step.Name, PipelineId);
 
-                    // var stepInstance = CreateStep(step, scope.ServiceProvider);
-                    // var result = await stepInstance.ExecuteAsync(context, ct);
-                    //
-                    // if (!result.ShouldContinue)
-                    // {
-                    //     break;
-                    // }
+                    try
+                    {
+                        PipelineStepResult result = await step.ExecuteAsync(context, ct);
+                        logger.LogDebug(
+                            "Step {StepName} result: {Message} (Continue: {Continue})",
+                            step.Name,
+                            result.Message,
+                            result.ShouldContinue);
+
+                        if (!result.ShouldContinue)
+                        {
+                            logger.LogDebug("Pipeline {PipelineId} stopped at step {StepName}", PipelineId, step.Name);
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error executing step {StepName} for pipeline {PipelineId}", step.Name, PipelineId);
+                        break;
+                    }
                 }
 
                 await Task.Delay(configuration.ExecutionInterval, ct);

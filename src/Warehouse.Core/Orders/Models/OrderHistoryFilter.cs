@@ -3,6 +3,9 @@ using Warehouse.Core.Orders.Domain;
 
 namespace Warehouse.Core.Orders.Models;
 
+/// <summary>
+///     Criteria for filtering order history.
+/// </summary>
 public class OrderHistoryFilter
 {
     public int? PipelineId { get; init; }

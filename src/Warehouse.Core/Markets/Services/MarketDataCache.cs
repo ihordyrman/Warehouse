@@ -5,13 +5,25 @@ using Warehouse.Core.Markets.Models;
 
 namespace Warehouse.Core.Markets.Services;
 
+/// <summary>
+///     Provides in-memory caching for real-time market data (order books).
+/// </summary>
 public interface IMarketDataCache
 {
+    /// <summary>
+    ///     Retrieves the current market data snapshot for a specific symbol.
+    /// </summary>
     MarketData? GetData(string symbol, MarketType marketType);
 
+    /// <summary>
+    ///     Updates the cache with new market data events (deltas).
+    /// </summary>
     void Update(MarketDataEvent marketDataEvent);
 }
 
+/// <summary>
+///     Thread-safe implementation of IMarketDataCache using concurrent dictionaries.
+/// </summary>
 public class MarketDataCache : IMarketDataCache
 {
     private readonly ConcurrentDictionary<MarketDataKey, MarketDataSnapshot> cache = new();

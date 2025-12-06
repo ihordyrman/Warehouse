@@ -3,9 +3,43 @@ using Microsoft.Extensions.DependencyInjection;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Pipelines.Core;
 using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Parameters;
+using Warehouse.Core.Pipelines.Steps;
 
 namespace Warehouse.Core.Pipelines.Trading.Steps;
 
+/// <summary>
+///     Definition for the Check Position step.
+/// </summary>
+[StepDefinition("check-position")]
+public class CheckPositionStepDefinition : BaseStepDefinition
+{
+    public override string Key => "check-position";
+
+    public override string Name => "Check Position";
+
+    public override string Description => "Checks if there is an open position for this pipeline.";
+
+    public override StepCategory Category => StepCategory.Validation;
+
+    public override string Icon => "fa-search-dollar";
+
+    public override ParameterSchema GetParameterSchema()
+        =>
+
+            // This step has no configurable parameters
+            new();
+
+    public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
+    {
+        IServiceScopeFactory scopeFactory = services.GetRequiredService<IServiceScopeFactory>();
+        return new CheckPositionStep(scopeFactory);
+    }
+}
+
+/// <summary>
+///     Checks if there is an open position for this pipeline and sets context accordingly.
+/// </summary>
 public class CheckPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipelineStep<TradingContext>
 {
     public int Order => 1;
@@ -21,30 +55,24 @@ public class CheckPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipe
         await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
         WarehouseDbContext db = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
-        // do we have an open position for this worker?
+        // Check for an open position for this pipeline
         Position? openPosition = await db.Positions.FirstOrDefaultAsync(
             x => x.PipelineId == context.PipelineId && x.Status == PositionStatus.Open,
             cancellationToken);
 
         if (openPosition is null)
         {
-            context.Action = TradingAction.Buy;
-            return PipelineStepResult.Continue("No open position - Buying");
+            // No position - signal steps should decide whether to buy
+            context.Action = TradingAction.None;
+            return PipelineStepResult.Continue("No open position");
         }
 
+        // Set context with position info for downstream steps
         context.BuyPrice = openPosition.EntryPrice;
         context.Quantity = openPosition.Quantity;
         context.ActiveOrderId = openPosition.BuyOrderId;
-
-        // do we have 5% profit?
-        decimal profitPercent = (context.CurrentPrice - openPosition.EntryPrice) / openPosition.EntryPrice * 100;
-        if (profitPercent >= 5m)
-        {
-            context.Action = TradingAction.Sell;
-            return PipelineStepResult.Continue($"Position profit: {profitPercent:F2}% - Selling");
-        }
-
         context.Action = TradingAction.Hold;
-        return PipelineStepResult.Stop($"Position profit: {profitPercent:F2}% - Holding");
+
+        return PipelineStepResult.Continue($"Position found - Entry: {openPosition.EntryPrice:F8}");
     }
 }

@@ -6,10 +6,21 @@ using Warehouse.Core.Shared.Domain;
 
 namespace Warehouse.Core.Shared.Services;
 
+/// <summary>
+///     Service for managing candlestick data storage and retrieval.
+/// </summary>
 public interface ICandlestickService
 {
+    /// <summary>
+    ///     Saves a batch of candlesticks to the database.
+    ///     Updates existing candles if the new data is more complete.
+    /// </summary>
+    /// <returns>The number of candlesticks saved (added or updated).</returns>
     Task<int> SaveCandlesticksAsync(IEnumerable<Candlestick> candlesticks, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Retrieves candlesticks based on the specified criteria.
+    /// </summary>
     IAsyncEnumerable<Candlestick> GetCandlesticksAsync(
         string symbol,
         MarketType marketType,
@@ -18,6 +29,9 @@ public interface ICandlestickService
         DateTime? to = null,
         int? limit = null);
 
+    /// <summary>
+    ///     Gets the most recent candlestick for a given symbol and timeframe.
+    /// </summary>
     Task<Candlestick?> GetLatestCandlestickAsync(
         string symbol,
         MarketType marketType,

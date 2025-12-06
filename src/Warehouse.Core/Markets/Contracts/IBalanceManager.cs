@@ -4,6 +4,10 @@ using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Markets.Contracts;
 
+/// <summary>
+///     Manages account balances across different markets.
+///     Provides unified access to balance information.
+/// </summary>
 public interface IBalanceManager
 {
     Task<Result<Balance>> GetBalanceAsync(MarketType marketType, string currency, CancellationToken cancellationToken = default);

@@ -6,12 +6,6 @@ namespace Warehouse.Core.Pipelines.Trading;
 
 public class TradingContext : IPipelineContext
 {
-    public Guid ExecutionId { get; } = Guid.CreateVersion7();
-
-    public DateTime StartedAt { get; } = DateTime.UtcNow;
-
-    public bool IsCancelled { get; set; }
-
     public required int PipelineId { get; init; }
 
     public MarketData? CurrentMarketData { get; set; }
@@ -29,4 +23,10 @@ public class TradingContext : IPipelineContext
     public long? ActiveOrderId { get; set; }
 
     public decimal CurrentPrice { get; set; }
+
+    public Guid ExecutionId { get; } = Guid.CreateVersion7();
+
+    public DateTime StartedAt { get; } = DateTime.UtcNow;
+
+    public bool IsCancelled { get; set; }
 }

@@ -7,9 +7,14 @@ using Warehouse.Core.Markets.Domain;
 
 namespace Warehouse.Core.Markets.Services;
 
+/// <summary>
+///     Retrieves market credentials from the database.
+///     Implements the ICredentialsProvider interface using EF Core.
+/// </summary>
 public class DatabaseCredentialsProvider(IServiceScopeFactory scopeFactory, ILogger<DatabaseCredentialsProvider> logger)
     : ICredentialsProvider
 {
+    /// <inheritdoc />
     public async Task<MarketCredentials> GetCredentialsAsync(MarketType marketType, CancellationToken cancellationToken = default)
     {
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();

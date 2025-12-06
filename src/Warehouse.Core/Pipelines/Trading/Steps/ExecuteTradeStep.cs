@@ -7,9 +7,50 @@ using Warehouse.Core.Orders.Domain;
 using Warehouse.Core.Orders.Models;
 using Warehouse.Core.Pipelines.Core;
 using Warehouse.Core.Pipelines.Domain;
+using Warehouse.Core.Pipelines.Parameters;
+using Warehouse.Core.Pipelines.Steps;
 using Warehouse.Core.Shared;
 
 namespace Warehouse.Core.Pipelines.Trading.Steps;
+
+/// <summary>
+///     Definition for the Execute Trade step.
+/// </summary>
+[StepDefinition("execute-trade")]
+public class ExecuteTradeStepDefinition : BaseStepDefinition
+{
+    public override string Key => "execute-trade";
+
+    public override string Name => "Execute Trade";
+
+    public override string Description => "Executes buy or sell orders based on the current trading action.";
+
+    public override StepCategory Category => StepCategory.Execution;
+
+    public override string Icon => "fa-exchange-alt";
+
+    public override ParameterSchema GetParameterSchema()
+        => new ParameterSchema().AddDecimal(
+            "tradeAmount",
+            "Trade Amount (USDT)",
+            "Amount in USDT to trade per order",
+            true,
+            100m,
+            1m,
+            100000m,
+            "Order Settings");
+
+    public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
+    {
+        IServiceScopeFactory scopeFactory = services.GetRequiredService<IServiceScopeFactory>();
+        var step = new ExecuteTradeStep(scopeFactory);
+
+        // Pass parameters to the step
+        step.Parameters["TradeAmount"] = parameters.GetDecimal("tradeAmount", 100m).ToString();
+
+        return step;
+    }
+}
 
 public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipelineStep<TradingContext>
 {

@@ -17,9 +17,8 @@ using static Warehouse.Core.Markets.Domain.MarketType;
 AnsiConsole.Write(new FigletText("Warehouse Tools").Centered().Color(Color.Blue));
 AnsiConsole.WriteLine();
 
-IConfiguration configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+IConfiguration configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", false, true)
     .Build();
 
 IServiceCollection services = new ServiceCollection();
@@ -29,7 +28,6 @@ services.AddLogging(builder =>
     builder.SetMinimumLevel(LogLevel.Information);
 });
 services.AddCoreDependencies(configuration);
-
 
 ServiceProvider serviceProvider = services.BuildServiceProvider();
 

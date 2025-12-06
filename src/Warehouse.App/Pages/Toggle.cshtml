@@ -1,5 +1,6 @@
 @page "/pipeline/{id:int}/toggle"
-@model Warehouse.App.Pages.ToggleModel
+@using System.Globalization
+@model ToggleModel
 @{
     Layout = null;
 }
@@ -61,7 +62,7 @@
         if (!date.HasValue)
             return "Never";
 
-        var options = new System.Globalization.CultureInfo("en-US");
+        var options = new CultureInfo("en-US");
         return date.Value.ToString("MMM dd, HH:mm", options);
     }
 

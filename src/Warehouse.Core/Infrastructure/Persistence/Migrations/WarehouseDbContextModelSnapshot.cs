@@ -17,7 +17,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("ProductVersion", "9.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -247,6 +247,10 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("PipelineDetailsId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("StepTypeKey")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

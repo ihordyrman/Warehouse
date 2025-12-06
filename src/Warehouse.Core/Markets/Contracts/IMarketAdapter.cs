@@ -2,6 +2,10 @@
 
 namespace Warehouse.Core.Markets.Contracts;
 
+/// <summary>
+///     Standardized interface for interacting with different cryptocurrency exchanges.
+///     Handles connection management and realtime data subscriptions.
+/// </summary>
 public interface IMarketAdapter
 {
     MarketType MarketType { get; }

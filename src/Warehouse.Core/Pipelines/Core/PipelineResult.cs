@@ -1,5 +1,8 @@
 ﻿namespace Warehouse.Core.Pipelines.Core;
 
+/// <summary>
+///     Outcome of a complete pipeline run (all steps).
+/// </summary>
 public class PipelineResult
 {
     public bool IsSuccess { get; init; }

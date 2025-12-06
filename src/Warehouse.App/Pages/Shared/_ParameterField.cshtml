@@ -1,0 +1,102 @@
+@using Warehouse.Core.Pipelines.Parameters
+@model ParameterFieldViewModel
+
+<div class="mb-4">
+    <label for="param-@Model.Key" class="block text-sm font-medium text-gray-700 mb-1">
+        @Model.DisplayName
+        @if (Model.IsRequired)
+        {
+            <span class="text-red-500">*</span>
+        }
+    </label>
+
+    @switch (Model.Type)
+    {
+        case ParameterType.Decimal:
+            <input type="number"
+                   id="param-@Model.Key"
+                   name="@Model.Key"
+                   value="@(Model.CurrentValue ?? Model.DefaultValue)"
+                   step="0.01"
+                   min="@Model.Min"
+                   max="@Model.Max"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   @(Model.IsRequired ? "required" : "")/>
+            break;
+
+        case ParameterType.Integer:
+            <input type="number"
+                   id="param-@Model.Key"
+                   name="@Model.Key"
+                   value="@(Model.CurrentValue ?? Model.DefaultValue)"
+                   step="1"
+                   min="@Model.Min"
+                   max="@Model.Max"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   @(Model.IsRequired ? "required" : "")/>
+            break;
+
+        case ParameterType.Boolean:
+            <div class="flex items-center">
+                <input type="checkbox"
+                       id="param-@Model.Key"
+                       name="@Model.Key"
+                       value="true"
+                       @(Model.CurrentValue == "true" || (Model.CurrentValue == null && Model.DefaultValue == "true") ? "checked" : "")
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <span class="ml-2 text-sm text-gray-600">@Model.Description</span>
+                }
+            </div>
+            break;
+
+        case ParameterType.Select:
+            <select id="param-@Model.Key"
+                    name="@Model.Key"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    @(Model.IsRequired ? "required" : "")>
+                @if (Model.Options != null)
+                {
+                    foreach (SelectOptionViewModel option in Model.Options)
+                    {
+                        bool isSelected = option.Value == (Model.CurrentValue ?? Model.DefaultValue);
+                        if (isSelected)
+                        {
+                            <option value="@option.Value" selected>@option.Label</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    }
+                }
+            </select>
+            break;
+
+        case ParameterType.TimeSpan:
+            <input type="text"
+                   id="param-@Model.Key"
+                   name="@Model.Key"
+                   value="@(Model.CurrentValue ?? Model.DefaultValue)"
+                   placeholder="00:05:00"
+                   pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   @(Model.IsRequired ? "required" : "")/>
+            break;
+
+        default: // String
+            <input type="text"
+                   id="param-@Model.Key"
+                   name="@Model.Key"
+                   value="@(Model.CurrentValue ?? Model.DefaultValue)"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   @(Model.IsRequired ? "required" : "")/>
+            break;
+    }
+
+    @if (Model.Type != ParameterType.Boolean && !string.IsNullOrEmpty(Model.Description))
+    {
+        <p class="text-sm text-gray-500 mt-1">@Model.Description</p>
+    }
+</div>

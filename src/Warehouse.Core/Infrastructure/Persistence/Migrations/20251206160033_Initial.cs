@@ -133,6 +133,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     PipelineDetailsId = table.Column<int>(type: "integer", nullable: false),
+                    StepTypeKey = table.Column<string>(type: "text", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
