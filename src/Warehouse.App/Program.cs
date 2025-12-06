@@ -78,7 +78,7 @@ static async Task EnsureDbReadinessAsync(WebApplication app)
 
 static async Task EnsureCredentialsPopulated(IConfiguration configuration, WarehouseDbContext dbContext)
 {
-    if (await dbContext.MarketAccounts.AnyAsync())
+    if (await dbContext.MarketCredentials.AnyAsync())
     {
         return;
     }
@@ -88,26 +88,26 @@ static async Task EnsureCredentialsPopulated(IConfiguration configuration, Wareh
     string passPhrase = configuration[$"{section}:Passphrase"] ?? throw new ArgumentNullException();
     string secretKey = configuration[$"{section}:SecretKey"] ?? throw new ArgumentNullException();
 
-    MarketDetails? market = await dbContext.MarketDetails.FirstOrDefaultAsync(x => x.Type == MarketType.Okx);
+    Market? market = await dbContext.Markets.FirstOrDefaultAsync(x => x.Type == MarketType.Okx);
     if (market is null)
     {
-        market = new MarketDetails
+        market = new Market
         {
             Type = MarketType.Okx
         };
 
-        dbContext.MarketDetails.Add(market);
+        dbContext.Markets.Add(market);
     }
 
-    var marketCredentials = new MarketAccount
+    var marketCredentials = new MarketCredentials
     {
         ApiKey = apiKey,
         Passphrase = passPhrase,
         SecretKey = secretKey,
-        MarketDetails = market,
+        Market = market,
         IsSandbox = true
     };
 
-    dbContext.MarketAccounts.Add(marketCredentials);
+    dbContext.MarketCredentials.Add(marketCredentials);
     await dbContext.SaveChangesAsync();
 }

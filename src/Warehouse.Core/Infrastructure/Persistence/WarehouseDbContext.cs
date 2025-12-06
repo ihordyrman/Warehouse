@@ -16,9 +16,9 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
 {
     private readonly IDataProtector protector = dataProtection?.CreateProtector("Warehouse.Accounts") ?? null!;
 
-    public DbSet<MarketAccount> MarketAccounts { get; set; }
+    public DbSet<MarketCredentials> MarketCredentials { get; set; }
 
-    public DbSet<MarketDetails> MarketDetails { get; set; }
+    public DbSet<Market> Markets { get; set; }
 
     public DbSet<Pipeline> PipelineConfigurations { get; set; }
 
@@ -33,7 +33,7 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var encryptedConverter = new EncryptedStringConverter(protector);
-        modelBuilder.Entity<MarketAccount>(entity =>
+        modelBuilder.Entity<MarketCredentials>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).ValueGeneratedOnAdd().IsRequired();
@@ -70,14 +70,14 @@ public class WarehouseDbContext(DbContextOptions options, IDataProtectionProvide
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<MarketDetails>(entity =>
+        modelBuilder.Entity<Market>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Type).IsRequired();
             entity.HasIndex(x => x.Type).IsUnique();
-            entity.HasOne<MarketAccount>(x => x.Credentials)
-                .WithOne(x => x.MarketDetails)
-                .HasForeignKey<MarketAccount>(x => x.MarketId);
+            entity.HasOne<MarketCredentials>(x => x.Credentials)
+                .WithOne(x => x.Market)
+                .HasForeignKey<MarketCredentials>(x => x.MarketId);
         });
 
         modelBuilder.Entity<Candlestick>(entity =>

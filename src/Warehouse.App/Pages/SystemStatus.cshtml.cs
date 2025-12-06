@@ -24,7 +24,7 @@ public class SystemStatusModel(WarehouseDbContext db) : PageModel
                 return Page();
             }
 
-            bool hasEnabledMarkets = await db.MarketDetails.AsNoTracking().AnyAsync();
+            bool hasEnabledMarkets = await db.Markets.AsNoTracking().AnyAsync();
 
             if (hasEnabledMarkets)
             {

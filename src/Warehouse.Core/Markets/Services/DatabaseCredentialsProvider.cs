@@ -10,13 +10,13 @@ namespace Warehouse.Core.Markets.Services;
 public class DatabaseCredentialsProvider(IServiceScopeFactory scopeFactory, ILogger<DatabaseCredentialsProvider> logger)
     : ICredentialsProvider
 {
-    public async Task<MarketAccount> GetCredentialsAsync(MarketType marketType, CancellationToken cancellationToken = default)
+    public async Task<MarketCredentials> GetCredentialsAsync(MarketType marketType, CancellationToken cancellationToken = default)
     {
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
-        MarketAccount? credentials = await dbContext.MarketAccounts.Include(x => x.MarketDetails)
-            .FirstOrDefaultAsync(x => x.MarketDetails.Type == marketType, cancellationToken);
+        MarketCredentials? credentials = await dbContext.MarketCredentials.Include(x => x.Market)
+            .FirstOrDefaultAsync(x => x.Market.Type == marketType, cancellationToken);
 
         if (credentials is null)
         {

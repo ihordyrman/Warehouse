@@ -36,7 +36,7 @@ public class AccountsModel(WarehouseDbContext db, IBalanceManager balanceManager
 
     public async Task<IActionResult> OnPostToggleAsync(int id, bool enabled)
     {
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
 
         if (market is { Credentials: not null })
         {
@@ -49,11 +49,11 @@ public class AccountsModel(WarehouseDbContext db, IBalanceManager balanceManager
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
 
         if (market != null)
         {
-            db.MarketDetails.Remove(market);
+            db.Markets.Remove(market);
             await db.SaveChangesAsync();
         }
 
@@ -65,7 +65,7 @@ public class AccountsModel(WarehouseDbContext db, IBalanceManager balanceManager
     {
         try
         {
-            IQueryable<MarketDetails> query = db.MarketDetails.AsNoTracking().Include(x => x.Credentials).AsQueryable();
+            IQueryable<Market> query = db.Markets.AsNoTracking().Include(x => x.Credentials).AsQueryable();
 
             if (!string.IsNullOrEmpty(FilterType))
             {
@@ -75,11 +75,11 @@ public class AccountsModel(WarehouseDbContext db, IBalanceManager balanceManager
                 }
             }
 
-            List<MarketDetails> markets = await query.ToListAsync();
+            List<Market> markets = await query.ToListAsync();
 
             Accounts = new List<AccountDetailsViewModel>();
 
-            foreach (MarketDetails market in markets)
+            foreach (Market market in markets)
             {
                 var vm = new AccountDetailsViewModel
                 {

@@ -36,7 +36,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MarketDetails",
+                name: "Markets",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -47,7 +47,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MarketDetails", x => x.Id);
+                    table.PrimaryKey("PK_Markets", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -102,7 +102,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MarketAccounts",
+                name: "MarketCredentials",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -117,11 +117,11 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MarketAccounts", x => x.Id);
+                    table.PrimaryKey("PK_MarketCredentials", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MarketAccounts_MarketDetails_MarketId",
+                        name: "FK_MarketCredentials_Markets_MarketId",
                         column: x => x.MarketId,
-                        principalTable: "MarketDetails",
+                        principalTable: "Markets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -191,14 +191,14 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 column: "Timestamp");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MarketAccounts_MarketId",
-                table: "MarketAccounts",
+                name: "IX_MarketCredentials_MarketId",
+                table: "MarketCredentials",
                 column: "MarketId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_MarketDetails_Type",
-                table: "MarketDetails",
+                name: "IX_Markets_Type",
+                table: "Markets",
                 column: "Type",
                 unique: true);
 
@@ -236,7 +236,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 name: "Candlesticks");
 
             migrationBuilder.DropTable(
-                name: "MarketAccounts");
+                name: "MarketCredentials");
 
             migrationBuilder.DropTable(
                 name: "Orders");
@@ -248,7 +248,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                 name: "Positions");
 
             migrationBuilder.DropTable(
-                name: "MarketDetails");
+                name: "Markets");
 
             migrationBuilder.DropTable(
                 name: "PipelineConfigurations");

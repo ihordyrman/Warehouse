@@ -24,17 +24,17 @@ public class AccountsCreateModel(WarehouseDbContext db) : PageModel
             return Page();
         }
 
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Type == Input.Type);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Type == Input.Type);
 
         if (market == null)
         {
-            market = new MarketDetails
+            market = new Market
             {
                 Type = Input.Type,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            db.MarketDetails.Add(market);
+            db.Markets.Add(market);
         }
         else if (market.Credentials != null)
         {
@@ -43,9 +43,9 @@ public class AccountsCreateModel(WarehouseDbContext db) : PageModel
             return Page();
         }
 
-        var account = new MarketAccount
+        var account = new MarketCredentials
         {
-            MarketDetails = market,
+            Market = market,
             ApiKey = Input.ApiKey,
             SecretKey = Input.SecretKey,
             Passphrase = Input.Passphrase ?? string.Empty,
@@ -54,7 +54,7 @@ public class AccountsCreateModel(WarehouseDbContext db) : PageModel
             UpdatedAt = DateTime.UtcNow
         };
 
-        db.MarketAccounts.Add(account);
+        db.MarketCredentials.Add(account);
         await db.SaveChangesAsync();
 
         return RedirectToPage("/Accounts");

@@ -31,7 +31,8 @@ public class PipelineExecutor : IPipelineExecutor
             await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
             var context = new TradingContext
             {
-                PipelineId = 0
+                PipelineId = 0,
+                Symbol = configuration.Symbol
             };
 
             foreach (PipelineStep step in configuration.Steps.OrderBy(s => s.Order))

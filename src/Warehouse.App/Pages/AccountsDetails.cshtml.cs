@@ -14,7 +14,7 @@ public class AccountsDetailsModel(WarehouseDbContext db, IBalanceManager balance
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
 
         if (market == null)
         {

@@ -2,13 +2,13 @@
 
 namespace Warehouse.Core.Markets.Domain;
 
-public class MarketAccount : AuditEntity
+public class MarketCredentials : AuditEntity
 {
     public int Id { get; init; }
 
     public int MarketId { get; init; }
 
-    public MarketDetails MarketDetails { get; init; } = null!;
+    public Market Market { get; init; } = null!;
 
     public string ApiKey { get; set; } = string.Empty;
 

@@ -18,7 +18,7 @@ public class TradingContext : IPipelineContext
 
     public MarketType MarketType { get; init; }
 
-    public string Symbol { get; init; } = string.Empty;
+    public required string Symbol { get; init; }
 
     public decimal? BuyPrice { get; set; }
 

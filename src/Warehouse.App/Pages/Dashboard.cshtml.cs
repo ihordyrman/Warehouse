@@ -46,21 +46,21 @@ public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext d
 
     private async Task LoadAccountsAsync()
     {
-        List<MarketAccount> accounts = await db.MarketAccounts.Include(x => x.MarketDetails).ToListAsync();
+        List<MarketCredentials> accounts = await db.MarketCredentials.Include(x => x.Market).ToListAsync();
 
-        foreach (MarketAccount account in accounts)
+        foreach (MarketCredentials account in accounts)
         {
             var marketInfo = new MarketInfo
             {
-                Id = account.MarketDetails.Id,
-                Name = account.MarketDetails.Type.ToString(),
-                Type = account.MarketDetails.Type.ToString(),
+                Id = account.Market.Id,
+                Name = account.Market.Type.ToString(),
+                Type = account.Market.Type.ToString(),
                 Enabled = true,
                 HasCredentials = true
             };
 
             Markets.Add(marketInfo);
-            Result<decimal> totalUsdt = await balanceManager.GetTotalUsdtValueAsync(account.MarketDetails.Type);
+            Result<decimal> totalUsdt = await balanceManager.GetTotalUsdtValueAsync(account.Market.Type);
             if (totalUsdt.IsSuccess)
             {
                 TotalBalance += totalUsdt.Value;

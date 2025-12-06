@@ -6,7 +6,7 @@ namespace Warehouse.Core.Markets.Concrete.Okx.Services;
 
 public class OkxAuthService
 {
-    public static object CreateAuthRequest(MarketAccount config)
+    public static object CreateAuthRequest(MarketCredentials config)
     {
         var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
         string sign = GenerateSignature(timestamp, config.SecretKey);

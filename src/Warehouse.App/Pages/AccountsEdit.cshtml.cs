@@ -16,7 +16,7 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == id);
 
         if (market == null)
         {
@@ -46,7 +46,7 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
             return Page();
         }
 
-        MarketDetails? market = await db.MarketDetails.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == Input.Id);
+        Market? market = await db.Markets.Include(x => x.Credentials).FirstOrDefaultAsync(x => x.Id == Input.Id);
 
         if (market == null)
         {
@@ -59,9 +59,9 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
         {
             if (market.Credentials == null)
             {
-                var account = new MarketAccount
+                var account = new MarketCredentials
                 {
-                    MarketDetails = market,
+                    Market = market,
                     ApiKey = Input.ApiKey,
                     SecretKey = Input.SecretKey,
                     Passphrase = Input.Passphrase ?? string.Empty,
@@ -69,7 +69,7 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                db.MarketAccounts.Add(account);
+                db.MarketCredentials.Add(account);
             }
             else
             {
@@ -91,16 +91,16 @@ public class AccountsEditModel(WarehouseDbContext db) : PageModel
             }
             else
             {
-                var account = new MarketAccount
+                var account = new MarketCredentials
                 {
-                    MarketDetails = market,
+                    Market = market,
                     ApiKey = Input.ApiKey,
                     SecretKey = Input.SecretKey,
                     Passphrase = Input.Passphrase ?? string.Empty,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                db.MarketAccounts.Add(account);
+                db.MarketCredentials.Add(account);
             }
         }
 

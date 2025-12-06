@@ -12,7 +12,7 @@ using Warehouse.Core.Infrastructure.Persistence;
 namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WarehouseDbContext))]
-    [Migration("20251123151639_Initial")]
+    [Migration("20251206143823_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -25,7 +25,32 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketAccount", b =>
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.Market", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type")
+                        .IsUnique();
+
+                    b.ToTable("Markets");
+                });
+
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketCredentials", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -65,32 +90,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.HasIndex("MarketId")
                         .IsUnique();
 
-                    b.ToTable("MarketAccounts");
-                });
-
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketDetails", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Type")
-                        .IsUnique();
-
-                    b.ToTable("MarketDetails");
+                    b.ToTable("MarketCredentials");
                 });
 
             modelBuilder.Entity("Warehouse.Core.Orders.Domain.Order", b =>
@@ -377,15 +377,15 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("Candlesticks");
                 });
 
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketAccount", b =>
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketCredentials", b =>
                 {
-                    b.HasOne("Warehouse.Core.Markets.Domain.MarketDetails", "MarketDetails")
+                    b.HasOne("Warehouse.Core.Markets.Domain.Market", "Market")
                         .WithOne("Credentials")
-                        .HasForeignKey("Warehouse.Core.Markets.Domain.MarketAccount", "MarketId")
+                        .HasForeignKey("Warehouse.Core.Markets.Domain.MarketCredentials", "MarketId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("MarketDetails");
+                    b.Navigation("Market");
                 });
 
             modelBuilder.Entity("Warehouse.Core.Pipelines.Domain.PipelineStep", b =>
@@ -410,7 +410,7 @@ namespace Warehouse.Core.Infrastructure.Persistence.Migrations
                     b.Navigation("Pipeline");
                 });
 
-            modelBuilder.Entity("Warehouse.Core.Markets.Domain.MarketDetails", b =>
+            modelBuilder.Entity("Warehouse.Core.Markets.Domain.Market", b =>
                 {
                     b.Navigation("Credentials");
                 });
