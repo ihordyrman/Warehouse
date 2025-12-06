@@ -63,12 +63,13 @@ public class StepRegistry : IStepRegistry
         {
             try
             {
-                var instance = Activator.CreateInstance(type) as IStepDefinition;
-                if (instance is not null)
+                if (Activator.CreateInstance(type) is not IStepDefinition instance)
                 {
-                    _definitions[instance.Key] = instance;
-                    _logger.LogDebug("Registered step definition: {Key} ({Name})", instance.Key, instance.Name);
+                    continue;
                 }
+
+                _definitions[instance.Key] = instance;
+                _logger.LogDebug("Registered step definition: {Key} ({Name})", instance.Key, instance.Name);
             }
             catch (Exception ex)
             {

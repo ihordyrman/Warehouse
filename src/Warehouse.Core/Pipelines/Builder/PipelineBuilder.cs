@@ -78,10 +78,8 @@ public class PipelineBuilder(IStepRegistry stepRegistry, ILogger<PipelineBuilder
             ValidationResult validationResult = stepRegistry.ValidateParameters(stepConfig.StepTypeKey, stepConfig.Parameters);
             if (!validationResult.IsValid)
             {
-                foreach (ValidationError error in validationResult.Errors)
-                {
-                    errors.Add(new ValidationError($"step_{stepConfig.Id}.{error.Key}", error.Message));
-                }
+                errors.AddRange(
+                    validationResult.Errors.Select(error => new ValidationError($"step_{stepConfig.Id}.{error.Key}", error.Message)));
             }
         }
 

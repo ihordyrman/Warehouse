@@ -26,8 +26,10 @@ public interface IPipelineOrchestrator
 /// <summary>
 ///     Background service that synchronizes running pipeline executors with the database configuration.
 /// </summary>
-public class PipelineOrchestrator(IServiceScopeFactory scopeFactory, ILogger<PipelineOrchestrator> logger)
-    : BackgroundService, IPipelineOrchestrator
+public class PipelineOrchestrator(
+    IServiceScopeFactory scopeFactory,
+    ILogger<PipelineOrchestrator> logger,
+    IPipelineExecutorFactory executorFactory) : BackgroundService, IPipelineOrchestrator
 {
     private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(30));
     private readonly ConcurrentDictionary<int, IPipelineExecutor> runningExecutors = new();
@@ -128,7 +130,7 @@ public class PipelineOrchestrator(IServiceScopeFactory scopeFactory, ILogger<Pip
                 return false;
             }
 
-            var executor = new PipelineExecutor(serviceProvider, pipeline);
+            IPipelineExecutor executor = executorFactory.Create(pipeline, serviceProvider);
 
             if (!runningExecutors.TryAdd(pipeline.Id, executor))
             {

@@ -9,7 +9,7 @@ using Warehouse.Core.Shared;
 namespace Warehouse.App.Pages;
 
 [IgnoreAntiforgeryToken]
-public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext db, IConfiguration configuration) : PageModel
+public class DashboardModel(IBalanceManager balanceManager, WarehouseDbContext db) : PageModel
 {
     public List<MarketInfo> Markets { get; set; } = [];
 
