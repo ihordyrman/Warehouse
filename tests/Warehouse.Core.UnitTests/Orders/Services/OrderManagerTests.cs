@@ -130,7 +130,7 @@ public class OrderManagerTests
             PipelineId = 1,
             Symbol = "BTC-USDT",
             MarketType = MarketType.Okx,
-            Status = OrderStatus.Filled // Already filled
+            Status = OrderStatus.Filled
         };
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

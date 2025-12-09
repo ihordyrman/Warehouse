@@ -55,13 +55,13 @@ public class PipelineOrchestratorTests
         pipelineBuilder.ValidatePipeline(Arg.Any<Pipeline>()).Returns(new ValidationResult(true, []));
 
         IPipelineExecutor? executor = Substitute.For<IPipelineExecutor>();
-        executorFactory.Create(Arg.Is<Pipeline>(p => p.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
+        executorFactory.Create(Arg.Is<Pipeline>(x => x.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
 
         // Act
         await orchestrator.SynchronizePipelinesAsync();
 
         // Assert
-        executorFactory.Received(1).Create(Arg.Is<Pipeline>(p => p.Id == 1), Arg.Any<IServiceProvider>());
+        executorFactory.Received(1).Create(Arg.Is<Pipeline>(x => x.Id == 1), Arg.Any<IServiceProvider>());
         await executor.Received(1).StartAsync(Arg.Any<CancellationToken>());
     }
 
@@ -77,7 +77,7 @@ public class PipelineOrchestratorTests
         await orchestrator.SynchronizePipelinesAsync();
 
         // Assert
-        executorFactory.DidNotReceive().Create(Arg.Is<Pipeline>(p => p.Id == 1), Arg.Any<IServiceProvider>());
+        executorFactory.DidNotReceive().Create(Arg.Is<Pipeline>(x => x.Id == 1), Arg.Any<IServiceProvider>());
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class PipelineOrchestratorTests
         pipelineBuilder.ValidatePipeline(Arg.Any<Pipeline>()).Returns(new ValidationResult(true, []));
 
         IPipelineExecutor? executor = Substitute.For<IPipelineExecutor>();
-        executorFactory.Create(Arg.Is<Pipeline>(p => p.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
+        executorFactory.Create(Arg.Is<Pipeline>(x => x.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
 
         // Act
         bool result = await orchestrator.StartPipelineAsync(1);
@@ -112,7 +112,7 @@ public class PipelineOrchestratorTests
         pipelineBuilder.ValidatePipeline(Arg.Any<Pipeline>()).Returns(new ValidationResult(true, []));
 
         IPipelineExecutor? executor = Substitute.For<IPipelineExecutor>();
-        executorFactory.Create(Arg.Is<Pipeline>(p => p.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
+        executorFactory.Create(Arg.Is<Pipeline>(x => x.Id == 1), Arg.Any<IServiceProvider>()).Returns(executor);
         await orchestrator.StartPipelineAsync(1);
 
         // Act

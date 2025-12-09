@@ -43,7 +43,7 @@ public class MarketDataCacheTests
         var updateEvt = new MarketDataEvent(
             "BTC-USDT",
             MarketType.Okx,
-            [["50000", "3.0", "0", "10"]], // Size changed to 3.0
+            [["50000", "3.0", "0", "10"]],
             []);
 
         // Act
@@ -69,7 +69,7 @@ public class MarketDataCacheTests
         var removeEvt = new MarketDataEvent(
             "BTC-USDT",
             MarketType.Okx,
-            [["50000", "0", "0", "0"]], // Size 0 means remove
+            [["50000", "0", "0", "0"]],
             []);
 
         // Act
@@ -89,8 +89,8 @@ public class MarketDataCacheTests
             "BTC-USDT",
             MarketType.Okx,
             [
-                ["invalid", "1.0", "0", "1"], // Bad price
-                ["50000", "bad", "0", "1"]    // Bad size
+                ["invalid", "1.0", "0", "1"],
+                ["50000", "bad", "0", "1"]
             ],
             []);
 

@@ -18,7 +18,7 @@ public class PipelineBuilder(IStepRegistry stepRegistry, ILogger<PipelineBuilder
     {
         var steps = new List<IPipelineStep<TradingContext>>();
 
-        foreach (PipelineStep stepConfig in pipeline.Steps.Where(s => s.IsEnabled).OrderBy(s => s.Order))
+        foreach (PipelineStep stepConfig in pipeline.Steps.Where(x => x.IsEnabled).OrderBy(x => x.Order))
         {
             try
             {
@@ -62,12 +62,12 @@ public class PipelineBuilder(IStepRegistry stepRegistry, ILogger<PipelineBuilder
     {
         var errors = new List<ValidationError>();
 
-        if (!pipeline.Steps.Any(s => s.IsEnabled))
+        if (!pipeline.Steps.Any(x => x.IsEnabled))
         {
             errors.Add(new ValidationError("steps", "Pipeline must have at least one enabled step."));
         }
 
-        foreach (PipelineStep stepConfig in pipeline.Steps.Where(s => s.IsEnabled))
+        foreach (PipelineStep stepConfig in pipeline.Steps.Where(x => x.IsEnabled))
         {
             if (string.IsNullOrEmpty(stepConfig.StepTypeKey))
             {
@@ -79,7 +79,7 @@ public class PipelineBuilder(IStepRegistry stepRegistry, ILogger<PipelineBuilder
             if (!validationResult.IsValid)
             {
                 errors.AddRange(
-                    validationResult.Errors.Select(error => new ValidationError($"step_{stepConfig.Id}.{error.Key}", error.Message)));
+                    validationResult.Errors.Select(x => new ValidationError($"step_{stepConfig.Id}.{x.Key}", x.Message)));
             }
         }
 

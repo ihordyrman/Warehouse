@@ -60,17 +60,17 @@ public class TakeProfitStepDefinition : BaseStepDefinition
 /// </summary>
 public class TakeProfitStep : IPipelineStep<TradingContext>
 {
-    private readonly ILogger<TakeProfitStep> _logger;
-    private readonly decimal _profitPercent;
-    private readonly decimal _trailingOffset;
-    private readonly bool _useTrailing;
+    private readonly ILogger<TakeProfitStep> logger;
+    private readonly decimal profitPercent;
+    private readonly decimal trailingOffset;
+    private readonly bool useTrailing;
 
     public TakeProfitStep(decimal profitPercent, bool useTrailing, decimal trailingOffset, ILogger<TakeProfitStep> logger)
     {
-        _profitPercent = profitPercent;
-        _useTrailing = useTrailing;
-        _trailingOffset = trailingOffset;
-        _logger = logger;
+        this.profitPercent = profitPercent;
+        this.useTrailing = useTrailing;
+        this.trailingOffset = trailingOffset;
+        this.logger = logger;
     }
 
     public int Order => 0; // Set at runtime from database
@@ -90,13 +90,13 @@ public class TakeProfitStep : IPipelineStep<TradingContext>
 
         decimal profitPercent = (context.CurrentPrice - context.BuyPrice.Value) / context.BuyPrice.Value * 100;
 
-        if (profitPercent >= _profitPercent)
+        if (profitPercent >= this.profitPercent)
         {
             context.Action = TradingAction.Sell;
-            _logger.LogInformation("Take profit triggered at {Profit:F2}% (target: {Target:F2}%)", profitPercent, _profitPercent);
+            logger.LogInformation("Take profit triggered at {Profit:F2}% (target: {Target:F2}%)", profitPercent, this.profitPercent);
             return Task.FromResult(PipelineStepResult.Continue($"Take profit at {profitPercent:F2}%"));
         }
 
-        return Task.FromResult(PipelineStepResult.Continue($"Profit: {profitPercent:F2}% (target: {_profitPercent:F2}%)"));
+        return Task.FromResult(PipelineStepResult.Continue($"Profit: {profitPercent:F2}% (target: {this.profitPercent:F2}%)"));
     }
 }

@@ -77,7 +77,7 @@ public class PipelineExecutorTests
         step2.ExecuteAsync(Arg.Any<TradingContext>(), Arg.Any<CancellationToken>())
             .Returns(x =>
             {
-                tcs.TrySetResult(true); // Signal completion at step 2
+                tcs.TrySetResult(true);
                 return PipelineStepResult.Continue("Step 2 done");
             });
 

@@ -7,13 +7,13 @@ namespace Warehouse.Core.Pipelines.Parameters;
 /// </summary>
 public class ParameterSchema
 {
-    private readonly List<ParameterDefinition> _parameters = [];
-    private int _orderCounter;
+    private readonly List<ParameterDefinition> parameters = [];
+    private int orderCounter;
 
     /// <summary>
     ///     Gets all parameter definitions in this schema.
     /// </summary>
-    public IReadOnlyList<ParameterDefinition> Parameters => _parameters.AsReadOnly();
+    public IReadOnlyList<ParameterDefinition> Parameters => parameters.AsReadOnly();
 
     /// <summary>
     ///     Adds a string parameter.
@@ -26,7 +26,7 @@ public class ParameterSchema
         string? defaultValue = null,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -36,7 +36,7 @@ public class ParameterSchema
                 IsRequired = required,
                 DefaultValue = defaultValue,
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -54,7 +54,7 @@ public class ParameterSchema
         int? max = null,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -66,7 +66,7 @@ public class ParameterSchema
                 Min = min,
                 Max = max,
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -84,7 +84,7 @@ public class ParameterSchema
         decimal? max = null,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -96,7 +96,7 @@ public class ParameterSchema
                 Min = min,
                 Max = max,
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -111,7 +111,7 @@ public class ParameterSchema
         bool defaultValue = false,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -121,7 +121,7 @@ public class ParameterSchema
                 IsRequired = false, // Booleans are never "required" in the traditional sense
                 DefaultValue = defaultValue.ToString().ToLowerInvariant(),
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -137,7 +137,7 @@ public class ParameterSchema
         TimeSpan? defaultValue = null,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -147,7 +147,7 @@ public class ParameterSchema
                 IsRequired = required,
                 DefaultValue = defaultValue?.ToString(@"hh\:mm\:ss"),
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -164,7 +164,7 @@ public class ParameterSchema
         string? defaultValue = null,
         string? group = null)
     {
-        _parameters.Add(
+        parameters.Add(
             new ParameterDefinition
             {
                 Key = key,
@@ -175,7 +175,7 @@ public class ParameterSchema
                 DefaultValue = defaultValue,
                 Options = options.ToList().AsReadOnly(),
                 Group = group,
-                Order = _orderCounter++
+                Order = orderCounter++
             });
         return this;
     }
@@ -186,7 +186,7 @@ public class ParameterSchema
     public Dictionary<string, string> GetDefaultValues()
     {
         var defaults = new Dictionary<string, string>();
-        foreach (ParameterDefinition param in _parameters)
+        foreach (ParameterDefinition param in parameters)
         {
             if (param.DefaultValue is not null)
             {
@@ -204,7 +204,7 @@ public class ParameterSchema
     {
         var errors = new List<ValidationError>();
 
-        foreach (ParameterDefinition param in _parameters)
+        foreach (ParameterDefinition param in parameters)
         {
             bool hasValue = values.TryGetValue(param.Key, out string? value) && !string.IsNullOrWhiteSpace(value);
 
@@ -280,7 +280,7 @@ public class ParameterSchema
                     break;
 
                 case ParameterType.Select:
-                    if (param.Options is not null && !param.Options.Any(o => o.Value == value))
+                    if (param.Options is not null && param.Options.All(x => x.Value != value))
                     {
                         errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be one of the available options."));
                     }

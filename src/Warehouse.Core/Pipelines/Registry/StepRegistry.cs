@@ -12,23 +12,23 @@ namespace Warehouse.Core.Pipelines.Registry;
 /// </summary>
 public class StepRegistry : IStepRegistry
 {
-    private readonly Dictionary<string, IStepDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ILogger<StepRegistry> _logger;
+    private readonly Dictionary<string, IStepDefinition> definitions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ILogger<StepRegistry> logger;
 
     public StepRegistry(ILogger<StepRegistry> logger)
     {
-        _logger = logger;
+        this.logger = logger;
         DiscoverDefinitions();
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IStepDefinition> GetAllDefinitions() => _definitions.Values.ToList().AsReadOnly();
+    public IReadOnlyList<IStepDefinition> GetAllDefinitions() => definitions.Values.ToList().AsReadOnly();
 
     /// <inheritdoc/>
-    public IStepDefinition? GetDefinition(string key) => _definitions.TryGetValue(key, out IStepDefinition? definition) ? definition : null;
+    public IStepDefinition? GetDefinition(string key) => definitions.GetValueOrDefault(key);
 
     /// <inheritdoc/>
-    public IEnumerable<IStepDefinition> GetByCategory(StepCategory category) => _definitions.Values.Where(d => d.Category == category);
+    public IEnumerable<IStepDefinition> GetByCategory(StepCategory category) => definitions.Values.Where(x => x.Category == category);
 
     /// <inheritdoc/>
     public IPipelineStep<TradingContext> CreateInstance(string key, IServiceProvider services, ParameterBag parameters)
@@ -55,9 +55,9 @@ public class StepRegistry : IStepRegistry
     {
         Assembly assembly = typeof(StepRegistry).Assembly;
         IEnumerable<Type> definitionTypes = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
-            .Where(t => t.GetCustomAttribute<StepDefinitionAttribute>() is not null)
-            .Where(t => typeof(IStepDefinition).IsAssignableFrom(t));
+            .Where(x => x is { IsClass: true, IsAbstract: false })
+            .Where(x => x.GetCustomAttribute<StepDefinitionAttribute>() is not null)
+            .Where(x => typeof(IStepDefinition).IsAssignableFrom(x));
 
         foreach (Type type in definitionTypes)
         {
@@ -68,15 +68,15 @@ public class StepRegistry : IStepRegistry
                     continue;
                 }
 
-                _definitions[instance.Key] = instance;
-                _logger.LogDebug("Registered step definition: {Key} ({Name})", instance.Key, instance.Name);
+                definitions[instance.Key] = instance;
+                logger.LogDebug("Registered step definition: {Key} ({Name})", instance.Key, instance.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to instantiate step definition: {Type}", type.FullName);
+                logger.LogError(ex, "Failed to instantiate step definition: {Type}", type.FullName);
             }
         }
 
-        _logger.LogInformation("Discovered {Count} step definitions", _definitions.Count);
+        logger.LogInformation("Discovered {Count} step definitions", definitions.Count);
     }
 }

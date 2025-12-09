@@ -28,7 +28,7 @@ public static class DependencyInjection
 
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName));
 
-        services.AddDbContext<WarehouseDbContext>((sp, options) =>
+        services.AddDbContext<WarehouseDbContext>((_, options) =>
         {
             DatabaseSettings settings = configuration.GetSection(DatabaseSettings.SectionName).Get<DatabaseSettings>() ??
                                         throw new InvalidOperationException(
@@ -46,7 +46,7 @@ public static class DependencyInjection
         services.AddSingleton<IStepRegistry, StepRegistry>();
         services.AddScoped<IPipelineBuilder, PipelineBuilder>();
         services.AddSingleton<IPipelineExecutorFactory, PipelineExecutorFactory>();
-        services.AddHostedService(sp => (PipelineOrchestrator)sp.GetRequiredService<IPipelineOrchestrator>());
+        services.AddHostedService(x => (PipelineOrchestrator)x.GetRequiredService<IPipelineOrchestrator>());
 
         return services;
     }
