@@ -9,7 +9,7 @@ internal sealed class OkxSubscriptionManager
     private readonly OkxConnectionManager connectionManager;
     private readonly ILogger<OkxSubscriptionManager> logger;
     private readonly SemaphoreSlim subscriptionLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, SubscriptionInfo> subscriptions = new();
+    private readonly ConcurrentDictionary<string, SubscriptionInfo> subscriptions = new(StringComparer.OrdinalIgnoreCase);
 
     public OkxSubscriptionManager(OkxConnectionManager connectionManager, ILogger<OkxSubscriptionManager> logger)
     {

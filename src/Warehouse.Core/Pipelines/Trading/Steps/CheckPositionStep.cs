@@ -24,11 +24,7 @@ public class CheckPositionStepDefinition : BaseStepDefinition
 
     public override string Icon => "fa-search-dollar";
 
-    public override ParameterSchema GetParameterSchema()
-        =>
-
-            // This step has no configurable parameters
-            new();
+    public override ParameterSchema GetParameterSchema() => new();
 
     public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
     {
@@ -55,19 +51,16 @@ public class CheckPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipe
         await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
         WarehouseDbContext db = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
-        // Check for an open position for this pipeline
         Position? openPosition = await db.Positions.FirstOrDefaultAsync(
             x => x.PipelineId == context.PipelineId && x.Status == PositionStatus.Open,
             cancellationToken);
 
         if (openPosition is null)
         {
-            // No position - signal steps should decide whether to buy
             context.Action = TradingAction.None;
             return PipelineStepResult.Continue("No open position");
         }
 
-        // Set context with position info for downstream steps
         context.BuyPrice = openPosition.EntryPrice;
         context.Quantity = openPosition.Quantity;
         context.ActiveOrderId = openPosition.BuyOrderId;

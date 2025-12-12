@@ -12,6 +12,14 @@ namespace Warehouse.Core.Pipelines.Trading.Steps;
 [StepDefinition("take-profit")]
 public class TakeProfitStepDefinition : BaseStepDefinition
 {
+    private const string ParamProfitPercent = "profitPercent";
+    private const decimal DefaultProfitPercent = 5.0m;
+
+    private const string ParamTrailingOffset = "trailingOffset";
+    private const decimal DefaultTrailingOffset = 1.0m;
+
+    private const string ParamUseTrailing = "useTrailing";
+
     public override string Key => "take-profit";
 
     public override string Name => "Take Profit";
@@ -25,21 +33,21 @@ public class TakeProfitStepDefinition : BaseStepDefinition
     public override ParameterSchema GetParameterSchema()
         => new ParameterSchema()
             .AddDecimal(
-                "profitPercent",
+                ParamProfitPercent,
                 "Profit Threshold (%)",
                 "Close position when profit reaches this percentage",
                 true,
-                5.0m,
+                DefaultProfitPercent,
                 0.1m,
                 100m,
                 "Profit Taking")
-            .AddBoolean("useTrailing", "Use Trailing Stop", "Trail the stop as price rises to lock in gains", false, "Advanced")
+            .AddBoolean(ParamUseTrailing, "Use Trailing Stop", "Trail the stop as price rises to lock in gains", false, "Advanced")
             .AddDecimal(
-                "trailingOffset",
+                ParamTrailingOffset,
                 "Trailing Offset (%)",
                 "Distance from peak price to trigger sell",
                 false,
-                1.0m,
+                DefaultTrailingOffset,
                 0.1m,
                 50m,
                 "Advanced");
@@ -48,9 +56,9 @@ public class TakeProfitStepDefinition : BaseStepDefinition
     {
         ILogger<TakeProfitStep> logger = services.GetRequiredService<ILogger<TakeProfitStep>>();
         return new TakeProfitStep(
-            parameters.GetDecimal("profitPercent", 5.0m),
-            parameters.GetBoolean("useTrailing"),
-            parameters.GetDecimal("trailingOffset", 1.0m),
+            parameters.GetDecimal(ParamProfitPercent, DefaultProfitPercent),
+            parameters.GetBoolean(ParamUseTrailing, false),
+            parameters.GetDecimal(ParamTrailingOffset, DefaultTrailingOffset),
             logger);
     }
 }
@@ -58,22 +66,13 @@ public class TakeProfitStepDefinition : BaseStepDefinition
 /// <summary>
 ///     Takes profit when the configured threshold is reached.
 /// </summary>
-public class TakeProfitStep : IPipelineStep<TradingContext>
+public class TakeProfitStep(decimal percent, bool useTrailing, decimal trailingOffset, ILogger<TakeProfitStep> logger)
+    : IPipelineStep<TradingContext>
 {
-    private readonly ILogger<TakeProfitStep> logger;
-    private readonly decimal profitPercent;
-    private readonly decimal trailingOffset;
-    private readonly bool useTrailing;
+    private readonly decimal trailingOffset = trailingOffset;
+    private readonly bool useTrailing = useTrailing;
 
-    public TakeProfitStep(decimal profitPercent, bool useTrailing, decimal trailingOffset, ILogger<TakeProfitStep> logger)
-    {
-        this.profitPercent = profitPercent;
-        this.useTrailing = useTrailing;
-        this.trailingOffset = trailingOffset;
-        this.logger = logger;
-    }
-
-    public int Order => 0; // Set at runtime from database
+    public int Order => 0;
 
     public PipelineStepType Type => PipelineStepType.SignalGeneration;
 
@@ -90,13 +89,13 @@ public class TakeProfitStep : IPipelineStep<TradingContext>
 
         decimal profitPercent = (context.CurrentPrice - context.BuyPrice.Value) / context.BuyPrice.Value * 100;
 
-        if (profitPercent >= this.profitPercent)
+        if (profitPercent >= percent)
         {
             context.Action = TradingAction.Sell;
-            logger.LogInformation("Take profit triggered at {Profit:F2}% (target: {Target:F2}%)", profitPercent, this.profitPercent);
+            logger.LogInformation("Take profit triggered at {Profit:F2}% (target: {Target:F2}%)", profitPercent, percent);
             return Task.FromResult(PipelineStepResult.Continue($"Take profit at {profitPercent:F2}%"));
         }
 
-        return Task.FromResult(PipelineStepResult.Continue($"Profit: {profitPercent:F2}% (target: {this.profitPercent:F2}%)"));
+        return Task.FromResult(PipelineStepResult.Continue($"Profit: {profitPercent:F2}% (target: {percent:F2}%)"));
     }
 }

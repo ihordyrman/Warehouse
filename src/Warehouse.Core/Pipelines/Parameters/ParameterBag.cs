@@ -21,7 +21,8 @@ public class ParameterBag
     /// </summary>
     public int GetInteger(string key, int defaultValue = 0)
     {
-        if (values.TryGetValue(key, out string? value) && int.TryParse(value, out int result))
+        if (values.TryGetValue(key, out string? value) &&
+            int.TryParse(value, NumberStyles.Any, NumberFormatInfo.InvariantInfo, out int result))
         {
             return result;
         }

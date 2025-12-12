@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using Warehouse.Core.Markets.Domain;
 
@@ -8,7 +9,7 @@ public class OkxAuthService
 {
     public static object CreateAuthRequest(MarketCredentials config)
     {
-        var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString();
+        var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000).ToString(CultureInfo.InvariantCulture);
         string sign = GenerateSignature(timestamp, config.SecretKey);
 
         return new

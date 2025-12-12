@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Globalization;
 using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Markets.Models;
 
@@ -47,9 +48,9 @@ public class MarketDataCache : IMarketDataCache
         foreach (string[] ask in marketDataEvent.Asks)
         {
             if (ask.Length < 4 ||
-                !decimal.TryParse(ask[0], out decimal price) ||
-                !decimal.TryParse(ask[1], out decimal size) ||
-                !int.TryParse(ask[3], out int orderCount))
+                !decimal.TryParse(ask[0], CultureInfo.InvariantCulture, out decimal price) ||
+                !decimal.TryParse(ask[1], CultureInfo.InvariantCulture, out decimal size) ||
+                !int.TryParse(ask[3], CultureInfo.InvariantCulture, out int orderCount))
             {
                 continue;
             }
@@ -67,9 +68,9 @@ public class MarketDataCache : IMarketDataCache
         foreach (string[] bid in marketDataEvent.Bids)
         {
             if (bid.Length < 4 ||
-                !decimal.TryParse(bid[0], out decimal price) ||
-                !decimal.TryParse(bid[1], out decimal size) ||
-                !int.TryParse(bid[3], out int orderCount))
+                !decimal.TryParse(bid[0], CultureInfo.InvariantCulture, out decimal price) ||
+                !decimal.TryParse(bid[1], CultureInfo.InvariantCulture, out decimal size) ||
+                !int.TryParse(bid[3], CultureInfo.InvariantCulture, out int orderCount))
             {
                 continue;
             }

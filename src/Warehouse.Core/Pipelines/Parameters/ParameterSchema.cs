@@ -118,7 +118,7 @@ public class ParameterSchema
                 DisplayName = displayName,
                 Description = description,
                 Type = ParameterType.Boolean,
-                IsRequired = false, // Booleans are never "required" in the traditional sense
+                IsRequired = false,
                 DefaultValue = defaultValue.ToString().ToLowerInvariant(),
                 Group = group,
                 Order = orderCounter++
@@ -208,7 +208,6 @@ public class ParameterSchema
         {
             bool hasValue = values.TryGetValue(param.Key, out string? value) && !string.IsNullOrWhiteSpace(value);
 
-            // Required check
             if (param.IsRequired && !hasValue)
             {
                 errors.Add(new ValidationError(param.Key, $"{param.DisplayName} is required."));
@@ -220,72 +219,78 @@ public class ParameterSchema
                 continue;
             }
 
-            // Type-specific validation
-            switch (param.Type)
+            if (param.Type == ParameterType.Integer)
             {
-                case ParameterType.Integer:
-                    if (!int.TryParse(value, out int intVal))
+                if (!int.TryParse(value, out int intVal))
+                {
+                    errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a whole number."));
+                }
+                else
+                {
+                    if (param.Min.HasValue && intVal < param.Min.Value)
                     {
-                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a whole number."));
-                    }
-                    else
-                    {
-                        if (param.Min.HasValue && intVal < param.Min.Value)
-                        {
-                            errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at least {param.Min.Value}."));
-                        }
-
-                        if (param.Max.HasValue && intVal > param.Max.Value)
-                        {
-                            errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at most {param.Max.Value}."));
-                        }
+                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at least {param.Min.Value}."));
                     }
 
-                    break;
-
-                case ParameterType.Decimal:
-                    if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal decVal))
+                    if (param.Max.HasValue && intVal > param.Max.Value)
                     {
-                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a number."));
+                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at most {param.Max.Value}."));
                     }
-                    else
+                }
+
+                continue;
+            }
+
+            if (param.Type == ParameterType.Decimal)
+            {
+                if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal decVal))
+                {
+                    errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a number."));
+                }
+                else
+                {
+                    if (param.Min.HasValue && decVal < param.Min.Value)
                     {
-                        if (param.Min.HasValue && decVal < param.Min.Value)
-                        {
-                            errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at least {param.Min.Value}."));
-                        }
-
-                        if (param.Max.HasValue && decVal > param.Max.Value)
-                        {
-                            errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at most {param.Max.Value}."));
-                        }
-                    }
-
-                    break;
-
-                case ParameterType.Boolean:
-                    if (value != "true" && value != "false")
-                    {
-                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be true or false."));
+                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at least {param.Min.Value}."));
                     }
 
-                    break;
-
-                case ParameterType.TimeSpan:
-                    if (!TimeSpan.TryParse(value, out _))
+                    if (param.Max.HasValue && decVal > param.Max.Value)
                     {
-                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a valid time span (e.g., 00:05:00)."));
+                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be at most {param.Max.Value}."));
                     }
+                }
 
-                    break;
+                continue;
+            }
 
-                case ParameterType.Select:
-                    if (param.Options is not null && param.Options.All(x => x.Value != value))
-                    {
-                        errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be one of the available options."));
-                    }
+            if (param.Type == ParameterType.Boolean)
+            {
+                if (value != "true" && value != "false")
+                {
+                    errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be true or false."));
+                }
 
-                    break;
+                continue;
+            }
+
+            if (param.Type == ParameterType.TimeSpan)
+            {
+                if (!TimeSpan.TryParse(value, out _))
+                {
+                    errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be a valid time span (e.g., 00:05:00)."));
+                }
+
+                continue;
+            }
+
+            if (param.Type == ParameterType.Select)
+            {
+                if (param.Options is not null && param.Options.All(x => !string.Equals(x.Value, value, StringComparison.Ordinal)))
+                {
+                    errors.Add(new ValidationError(param.Key, $"{param.DisplayName} must be one of the available options."));
+                }
+
+                continue;
             }
         }
 

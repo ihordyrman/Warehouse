@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph Orchestration["Orchestration Layer"]
+        direction TB
+        Orchestrator["PipelineOrchestrator<br/>─────────────<br/>• Starts pipelines via executor<br/>• Stops pipelines via executor<br/>• Synchronizes state with DB<br/>• BackgroundService"]
+    end
+
+    subgraph Factory["Factory Layer"]
+        ExecutorFactory["IPipelineExecutorFactory<br/>─────────────<br/>Creates executor instances"]
+        Builder["IPipelineBuilder<br/>─────────────<br/>• Builds step instances<br/>• Validates pipeline config"]
+    end
+
+    subgraph Execution["Execution Layer"]
+        Executor["PipelineExecutor<br/>─────────────<br/>• Holds dependencies<br/>• Periodic execution loop<br/>• Executes each step<br/>• Creates TradingContext"]
+
+        subgraph PipelineInstance["Pipeline Runtime"]
+            Steps["IPipelineStep[]<br/>─────────────<br/>Ordered step instances"]
+            Context["TradingContext<br/>─────────────<br/>Shared execution state"]
+        end
+    end
+
+    subgraph Results["Result Types"]
+        StepResult["PipelineStepResult<br/>─────────────<br/>• Continue<br/>• Stop<br/>• Error"]
+        StepType["PipelineStepType<br/>─────────────<br/>• Validation<br/>• RiskManagement<br/>• SignalGeneration<br/>• Execution"]
+    end
+
+    subgraph Registry["Step Registry"]
+        StepRegistry["IStepRegistry<br/>─────────────<br/>• Discovers definitions<br/>• Creates instances<br/>• Validates parameters"]
+        StepDef["IStepDefinition[]<br/>─────────────<br/>Step type metadata"]
+    end
+
+    Orchestrator -->|"Creates via"| ExecutorFactory
+    ExecutorFactory -->|"Produces"| Executor
+    Orchestrator -->|"Start/Stop"| Executor
+    Builder -->|"Uses"| StepRegistry
+    StepRegistry -->|"Contains"| StepDef
+    Executor -->|"Uses"| Builder
+    Builder -->|"Builds"| Steps
+    Executor -->|"Creates"| Context
+    Executor -->|"Executes"| Steps
+    Steps -->|"Returns"| StepResult
+    Steps -->|"Categorized by"| StepType
+    Steps -->|"Modifies"| Context

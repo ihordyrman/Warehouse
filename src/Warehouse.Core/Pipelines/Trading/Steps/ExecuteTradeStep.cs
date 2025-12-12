@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Warehouse.Core.Infrastructure.Persistence;
@@ -19,6 +20,9 @@ namespace Warehouse.Core.Pipelines.Trading.Steps;
 [StepDefinition("execute-trade")]
 public class ExecuteTradeStepDefinition : BaseStepDefinition
 {
+    private const string ParamTradeAmount = "tradeAmount";
+    private const decimal DefaultTradeAmount = 100m;
+
     public override string Key => "execute-trade";
 
     public override string Name => "Execute Trade";
@@ -31,11 +35,11 @@ public class ExecuteTradeStepDefinition : BaseStepDefinition
 
     public override ParameterSchema GetParameterSchema()
         => new ParameterSchema().AddDecimal(
-            "tradeAmount",
+            ParamTradeAmount,
             "Trade Amount (USDT)",
             "Amount in USDT to trade per order",
             true,
-            100m,
+            DefaultTradeAmount,
             1m,
             100000m,
             "Order Settings");
@@ -43,10 +47,13 @@ public class ExecuteTradeStepDefinition : BaseStepDefinition
     public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
     {
         IServiceScopeFactory scopeFactory = services.GetRequiredService<IServiceScopeFactory>();
-        var step = new ExecuteTradeStep(scopeFactory);
-
-        // Pass parameters to the step
-        step.Parameters["TradeAmount"] = parameters.GetDecimal("tradeAmount", 100m).ToString();
+        var step = new ExecuteTradeStep(scopeFactory)
+        {
+            Parameters =
+            {
+                ["TradeAmount"] = parameters.GetDecimal(ParamTradeAmount, DefaultTradeAmount).ToString(CultureInfo.InvariantCulture)
+            }
+        };
 
         return step;
     }
@@ -105,7 +112,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
             Quantity = context.Quantity!.Value,
             MarketType = context.MarketType,
             Symbol = context.Symbol,
-            Price = context.CurrentPrice // or should be null for market order?
+            Price = context.CurrentPrice // or should be null for market order? need to think about it
         };
 
         Result<Order> result = await orderManager.CreateOrderAsync(request, cancellationToken);
@@ -158,7 +165,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
             Quantity = quantity,
             MarketType = context.MarketType,
             Symbol = context.Symbol,
-            Price = context.CurrentPrice // or should be null for market order?
+            Price = context.CurrentPrice // or should be null for market order? same question as above
         };
 
         Result<Order> result = await orderManager.CreateOrderAsync(request, cancellationToken);

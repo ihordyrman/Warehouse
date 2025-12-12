@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Warehouse.Core.Markets.Concrete.Okx.Messages.Http;
@@ -9,23 +10,26 @@ public record OkxCandlestick
     public string[] Data { get; set; } = [];
 
     public DateTime Timestamp
-        => Data.Length > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Data[0])).DateTime.ToUniversalTime() : default;
+        => Data.Length > 0 ?
+            DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Data[0], NumberStyles.Any, NumberFormatInfo.InvariantInfo))
+                .DateTime.ToUniversalTime() :
+            default;
 
-    public decimal Open => Data.Length > 1 ? decimal.Parse(Data[1]) : 0;
+    public decimal Open => Data.Length > 1 ? decimal.Parse(Data[1], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal High => Data.Length > 2 ? decimal.Parse(Data[2]) : 0;
+    public decimal High => Data.Length > 2 ? decimal.Parse(Data[2], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal Low => Data.Length > 3 ? decimal.Parse(Data[3]) : 0;
+    public decimal Low => Data.Length > 3 ? decimal.Parse(Data[3], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal Close => Data.Length > 4 ? decimal.Parse(Data[4]) : 0;
+    public decimal Close => Data.Length > 4 ? decimal.Parse(Data[4], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal Volume => Data.Length > 5 ? decimal.Parse(Data[5]) : 0;
+    public decimal Volume => Data.Length > 5 ? decimal.Parse(Data[5], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal VolumeCurrency => Data.Length > 6 ? decimal.Parse(Data[6]) : 0;
+    public decimal VolumeCurrency => Data.Length > 6 ? decimal.Parse(Data[6], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public decimal VolumeQuoteCurrency => Data.Length > 7 ? decimal.Parse(Data[7]) : 0;
+    public decimal VolumeQuoteCurrency => Data.Length > 7 ? decimal.Parse(Data[7], NumberStyles.Any, NumberFormatInfo.InvariantInfo) : 0;
 
-    public bool IsCompleted => Data.Length > 8 && Data[8] == "1";
+    public bool IsCompleted => Data.Length > 8 && string.Equals(Data[8], "1", StringComparison.OrdinalIgnoreCase);
 }
 
 public class OkxCandlestickConverter : JsonConverter<OkxCandlestick>

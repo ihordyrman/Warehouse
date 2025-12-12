@@ -83,7 +83,6 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                 ILogger<PipelineExecutor> logger = scope.ServiceProvider.GetRequiredService<ILogger<PipelineExecutor>>();
                 IPipelineBuilder pipelineBuilder = scope.ServiceProvider.GetRequiredService<IPipelineBuilder>();
 
-                // Build step instances from configuration
                 IReadOnlyList<IPipelineStep<TradingContext>> steps = pipelineBuilder.BuildSteps(configuration, scope.ServiceProvider);
 
                 if (steps.Count == 0)
@@ -93,7 +92,6 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                     continue;
                 }
 
-                // Create execution context
                 var context = new TradingContext
                 {
                     PipelineId = PipelineId,
@@ -101,7 +99,6 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                     MarketType = configuration.MarketType
                 };
 
-                // Execute each step in order
                 foreach (IPipelineStep<TradingContext> step in steps)
                 {
                     logger.LogDebug("Executing step {StepName} for pipeline {PipelineId}", step.Name, PipelineId);

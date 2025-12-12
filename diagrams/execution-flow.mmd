@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    participant O as Orchestrator
+    participant EF as ExecutorFactory
+    participant E as Executor
+    participant B as Builder
+    participant R as StepRegistry
+    participant S as Steps
+    participant C as Context
+
+    rect rgb(40, 60, 40)
+        Note over O,EF: Startup Phase
+        O->>EF: Create(pipeline, services)
+        EF->>E: new PipelineExecutor(services, pipeline)
+        EF-->>O: executor
+        O->>E: StartAsync(ct)
+    end
+
+    rect rgb(40, 40, 60)
+        Note over E,C: Execution Loop (repeats)
+        loop Every ExecutionInterval
+            E->>B: BuildSteps(pipeline, services)
+            B->>R: GetDefinition(stepTypeKey)
+            R-->>B: IStepDefinition
+            B->>R: CreateInstance(key, services, params)
+            R-->>B: IPipelineStep
+            B-->>E: List<IPipelineStep>
+
+            E->>C: new TradingContext()
+
+            loop For each step
+                E->>S: ExecuteAsync(context, ct)
+                S->>C: Read/Modify state
+                S-->>E: PipelineStepResult
+                alt result.ShouldContinue == false
+                    Note over E: Break loop
+                end
+            end
+
+            E->>E: await Delay(interval)
+        end
+    end
+
+    rect rgb(60, 40, 40)
+        Note over O,E: Shutdown Phase
+        O->>E: StopAsync()
+        E->>E: Cancel & await task
+    end

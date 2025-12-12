@@ -12,6 +12,9 @@ namespace Warehouse.Core.Pipelines.Trading.Steps;
 [StepDefinition("stop-loss")]
 public class StopLossStepDefinition : BaseStepDefinition
 {
+    private const string ParamLossPercent = "lossPercent";
+    private const decimal DefaultLossPercent = 3.0m;
+
     public override string Key => "stop-loss";
 
     public override string Name => "Stop Loss";
@@ -24,11 +27,11 @@ public class StopLossStepDefinition : BaseStepDefinition
 
     public override ParameterSchema GetParameterSchema()
         => new ParameterSchema().AddDecimal(
-            "lossPercent",
+            ParamLossPercent,
             "Loss Threshold (%)",
             "Close position when loss reaches this percentage",
             true,
-            3.0m,
+            DefaultLossPercent,
             0.1m,
             100m,
             "Stop Loss");
@@ -36,7 +39,7 @@ public class StopLossStepDefinition : BaseStepDefinition
     public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
     {
         ILogger<StopLossStep> logger = services.GetRequiredService<ILogger<StopLossStep>>();
-        return new StopLossStep(parameters.GetDecimal("lossPercent", 3.0m), logger);
+        return new StopLossStep(parameters.GetDecimal(ParamLossPercent, DefaultLossPercent), logger);
     }
 }
 

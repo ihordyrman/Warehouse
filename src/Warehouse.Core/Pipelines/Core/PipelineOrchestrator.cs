@@ -119,7 +119,6 @@ public class PipelineOrchestrator(
     {
         try
         {
-            // Validate pipeline configuration before starting
             IPipelineBuilder pipelineBuilder = serviceProvider.GetRequiredService<IPipelineBuilder>();
             ValidationResult validationResult = pipelineBuilder.ValidatePipeline(pipeline);
 
