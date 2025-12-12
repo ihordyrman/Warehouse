@@ -5,17 +5,15 @@ using Warehouse.Core.Markets.Domain;
 using Warehouse.Core.Markets.Models;
 using Warehouse.Core.Shared;
 
-namespace Warehouse.Core.Markets.Concrete.Okx.Services;
+namespace Warehouse.Core.Markets.Services;
 
 public class BalanceManager : IBalanceManager
 {
     private readonly ILogger<BalanceManager> logger;
     private readonly Dictionary<MarketType, IMarketBalanceProvider> providers = new();
-    private readonly IServiceProvider serviceProvider;
 
     public BalanceManager(IServiceProvider serviceProvider, ILogger<BalanceManager> logger)
     {
-        this.serviceProvider = serviceProvider;
         this.logger = logger;
 
         IEnumerable<IMarketBalanceProvider> marketProviders = serviceProvider.GetServices<IMarketBalanceProvider>();
