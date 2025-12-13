@@ -47,15 +47,13 @@ public class ExecuteTradeStepDefinition : BaseStepDefinition
     public override IPipelineStep<TradingContext> CreateInstance(IServiceProvider services, ParameterBag parameters)
     {
         IServiceScopeFactory scopeFactory = services.GetRequiredService<IServiceScopeFactory>();
-        var step = new ExecuteTradeStep(scopeFactory)
+        return new ExecuteTradeStep(scopeFactory)
         {
             Parameters =
             {
                 ["TradeAmount"] = parameters.GetDecimal(ParamTradeAmount, DefaultTradeAmount).ToString(CultureInfo.InvariantCulture)
             }
         };
-
-        return step;
     }
 }
 
@@ -83,7 +81,7 @@ public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipel
 
         decimal tradeAmount = Parameters.TryGetValue("TradeAmount", out string? amountStr) && decimal.TryParse(amountStr, out decimal amt) ?
             amt :
-            100m;
+            throw new InvalidOperationException("Invalid trade amount parameter");
 
         if (context.Action == TradingAction.Buy)
         {

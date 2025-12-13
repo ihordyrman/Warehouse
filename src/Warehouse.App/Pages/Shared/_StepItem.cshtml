@@ -29,6 +29,26 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-2">
+        <!-- Move Up -->
+        <button hx-post="?handler=MoveStep&id=@Model.PipelineId&stepId=@Model.Id&direction=up"
+                hx-target="#step-list"
+                hx-swap="outerHTML"
+                disabled="@Model.IsFirst"
+                class="p-2 rounded hover:bg-gray-100 transition-colors @(Model.IsFirst ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700")"
+                title="Move Up">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+
+        <!-- Move Down -->
+        <button hx-post="?handler=MoveStep&id=@Model.PipelineId&stepId=@Model.Id&direction=down"
+                hx-target="#step-list"
+                hx-swap="outerHTML"
+                disabled="@Model.IsLast"
+                class="p-2 rounded hover:bg-gray-100 transition-colors @(Model.IsLast ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700")"
+                title="Move Down">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+
         <!-- Toggle Enabled -->
         <button hx-post="?handler=ToggleStep&id=@Model.PipelineId&stepId=@Model.Id"
                 hx-target="#step-@Model.Id"

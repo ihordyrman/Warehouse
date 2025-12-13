@@ -130,7 +130,7 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
             return BadRequest("Unknown step type");
         }
 
-        int maxOrder = await db.PipelineSteps.Where(s => s.PipelineDetailsId == id).MaxAsync(s => (int?)s.Order) ?? 0;
+        int maxOrder = await db.PipelineSteps.Where(x => x.PipelineDetailsId == id).MaxAsync(s => (int?)s.Order) ?? 0;
 
         ParameterSchema schema = definition.GetParameterSchema();
         Dictionary<string, string> defaultParams = schema.GetDefaultValues();
@@ -149,6 +149,9 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         await db.SaveChangesAsync();
 
         StepItemViewModel vm = MapToStepItemViewModel(step, definition, id);
+        vm.IsFirst = maxOrder == 0;
+        vm.IsLast = true;
+
         return Partial("Shared/_StepItem", vm);
     }
 
@@ -169,7 +172,6 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         ParameterSchema schema = definition.GetParameterSchema();
         var newParams = new Dictionary<string, string>();
 
-        // Check if request has form data
         if (Request.HasFormContentType)
         {
             foreach (ParameterDefinition param in schema.Parameters)
@@ -188,7 +190,6 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         }
         else
         {
-            // No form data - keep existing parameters
             newParams = new Dictionary<string, string>(step.Parameters);
         }
 
@@ -203,11 +204,17 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         step.Parameters = newParams;
         await db.SaveChangesAsync();
 
+        int minOrder = await db.PipelineSteps.Where(x => x.PipelineDetailsId == id).MinAsync(x => (int?)x.Order) ?? 0;
+        int maxOrder = await db.PipelineSteps.Where(x => x.PipelineDetailsId == id).MaxAsync(x => (int?)x.Order) ?? 0;
+
         StepItemViewModel itemVm = MapToStepItemViewModel(step, definition, id);
+        itemVm.IsFirst = step.Order == minOrder;
+        itemVm.IsLast = step.Order == maxOrder;
+
         return Partial("Shared/_StepItem", itemVm);
     }
 
-    public async Task<IActionResult> OnPostToggleStepAsync(int id, int stepId)
+    public async Task<IActionResult> OnPostToggleStepAsync([FromQuery] int id, [FromQuery] int stepId)
     {
         PipelineStep? step = await db.PipelineSteps.FirstOrDefaultAsync(s => s.Id == stepId);
         if (step == null)
@@ -224,16 +231,63 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         return Partial("Shared/_StepItem", vm);
     }
 
-    public async Task<IActionResult> OnDeleteDeleteStepAsync(int id, int stepId)
+    public async Task<IActionResult> OnDeleteDeleteStepAsync([FromQuery] int id, [FromQuery] int stepId)
     {
         PipelineStep? step = await db.PipelineSteps.FirstOrDefaultAsync(s => s.Id == stepId);
-        if (step != null)
+        if (step == null)
         {
-            db.PipelineSteps.Remove(step);
+            return new EmptyResult();
+        }
+
+        db.PipelineSteps.Remove(step);
+        await db.SaveChangesAsync();
+
+        return new EmptyResult();
+    }
+
+    public async Task<IActionResult> OnPostMoveStepAsync([FromQuery] int id, [FromQuery] int stepId, [FromQuery] string direction)
+    {
+        List<PipelineStep> steps = await db.PipelineSteps.Where(x => x.PipelineDetailsId == id).OrderBy(x => x.Order).ToListAsync();
+        PipelineStep? currentStep = steps.FirstOrDefault(x => x.Id == stepId);
+
+        if (currentStep == null)
+        {
+            return NotFound();
+        }
+
+        int index = steps.IndexOf(currentStep);
+
+        PipelineStep? targetStep = direction switch
+        {
+            "up" when index > 0 => steps[index - 1],
+            "down" when index < steps.Count - 1 => steps[index + 1],
+            _ => null
+        };
+
+        if (targetStep != null)
+        {
+            int originalCurrentOrder = currentStep.Order;
+            int originalTargetOrder = targetStep.Order;
+
+            currentStep.Order = -1;
+            await db.SaveChangesAsync();
+
+            targetStep.Order = originalCurrentOrder;
+            await db.SaveChangesAsync();
+
+            currentStep.Order = originalTargetOrder;
             await db.SaveChangesAsync();
         }
 
-        return new EmptyResult();
+        Pipeline? pipeline = await db.PipelineConfigurations.Include(x => x.Steps).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (pipeline == null)
+        {
+            return NotFound();
+        }
+
+        LoadSteps(pipeline);
+
+        return Partial("Shared/_StepList", new StepListViewModel { PipelineId = id, Steps = Steps });
     }
 
     public async Task<IActionResult> OnPostAsync(int id)
@@ -286,13 +340,18 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
     }
 
     private void LoadSteps(Pipeline pipeline)
-        => Steps = pipeline.Steps.OrderBy(s => s.Order)
-            .Select(s =>
+    {
+        var sortedSteps = pipeline.Steps.OrderBy(s => s.Order).ToList();
+        Steps = sortedSteps.Select((s, i) =>
             {
                 IStepDefinition? definition = stepRegistry.GetDefinition(s.StepTypeKey);
-                return MapToStepItemViewModel(s, definition, pipeline.Id);
+                StepItemViewModel vm = MapToStepItemViewModel(s, definition, pipeline.Id);
+                vm.IsFirst = i == 0;
+                vm.IsLast = i == sortedSteps.Count - 1;
+                return vm;
             })
             .ToList();
+    }
 
     private static StepItemViewModel MapToStepItemViewModel(PipelineStep step, IStepDefinition? definition, int pipelineId)
     {

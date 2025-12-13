@@ -26,6 +26,10 @@ public class StepItemViewModel
     public bool IsEnabled { get; set; }
 
     public string ParameterSummary { get; set; } = string.Empty;
+
+    public bool IsFirst { get; set; }
+
+    public bool IsLast { get; set; }
 }
 
 /// <summary>
