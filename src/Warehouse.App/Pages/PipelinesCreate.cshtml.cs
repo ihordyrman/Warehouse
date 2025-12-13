@@ -46,7 +46,8 @@ public class PipelinesCreateModel(WarehouseDbContext db) : PageModel
             MarketType = Input.Type,
             Symbol = symbolUpper,
             Enabled = Input.Enabled,
-            Tags = tags
+            Tags = tags,
+            ExecutionInterval = TimeSpan.FromMinutes(Input.ExecutionInterval)
         };
 
         db.PipelineConfigurations.Add(pipeline);
@@ -64,5 +65,7 @@ public class PipelinesCreateModel(WarehouseDbContext db) : PageModel
         public string Symbol { get; set; } = string.Empty;
 
         public string TagsInput { get; set; } = string.Empty;
+
+        public int ExecutionInterval { get; set; } = 1;
     }
 }

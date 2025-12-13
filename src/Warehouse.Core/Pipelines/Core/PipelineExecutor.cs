@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Pipelines.Builder;
 using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Pipelines.Trading;
@@ -82,21 +84,25 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                 await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
                 ILogger<PipelineExecutor> logger = scope.ServiceProvider.GetRequiredService<ILogger<PipelineExecutor>>();
                 IPipelineBuilder pipelineBuilder = scope.ServiceProvider.GetRequiredService<IPipelineBuilder>();
+                WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
+                Pipeline pipeline = await dbContext.PipelineConfigurations
+                    .Include(x => x.Steps)
+                    .FirstAsync(x => x.Id == PipelineId, ct);
 
-                IReadOnlyList<IPipelineStep<TradingContext>> steps = pipelineBuilder.BuildSteps(configuration, scope.ServiceProvider);
+                IReadOnlyList<IPipelineStep<TradingContext>> steps = pipelineBuilder.BuildSteps(pipeline, scope.ServiceProvider);
 
                 if (steps.Count == 0)
                 {
                     logger.LogWarning("Pipeline {PipelineId} has no enabled steps, skipping execution", PipelineId);
-                    await Task.Delay(configuration.ExecutionInterval, ct);
+                    await Task.Delay(pipeline.ExecutionInterval, ct);
                     continue;
                 }
 
                 var context = new TradingContext
                 {
                     PipelineId = PipelineId,
-                    Symbol = configuration.Symbol,
-                    MarketType = configuration.MarketType
+                    Symbol = pipeline.Symbol,
+                    MarketType = pipeline.MarketType
                 };
 
                 foreach (IPipelineStep<TradingContext> step in steps)
@@ -125,7 +131,7 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                     }
                 }
 
-                await Task.Delay(configuration.ExecutionInterval, ct);
+                await Task.Delay(pipeline.ExecutionInterval, ct);
             }
         }
         catch (OperationCanceledException)

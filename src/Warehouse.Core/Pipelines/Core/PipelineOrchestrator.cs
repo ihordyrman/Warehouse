@@ -33,13 +33,12 @@ public class PipelineOrchestrator(
 {
     private readonly PeriodicTimer periodicTimer = new(TimeSpan.FromSeconds(30));
     private readonly ConcurrentDictionary<int, IPipelineExecutor> runningExecutors = new();
+    private readonly AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
     private CancellationToken cancellationToken;
 
     public async Task SynchronizePipelinesAsync()
     {
-        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
-
         List<Pipeline> pipelines = await dbContext.PipelineConfigurations.Include(x => x.Steps).ToListAsync(cancellationToken);
 
         logger.LogDebug("Synchronizing {Count} pipelines", pipelines.Count);
@@ -78,7 +77,6 @@ public class PipelineOrchestrator(
             return false;
         }
 
-        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
         Pipeline? pipeline = await dbContext.PipelineConfigurations.Include(x => x.Steps)

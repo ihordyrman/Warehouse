@@ -2,12 +2,19 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using Warehouse.Core;
 using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Domain;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
 
 builder.Services.AddCoreDependencies(builder.Configuration);
 builder.Services.AddOkxSupport(builder.Configuration);

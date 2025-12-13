@@ -40,7 +40,8 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
             Enabled = pipeline.Enabled,
             Type = pipeline.MarketType,
             Symbol = pipeline.Symbol,
-            TagsInput = string.Join(", ", pipeline.Tags)
+            TagsInput = string.Join(", ", pipeline.Tags),
+            ExecutionInterval = (int)pipeline.ExecutionInterval.TotalMinutes
         };
 
         LoadSteps(pipeline);
@@ -277,6 +278,7 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         pipeline.MarketType = Input.Type;
         pipeline.Symbol = symbolUpper;
         pipeline.Tags = tags;
+        pipeline.ExecutionInterval = TimeSpan.FromMinutes(Input.ExecutionInterval);
 
         await db.SaveChangesAsync();
 
@@ -358,5 +360,7 @@ public class PipelinesEditModel(WarehouseDbContext db, IStepRegistry stepRegistr
         public string Symbol { get; set; } = string.Empty;
 
         public string TagsInput { get; set; } = string.Empty;
+
+        public int ExecutionInterval { get; set; } = 1;
     }
 }
