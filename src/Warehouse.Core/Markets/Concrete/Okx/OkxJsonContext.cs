@@ -15,7 +15,12 @@ namespace Warehouse.Core.Markets.Concrete.Okx;
 [JsonSerializable(typeof(OkxHttpResponse<OkxFundingBalance[]>))]
 [JsonSerializable(typeof(OkxHttpResponse<OkxCandlestick[]>))]
 [JsonSerializable(typeof(OkxHttpResponse<OkxAssetsValuation[]>))]
+[JsonSerializable(typeof(OkxHttpResponse<OkxPlaceOrderResponse[]>))]
 [JsonSerializable(typeof(OkxAccountBalance))]
 [JsonSerializable(typeof(OkxBalanceDetail))]
 [JsonSerializable(typeof(OkxFundingBalance))]
+[JsonSerializable(typeof(OkxAssetsValuation))]
+[JsonSerializable(typeof(OkxPlaceOrderRequest))]
+[JsonSerializable(typeof(OkxPlaceOrderResponse))]
+[JsonSerializable(typeof(OkxPlaceOrderResponse[]))]
 internal partial class OkxJsonContext : JsonSerializerContext;

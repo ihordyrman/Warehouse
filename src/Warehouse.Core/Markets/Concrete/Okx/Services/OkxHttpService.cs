@@ -1,4 +1,5 @@
 ﻿using System.Collections.Specialized;
+using System.Text;
 using System.Text.Json;
 using System.Web;
 using Microsoft.Extensions.Logging;
@@ -104,7 +105,17 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         return await SendRequestAsync<OkxCandlestick[]>("GET", endpoint, parameters);
     }
 
-    private async Task<Result<T>> SendRequestAsync<T>(string method, string endpoint, Dictionary<string, string>? parameters = null)
+    public async Task<Result<OkxPlaceOrderResponse>> PlaceOrderAsync(OkxPlaceOrderRequest orderRequest)
+    {
+        const string endpoint = "/api/v5/trade/order";
+        return await SendRequestAsync<OkxPlaceOrderResponse>("POST", endpoint, body: orderRequest);
+    }
+
+    private async Task<Result<T>> SendRequestAsync<T>(
+        string method,
+        string endpoint,
+        Dictionary<string, string>? parameters = null,
+        object? body = null)
     {
         if (Credentials is null)
         {
@@ -117,9 +128,10 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
 
         using HttpClient httpClient = httpClientFactory.CreateClient("Okx");
 
-        string requestPath = BuildRequestPath();
+        string requestPath = BuildRequestPath(parameters, endpoint);
+        string bodyJson = JsonSerializer.Serialize(body ?? string.Empty, serializerOptions);
         var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-        string signature = OkxAuthService.GenerateSignature(timestamp, Credentials.SecretKey, method, requestPath);
+        string signature = OkxAuthService.GenerateSignature(timestamp, Credentials.SecretKey, method, requestPath, bodyJson);
 
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature);
         httpClient.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp);
@@ -129,7 +141,12 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
 
         try
         {
-            HttpResponseMessage httpResponse = await httpClient.GetAsync(requestPath);
+            HttpResponseMessage httpResponse = method.ToUpperInvariant() switch
+            {
+                "GET" => await httpClient.GetAsync(requestPath),
+                "POST" => await httpClient.PostAsync(requestPath, CreateJsonContent(bodyJson)),
+                _ => throw new ArgumentException($"Unsupported HTTP method: {method}")
+            };
 
             if (!httpResponse.IsSuccessStatusCode)
             {
@@ -147,21 +164,23 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
             logger.LogError(ex, "Error making authenticated request to {Endpoint}", endpoint);
             return Result<T>.Failure(new Error($"Error making authenticated request to {endpoint}"));
         }
-
-        string BuildRequestPath()
-        {
-            if (parameters is null || parameters.Count == 0)
-            {
-                return endpoint;
-            }
-
-            NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
-            foreach (KeyValuePair<string, string> param in parameters)
-            {
-                query[param.Key] = param.Value;
-            }
-
-            return $"{endpoint}?{query}";
-        }
     }
+
+    private string BuildRequestPath(Dictionary<string, string>? parameters, string endpoint)
+    {
+        if (parameters is null || parameters.Count == 0)
+        {
+            return endpoint;
+        }
+
+        NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
+        foreach (KeyValuePair<string, string> param in parameters)
+        {
+            query[param.Key] = param.Value;
+        }
+
+        return $"{endpoint}?{query}";
+    }
+
+    private static StringContent CreateJsonContent(string json) => new(json, Encoding.UTF8, "application/json");
 }

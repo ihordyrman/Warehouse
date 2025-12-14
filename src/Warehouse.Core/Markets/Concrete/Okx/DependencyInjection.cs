@@ -7,6 +7,7 @@ using Warehouse.Core.Infrastructure.WebSockets;
 using Warehouse.Core.Markets.Concrete.Okx.Services;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
+using Warehouse.Core.Orders.Contracts;
 
 namespace Warehouse.Core.Markets.Concrete.Okx;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
         services.AddSingleton<OkxHeartbeatService>();
         services.AddScoped<OkxHttpService>();
         services.AddScoped<IMarketBalanceProvider, OkxBalanceProvider>();
+        services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>();
         services.AddSingleton<OkxMarketAdapter>();
         services.AddHostedService<OkxSynchronizationWorker>();
 

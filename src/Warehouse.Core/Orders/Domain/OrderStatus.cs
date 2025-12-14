@@ -6,20 +6,20 @@
 public enum OrderStatus
 {
     /// <summary>Order created locally but not yet sent to exchange.</summary>
-    Pending,
+    Pending = 0,
 
     /// <summary>Order submitted to exchange and waiting to be filled.</summary>
-    Placed,
+    Placed = 1,
 
     /// <summary>Order partially executed, waiting for remaining quantity.</summary>
-    PartiallyFilled,
+    PartiallyFilled = 2,
 
     /// <summary>Order completely executed.</summary>
-    Filled,
+    Filled = 3,
 
-    /// <summary>Order cancelled before full execution.</summary>
-    Cancelled,
+    /// <summary>Order canceled before full execution.</summary>
+    Cancelled = 4,
 
     /// <summary>Order failed due to an error (insufficient funds, invalid params, etc.).</summary>
-    Failed
+    Failed = 5
 }
