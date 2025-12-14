@@ -10,7 +10,6 @@
         <File Path="README.md" />
         <File Path=".gitignore" />
         <File Path=".editorconfig" />
-        <File Path="sync.sh" />
     </Folder>
     <Folder Name="/src/">
         <Project Path="src\Warehouse.App\Warehouse.App.csproj" />

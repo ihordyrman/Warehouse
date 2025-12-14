@@ -2,9 +2,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Warehouse.Core.Infrastructure.Persistence;
+using Warehouse.Core.Markets.Concrete.Okx.Constants;
+using Warehouse.Core.Markets.Models;
+using Warehouse.Core.Markets.Services;
 using Warehouse.Core.Pipelines.Builder;
 using Warehouse.Core.Pipelines.Domain;
 using Warehouse.Core.Pipelines.Trading;
+using Warehouse.Core.Shared.Domain;
+using Warehouse.Core.Shared.Services;
 
 namespace Warehouse.Core.Pipelines.Core;
 
@@ -85,10 +90,9 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                 ILogger<PipelineExecutor> logger = scope.ServiceProvider.GetRequiredService<ILogger<PipelineExecutor>>();
                 IPipelineBuilder pipelineBuilder = scope.ServiceProvider.GetRequiredService<IPipelineBuilder>();
                 WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
-                Pipeline pipeline = await dbContext.PipelineConfigurations
-                    .Include(x => x.Steps)
-                    .FirstAsync(x => x.Id == PipelineId, ct);
+                Pipeline pipeline = await dbContext.PipelineConfigurations.Include(x => x.Steps).FirstAsync(x => x.Id == PipelineId, ct);
 
+                // already sorted in builder
                 IReadOnlyList<IPipelineStep<TradingContext>> steps = pipelineBuilder.BuildSteps(pipeline, scope.ServiceProvider);
 
                 if (steps.Count == 0)
@@ -98,11 +102,43 @@ public class PipelineExecutor(IServiceProvider serviceProvider, Pipeline configu
                     continue;
                 }
 
+                ICandlestickService candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>();
+                Candlestick? recentCandlestick = await candlestickService.GetLatestCandlestickAsync(
+                    pipeline.Symbol,
+                    pipeline.MarketType,
+                    CandlestickTimeframes.OneMinute,
+                    ct);
+
+                if (recentCandlestick is null)
+                {
+                    logger.LogWarning(
+                        "No recent candlestick data for {Symbol} {MarketType}, skipping execution",
+                        pipeline.Symbol,
+                        pipeline.MarketType);
+                    await Task.Delay(pipeline.ExecutionInterval, ct);
+                    continue;
+                }
+
+                IMarketDataCache marketDataCache = scope.ServiceProvider.GetRequiredService<IMarketDataCache>();
+                MarketData? currentMarketData = marketDataCache.GetData(pipeline.Symbol, pipeline.MarketType);
+
+                if (currentMarketData is null)
+                {
+                    logger.LogWarning(
+                        "No market data in cache for {Symbol} {MarketType}, skipping execution",
+                        pipeline.Symbol,
+                        pipeline.MarketType);
+                    await Task.Delay(pipeline.ExecutionInterval, ct);
+                    continue;
+                }
+
                 var context = new TradingContext
                 {
                     PipelineId = PipelineId,
                     Symbol = pipeline.Symbol,
-                    MarketType = pipeline.MarketType
+                    MarketType = pipeline.MarketType,
+                    CurrentMarketData = marketDataCache.GetData(pipeline.Symbol, pipeline.MarketType),
+                    CurrentPrice = recentCandlestick.Close
                 };
 
                 foreach (IPipelineStep<TradingContext> step in steps)

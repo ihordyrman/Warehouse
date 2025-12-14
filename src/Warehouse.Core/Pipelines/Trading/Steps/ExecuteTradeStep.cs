@@ -59,13 +59,11 @@ public class ExecuteTradeStepDefinition : BaseStepDefinition
 
 public class ExecuteTradeStep(IServiceScopeFactory serviceScopeFactory) : IPipelineStep<TradingContext>
 {
-    public int Order => 2;
-
     public PipelineStepType Type => PipelineStepType.Execution;
 
     public string Name => "ExecuteTrade";
 
-    public Dictionary<string, string> Parameters { get; set; } = [];
+    public Dictionary<string, string> Parameters { get; } = [];
 
     public async Task<PipelineStepResult> ExecuteAsync(TradingContext context, CancellationToken cancellationToken = default)
     {

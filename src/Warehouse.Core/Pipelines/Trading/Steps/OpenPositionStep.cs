@@ -58,8 +58,6 @@ public class OpenPositionStepDefinition : BaseStepDefinition
 /// </summary>
 public class OpenPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipelineStep<TradingContext>
 {
-    public int Order => 1;
-
     public PipelineStepType Type => PipelineStepType.Validation;
 
     public string Name => "OpenPosition";

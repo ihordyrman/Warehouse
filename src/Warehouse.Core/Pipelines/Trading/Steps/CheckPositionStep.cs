@@ -38,8 +38,6 @@ public class CheckPositionStepDefinition : BaseStepDefinition
 /// </summary>
 public class CheckPositionStep(IServiceScopeFactory serviceScopeFactory) : IPipelineStep<TradingContext>
 {
-    public int Order => 1;
-
     public PipelineStepType Type => PipelineStepType.Validation;
 
     public string Name => "CheckPosition";

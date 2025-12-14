@@ -7,8 +7,6 @@
 public interface IPipelineStep<in TContext>
     where TContext : IPipelineContext
 {
-    int Order { get; }
-
     PipelineStepType Type { get; }
 
     string Name { get; }

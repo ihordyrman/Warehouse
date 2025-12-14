@@ -5,16 +5,12 @@ namespace Warehouse.Core.Pipelines.Parameters;
 /// <summary>
 ///     Type-safe wrapper for parameter values stored as strings.
 /// </summary>
-public class ParameterBag
+public class ParameterBag(IReadOnlyDictionary<string, string> values)
 {
-    private readonly IReadOnlyDictionary<string, string> values;
-
-    public ParameterBag(IReadOnlyDictionary<string, string> values) => this.values = values;
-
     /// <summary>
     ///     Gets a string value.
     /// </summary>
-    public string GetString(string key, string defaultValue = "") => values.TryGetValue(key, out string? value) ? value : defaultValue;
+    public string GetString(string key, string defaultValue = "") => values.GetValueOrDefault(key, defaultValue);
 
     /// <summary>
     ///     Gets an integer value.
@@ -48,27 +44,15 @@ public class ParameterBag
     ///     Gets a boolean value.
     /// </summary>
     public bool GetBoolean(string key, bool defaultValue = false)
-    {
-        if (values.TryGetValue(key, out string? value))
-        {
-            return value.Equals("true", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return defaultValue;
-    }
+        => values.TryGetValue(key, out string? value) ? value.Equals("true", StringComparison.OrdinalIgnoreCase) : defaultValue;
 
     /// <summary>
     ///     Gets a TimeSpan value.
     /// </summary>
     public TimeSpan GetTimeSpan(string key, TimeSpan? defaultValue = null)
-    {
-        if (values.TryGetValue(key, out string? value) && TimeSpan.TryParse(value, out TimeSpan result))
-        {
-            return result;
-        }
-
-        return defaultValue ?? TimeSpan.Zero;
-    }
+        => values.TryGetValue(key, out string? value) && TimeSpan.TryParse(value, out TimeSpan result) ?
+            result :
+            defaultValue ?? TimeSpan.Zero;
 
     /// <summary>
     ///     Checks if a key exists in the bag.
@@ -78,5 +62,5 @@ public class ParameterBag
     /// <summary>
     ///     Gets the raw string value, or null if not present.
     /// </summary>
-    public string? GetRaw(string key) => values.TryGetValue(key, out string? value) ? value : null;
+    public string? GetRaw(string key) => values.GetValueOrDefault(key);
 }

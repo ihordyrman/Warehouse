@@ -48,8 +48,6 @@ public class StopLossStepDefinition : BaseStepDefinition
 /// </summary>
 public class StopLossStep(decimal percent, ILogger<StopLossStep> logger) : IPipelineStep<TradingContext>
 {
-    public int Order => 0;
-
     public PipelineStepType Type => PipelineStepType.SignalGeneration;
 
     public string Name => "Stop Loss";

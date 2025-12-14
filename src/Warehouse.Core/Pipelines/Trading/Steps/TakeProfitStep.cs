@@ -72,8 +72,6 @@ public class TakeProfitStep(decimal percent, bool useTrailing, decimal trailingO
     private readonly decimal trailingOffset = trailingOffset;
     private readonly bool useTrailing = useTrailing;
 
-    public int Order => 0;
-
     public PipelineStepType Type => PipelineStepType.SignalGeneration;
 
     public string Name => "Take Profit";
