@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IPipelineBuilder, PipelineBuilder>();
         services.AddSingleton<IPipelineExecutorFactory, PipelineExecutorFactory>();
         services.AddHostedService(x => (PipelineOrchestrator)x.GetRequiredService<IPipelineOrchestrator>());
+        services.AddHostedService<MarketConnectionService>();
 
         return services;
     }

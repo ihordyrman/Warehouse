@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Warehouse.Core.Infrastructure.Persistence;
 using Warehouse.Core.Markets.Concrete.Okx;
 using Warehouse.Core.Markets.Contracts;
 using Warehouse.Core.Markets.Domain;
@@ -14,17 +16,44 @@ namespace Warehouse.Core.Markets.Services;
 /// </summary>
 public class MarketConnectionService(ILogger<MarketConnectionService> logger, IServiceScopeFactory serviceScopeFactory) : BackgroundService
 {
+    private const int PollingIntervalSeconds = 5;
     private readonly SemaphoreSlim connectionLock = new(1, 1);
     private readonly Dictionary<MarketType, MarketConnection> marketConnections = [];
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        =>
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+                WarehouseDbContext dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
 
-            // periodic task that checks:
-            // 1. if we have worker for a specific market - we check if connection exists, if not we create it
-            // 2. if we have connection for a market but no workers - we disconnect
-            // 3. if we have connection for a market and workers - we check if subscriptions are up to date, if not we update them
-            Task.CompletedTask;
+                List<Pipeline> activePipelines = await dbContext.PipelineConfigurations.Where(x => x.Enabled)
+                    .Select(x => new Pipeline
+                    {
+                        Symbol = x.Symbol,
+                        MarketType = x.MarketType
+                    })
+                    .ToListAsync(stoppingToken);
+
+                var pipelinesByMarket = activePipelines.GroupBy(x => x.MarketType).ToDictionary(x => x.Key, g => g.ToList());
+
+                foreach ((MarketType marketType, List<Pipeline> pipelines) in pipelinesByMarket)
+                {
+                    await EnsureMarketConnectionAsync(marketType, pipelines, stoppingToken);
+                }
+
+                await DisconnectUnusedMarketsAsync(activePipelines);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Error in MarketConnectionService execution loop");
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), stoppingToken);
+        }
+    }
 
     private async Task UpdateSubscriptionsAsync(MarketConnection connection, List<Pipeline> pipelines, CancellationToken cancellationToken)
     {

@@ -148,12 +148,25 @@ public sealed class OkxMarketAdapter : IMarketAdapter, IDisposable
     private void OnConnectionStateChanged(object? sender, ConnectionState state)
         => logger.LogInformation("Connection state changed to: {State}", state);
 
-    private static Uri GetConnectionUri(OkxChannelType channelType)
-        => new(
+    private Uri GetConnectionUri(OkxChannelType channelType)
+    {
+        if (credentials.IsSandbox)
+        {
+            return new Uri(
+                channelType switch
+                {
+                    OkxChannelType.Public => SocketEndpoints.DEMO_PUBLIC_WS_URL,
+                    OkxChannelType.Private => SocketEndpoints.DEMO_PRIVATE_WS_URL,
+                    _ => throw new ArgumentException($"Invalid channel type: {channelType}")
+                });
+        }
+
+        return new Uri(
             channelType switch
             {
                 OkxChannelType.Public => SocketEndpoints.PUBLIC_WS_URL,
                 OkxChannelType.Private => SocketEndpoints.PRIVATE_WS_URL,
                 _ => throw new ArgumentException($"Invalid channel type: {channelType}")
             });
+    }
 }
