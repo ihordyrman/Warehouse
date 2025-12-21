@@ -129,7 +129,7 @@ public class OkxHttpService(ILogger<OkxHttpService> logger, IHttpClientFactory h
         using HttpClient httpClient = httpClientFactory.CreateClient("Okx");
 
         string requestPath = BuildRequestPath(parameters, endpoint);
-        string bodyJson = JsonSerializer.Serialize(body ?? string.Empty, serializerOptions);
+        string bodyJson = body is null ? string.Empty : JsonSerializer.Serialize(body, serializerOptions);
         var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         string signature = OkxAuthService.GenerateSignature(timestamp, Credentials.SecretKey, method, requestPath, bodyJson);
 

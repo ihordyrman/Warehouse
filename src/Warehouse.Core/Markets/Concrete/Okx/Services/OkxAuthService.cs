@@ -35,7 +35,10 @@ public class OkxAuthService
         string path = "/users/self/verify",
         string body = "")
     {
-        byte[] sign = Encoding.UTF8.GetBytes($"{timestamp}{method}{path}{body}");
+        byte[] sign = string.IsNullOrEmpty(body) ?
+            Encoding.UTF8.GetBytes($"{timestamp}{method}{path}") :
+            Encoding.UTF8.GetBytes($"{timestamp}{method}{path}{body}");
+
         byte[] key = Encoding.UTF8.GetBytes(secretKey);
 
         using var hmac = new HMACSHA256(key);
