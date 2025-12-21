@@ -12,6 +12,7 @@
         <File Path=".editorconfig" />
     </Folder>
     <Folder Name="/src/">
+        <Project Path="src/Warehouse.Core.Functional/Warehouse.Core.Functional.fsproj" />
         <Project Path="src\Warehouse.App\Warehouse.App.csproj" />
         <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" />
     </Folder>
