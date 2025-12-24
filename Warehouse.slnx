@@ -12,14 +12,7 @@
         <File Path=".editorconfig" />
     </Folder>
     <Folder Name="/src/">
-        <Project Path="src/Warehouse.Core.Functional/Warehouse.Core.Functional.fsproj" />
-        <Project Path="src\Warehouse.App\Warehouse.App.csproj" />
-        <Project Path="src\Warehouse.Core\Warehouse.Core.csproj" />
-    </Folder>
-    <Folder Name="/tests/">
-        <Project Path="tests\Warehouse.Core.UnitTests\Warehouse.Core.UnitTests.csproj" />
-    </Folder>
-    <Folder Name="/tools/">
-        <Project Path="tools\Warehouse.Tools\Warehouse.Tools.csproj" />
+        <Project Path="src\Warehouse.App\Warehouse.App.fsproj" />
+        <Project Path="src\Warehouse.Core\Warehouse.Core.fsproj" />
     </Folder>
 </Solution>

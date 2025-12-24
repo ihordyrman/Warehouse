@@ -1,0 +1,17 @@
+﻿namespace Warehouse.Core.Old.Pipelines.Core;
+
+/// <summary>
+///     A single unit of work in a pipeline.
+/// </summary>
+/// <typeparam name="TContext">The context type this step operates on.</typeparam>
+public interface IPipelineStep<in TContext>
+    where TContext : IPipelineContext
+{
+    PipelineStepType Type { get; }
+
+    string Name { get; }
+
+    Dictionary<string, string> Parameters { get; }
+
+    Task<PipelineStepResult> ExecuteAsync(TContext context, CancellationToken cancellationToken = default);
+}

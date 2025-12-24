@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Domain\Entities.fs" />
+        <Compile Include="Domain\Markets.fs" />
+        <Compile Include="Domain\Pipelines.fs" />
+        <Compile Include="Domain\Orders.fs" />
+
+        <Compile Include="Shared\ServiceError.fs" />
+
+        <Compile Include="Infrastructure\Persistence\Migrations\InitialMigration.fs" />
+        <Compile Include="Infrastructure\WebSockets.fs" />
+        <Compile Include="Infrastructure\Configurations.fs" />
+
+        <Compile Include="Orders\Contracts.fs" />
+
+        <Compile Include="Markets\Contracts.fs" />
+
+        <Compile Include="Markets\BalanceProvider.fs" />
+
+        <Compile Include="Markets\BalanceManager.fs" />
+
+        <Compile Include="Markets\MarketDataCache.fs" />
+        <Compile Include="Markets\Concrete\Okx\Constants.fs" />
+        <Compile Include="Markets\Concrete\Okx\Messages.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxAuth.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxHeartbeatService.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxConnectionManager.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxSubscriptionManager.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxMessageProcessor.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxHttpService.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxMarketOrderProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxBalanceProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxMarketAdapter.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxSynchronizationWorker.fs" />
+        <Compile Include="Markets\Concrete\Okx\DependencyInjection.fs" />
+        <Compile Include="Pipelines\Parameters.fs" />
+        <Compile Include="Pipelines\Steps.fs" />
+        <Compile Include="Pipelines\Trading.fs" />
+        <Compile Include="Pipelines\PipelineRunner.fs" />
+        <Compile Include="Pipelines\StepRegistry.fs" />
+        <Compile Include="Pipelines\PipelineBuilder.fs" />
+        <Compile Include="Pipelines\TradingSteps.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Dapper.FSharp" Version="4.9.0" />
+        <PackageReference Include="FluentMigrator.Runner" Version="7.2.0" />
+        <PackageReference Include="FSharp.Control.TaskSeq" Version="0.4.0" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    </ItemGroup>
+
+</Project>

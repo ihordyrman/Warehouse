@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <UserSecretsId>90b1b531-55ba-4a18-a28e-d7ed7e5f201d</UserSecretsId>
+        <PackageId>Warehouse.App</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Handlers\System.fs" />
+        <Compile Include="Handlers\Accounts.fs" />
+        <Compile Include="Handlers\Pipelines.fs" />
+        <Compile Include="Handlers\Balances.fs" />
+        <Compile Include="Views\Index.fs" />
+        <Compile Include="Seeding.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Falco" Version="5.*" />
+        <PackageReference Include="Falco.Htmx" Version="1.2.0" />
+        <PackageReference Include="Npgsql" Version="10.0.1" />
+        <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Warehouse.Core\Warehouse.Core.fsproj" />
+    </ItemGroup>
+
+</Project>

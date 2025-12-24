@@ -1,0 +1,116 @@
+@page
+@using Warehouse.Core.Old.Functional.Markets.Domain
+@model PipelinesCreateModel
+@{
+    ViewData["Title"] = "Create Pipeline";
+}
+
+<div>
+    <div class="mb-6">
+        <div class="flex items-center mb-2">
+            <a asp-page="/Dashboard" class="text-gray-600 hover:text-gray-900 mr-2">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="text-2xl font-bold text-gray-900">Create New Pipeline</h1>
+        </div>
+        <p class="text-gray-600">Configure a new trading pipeline for a specific market and symbol</p>
+    </div>
+
+    <div class="card">
+        <form method="post">
+            <div class="space-y-6">
+                <div>
+                    <label asp-for="Input.Type" class="block text-sm font-medium text-gray-700 mb-2">
+                        Market Type <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="Input.Type"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @foreach (MarketType marketType in Model.MarketTypes)
+                        {
+                            <option value="@marketType">@marketType</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Input.Type" class="text-red-500 text-sm"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.Symbol" class="block text-sm font-medium text-gray-700 mb-2">
+                        Symbol <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="Input.Symbol"
+                           type="text"
+                           placeholder="e.g., BTC-USDT, ETH-USDT"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           required/>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Enter the trading pair symbol (uppercase letters, numbers, hyphens, and slashes only)
+                    </p>
+                    <span asp-validation-for="Input.Symbol" class="text-red-500 text-sm"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.TagsInput" class="block text-sm font-medium text-gray-700 mb-2">
+                        Tags
+                    </label>
+                    <input asp-for="Input.TagsInput"
+                           type="text"
+                           placeholder="e.g., scalping, high-frequency, btc"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Enter tags separated by commas. Tags help organize and filter pipelines.
+                    </p>
+                    <span asp-validation-for="Input.TagsInput" class="text-red-500 text-sm"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.ExecutionInterval" class="block text-sm font-medium text-gray-700 mb-2">
+                        Execution Interval (minutes) <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="Input.ExecutionInterval"
+                           type="number"
+                           min="1"
+                           placeholder="e.g., 5"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           required/>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Specify how often the pipeline should execute (in minutes).
+                    </p>
+                    <span asp-validation-for="Input.ExecutionInterval" class="text-red-500 text-sm"></span>
+                </div>
+
+                <div class="flex items-center">
+                    <input asp-for="Input.Enabled"
+                           type="checkbox"
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
+                    <label asp-for="Input.Enabled" class="ml-2 block text-sm text-gray-700">
+                        Enable pipeline immediately
+                    </label>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <a asp-page="/Dashboard"
+                       class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg shadow-sm transition-all duration-200">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                        <i class="fas fa-plus mr-2"></i>Create Pipeline
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-md p-4">
+        <h3 class="text-sm font-semibold text-blue-900 mb-2">
+            <i class="fas fa-info-circle mr-1"></i>Pipeline Configuration Tips
+        </h3>
+        <ul class="text-sm text-blue-800 space-y-1">
+            <li>• Choose the market type that matches your trading account</li>
+            <li>• Symbol must match the exact format used by the exchange (e.g., BTC-USDT for OKX)</li>
+            <li>• Pipelines can be enabled/disabled at any time from the Pipelines list</li>
+            <li>• Each market type + symbol combination must be unique</li>
+        </ul>
+    </div>
+</div>
