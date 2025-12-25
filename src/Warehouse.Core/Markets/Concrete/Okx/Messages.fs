@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Functional.Markets.Okx
+namespace Warehouse.Core.Markets.Okx
 
 open System
 open System.Globalization
@@ -227,7 +227,6 @@ type OkxHttpResponse<'T> =
         Data: 'T option
     }
 
-// OkxCandlestick Custom Converter required
 type OkxCandlestick =
     {
         Data: string[]

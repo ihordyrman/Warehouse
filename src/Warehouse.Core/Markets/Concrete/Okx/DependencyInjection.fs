@@ -6,10 +6,10 @@ open System.Net.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Infrastructure.WebSockets
-open Warehouse.Core.Functional.Markets.Concrete.Okx.Services
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Orders.Contracts
+open Warehouse.Core.Infrastructure.WebSockets
+open Warehouse.Core.Markets.Concrete.Okx.Services
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Orders.Contracts
 open Warehouse.Core.Markets.Concrete.Okx.Services
 open Polly
 
@@ -18,7 +18,6 @@ module DependencyInjection =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore
         services.AddSingleton<IWebSocketClient, WebSocketClient>() |> ignore
         services.AddSingleton<OkxHeartbeatService>() |> ignore
-        services.AddScoped<OkxHttpService>() |> ignore
         services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>() |> ignore
         services.AddSingleton<OkxMarketAdapter>() |> ignore
         services.AddHostedService<OkxSynchronizationWorker>() |> ignore

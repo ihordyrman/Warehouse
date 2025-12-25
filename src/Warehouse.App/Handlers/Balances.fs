@@ -1,4 +1,4 @@
-module Warehouse.App.Functional.Handlers.Balances
+module Warehouse.App.Handlers.Balances
 
 open System.Data
 open System.Threading
@@ -6,7 +6,7 @@ open Dapper.FSharp.PostgreSQL
 open Falco
 open Serilog
 open Warehouse.Core
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.BalanceManager
 
 let marketsTable = table'<Market> "markets"

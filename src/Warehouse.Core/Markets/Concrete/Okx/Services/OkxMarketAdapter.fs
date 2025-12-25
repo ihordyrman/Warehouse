@@ -1,12 +1,12 @@
-namespace Warehouse.Core.Functional.Markets.Concrete.Okx.Services
+namespace Warehouse.Core.Markets.Concrete.Okx.Services
 
 open System
 open System.Threading
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Infrastructure.WebSockets
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Infrastructure.WebSockets
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.Concrete.Okx.Constants
 open Warehouse.Core.Markets.Concrete.Okx.Services
 

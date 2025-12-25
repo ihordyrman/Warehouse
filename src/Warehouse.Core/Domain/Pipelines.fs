@@ -1,8 +1,8 @@
-namespace Warehouse.Core.Functional.Pipelines.Domain
+namespace Warehouse.Core.Pipelines.Domain
 
 open System
 open System.Collections.Generic
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 
 type PipelineStatus =
     | Idle = 0

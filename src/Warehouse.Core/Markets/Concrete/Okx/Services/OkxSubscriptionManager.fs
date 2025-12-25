@@ -5,7 +5,7 @@ open System.Collections.Concurrent
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 
 type SubscriptionInfo = { Channel: string; Symbol: string; SubscribedAt: DateTime }
 

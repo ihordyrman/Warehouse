@@ -1,11 +1,11 @@
-﻿namespace Warehouse.Core.Functional.Markets.Services
+﻿namespace Warehouse.Core.Markets.Services
 
 open System
 open System.Collections.Concurrent
 open System.Collections.Frozen
 open System.Globalization
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
 
 [<Struct>]
 type private MarketDataKey = { Symbol: string; MarketType: MarketType }

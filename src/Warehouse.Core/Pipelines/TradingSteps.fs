@@ -5,9 +5,9 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open System
 open System.Data
-open Warehouse.Core.Functional.Orders.Contracts
-open Warehouse.Core.Functional.Orders.Domain
-open Warehouse.Core.Functional.Pipelines.Domain
+open Warehouse.Core.Orders.Contracts
+open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Pipelines.Domain
 open Warehouse.Core.Pipelines.Parameters
 open Warehouse.Core.Pipelines.Trading
 

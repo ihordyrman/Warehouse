@@ -1,13 +1,13 @@
-namespace Warehouse.Core.Functional.Markets.Contracts
+namespace Warehouse.Core.Markets.Contracts
 
 open System
 open System.Collections.Generic
 open System.Collections.Frozen
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Shared.Domain
-open Warehouse.Core.Functional.Shared.Errors
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Shared.Domain
+open Warehouse.Core.Shared.Errors
 
 [<CLIMutable>]
 type Balance =
@@ -58,19 +58,6 @@ type IMarketAdapter =
     abstract member DisconnectAsync: ct: CancellationToken -> Task
     abstract member SubscribeAsync: symbol: string * ct: CancellationToken -> Task
     abstract member UnsubscribeAsync: symbol: string * ct: CancellationToken -> Task
-
-type IMarketBalanceProvider =
-    abstract member MarketType: MarketType with get
-
-    abstract member GetBalancesAsync:
-        cancellationToken: CancellationToken -> Task<Result<BalanceSnapshot, ServiceError>>
-
-    abstract member GetBalanceAsync:
-        currency: string * cancellationToken: CancellationToken ->
-            Task<Result<Balance, ServiceError>>
-
-    abstract member GetTotalUsdtValueAsync:
-        cancellationToken: CancellationToken -> Task<Result<decimal, ServiceError>>
 
 type IMarketDataCache =
     abstract member GetData: symbol: string * marketType: MarketType -> MarketData option

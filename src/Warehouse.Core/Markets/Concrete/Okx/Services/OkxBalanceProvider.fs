@@ -1,14 +1,18 @@
 ﻿namespace Warehouse.Core.Markets.Concrete.Okx.Services
 
+
+open Microsoft.Extensions.Logging
+open System
+open System.Threading
+open Warehouse.Core.Shared
+open Warehouse.Core.Markets
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Okx
+open Warehouse.Core.Markets.Concrete.Okx
+
 module OkxBalanceProvider =
-    open Microsoft.Extensions.Logging
-    open System
-    open System.Threading
-    open Warehouse.Core.Functional.Markets
-    open Warehouse.Core.Functional.Markets.Contracts
-    open Warehouse.Core.Functional.Markets.Domain
-    open Warehouse.Core.Functional.Markets.Okx
-    open Warehouse.Core.Functional.Shared.Errors
+    open Errors
 
     let private parseDecimal (value: string) =
         match Decimal.TryParse(value) with
@@ -48,9 +52,9 @@ module OkxBalanceProvider =
             UpdatedAt = DateTime.UtcNow
         }
 
-    let create (httpService: OkxHttpService) (logger: ILogger) : BalanceProvider.T =
+    let create (http: OkxHttp.T) (logger: ILogger) : BalanceProvider.T =
 
-        let getBalances (ct: CancellationToken) =
+        let getBalances (_: CancellationToken) =
             task {
                 try
                     let mutable snapshot =
@@ -62,7 +66,7 @@ module OkxBalanceProvider =
                             AccountSummary = None
                         }
 
-                    let! fundingResult = httpService.GetFundingBalanceAsync()
+                    let! fundingResult = http.getFundingBalance None
 
                     match fundingResult with
                     | Ok balances ->
@@ -72,7 +76,7 @@ module OkxBalanceProvider =
                         snapshot <- { snapshot with Funding = funding }
                     | Error _ -> ()
 
-                    let! accountResult = httpService.GetAccountBalanceAsync()
+                    let! accountResult = http.getAccountBalance None
 
                     match accountResult with
                     | Ok [| okxAccount |] ->
@@ -97,10 +101,10 @@ module OkxBalanceProvider =
                     return Error(Unexpected ex)
             }
 
-        let getBalance (currency: string) (ct: CancellationToken) =
+        let getBalance (currency: string) (_: CancellationToken) =
             task {
                 try
-                    let! result = httpService.GetBalanceAsync(currency)
+                    let! result = http.getBalance (Some currency)
 
                     match result with
                     | Ok balances ->
@@ -112,10 +116,10 @@ module OkxBalanceProvider =
                     return Error(Unexpected ex)
             }
 
-        let getTotalUsdtValue (ct: CancellationToken) =
+        let getTotalUsdtValue (_: CancellationToken) =
             task {
                 try
-                    let! result = httpService.GetAssetsValuationAsync()
+                    let! result = http.getAssetsValuation None
 
                     match result with
                     | Ok valuations ->

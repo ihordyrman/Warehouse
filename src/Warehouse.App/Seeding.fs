@@ -1,11 +1,11 @@
-module Warehouse.App.Functional.Seeding
+module Warehouse.App.Seeding
 
 open System
 open System.Data
 open System.Threading.Tasks
 open Dapper
 open Microsoft.Extensions.Configuration
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 
 let ensureCredentialsPopulated (configuration: IConfiguration) (connection: IDbConnection) : Task<unit> =
     task {

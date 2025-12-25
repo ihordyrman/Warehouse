@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Functional.Infrastructure.WebSockets
+namespace Warehouse.Core.Infrastructure.WebSockets
 
 open System
 open System.Net.WebSockets

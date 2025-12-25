@@ -31,11 +31,11 @@
         <Compile Include="Markets\Concrete\Okx\Constants.fs" />
         <Compile Include="Markets\Concrete\Okx\Messages.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxAuth.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxHttp.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxHeartbeatService.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxConnectionManager.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxSubscriptionManager.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxMessageProcessor.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxHttpService.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxMarketOrderProvider.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxBalanceProvider.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxMarketAdapter.fs" />

@@ -4,7 +4,7 @@ open System
 open System.Globalization
 open System.Security.Cryptography
 open System.Text
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 
 module OkxAuth =
     let generateSignature (timestamp: string) (secretKey: string) (method: string) (path: string) (body: string) =

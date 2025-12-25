@@ -2,13 +2,12 @@ namespace Warehouse.Core.Markets.BalanceManager
 
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Functional.Markets
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Shared
+open Warehouse.Core.Markets
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Shared
 
 module BalanceManager =
-    open BalanceProvider
     open Errors
 
     type T = private { Providers: Map<MarketType, BalanceProvider.T> }

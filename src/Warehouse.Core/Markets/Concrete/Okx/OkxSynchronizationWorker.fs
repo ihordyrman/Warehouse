@@ -5,10 +5,9 @@ open System.Threading
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Shared.Domain
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Markets.Concrete.Okx.Services
+open Warehouse.Core.Shared.Domain
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Contracts
 open FSharp.Control
 
 type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogger<OkxSynchronizationWorker>) =

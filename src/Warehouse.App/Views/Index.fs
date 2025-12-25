@@ -1,4 +1,4 @@
-﻿module Warehouse.App.Functional.Views.Index
+﻿module Warehouse.App.Views.Index
 
 open Falco
 open Falco.Markup

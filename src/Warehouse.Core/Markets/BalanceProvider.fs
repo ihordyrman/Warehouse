@@ -1,10 +1,10 @@
-namespace Warehouse.Core.Functional.Markets
+namespace Warehouse.Core.Markets
 
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Shared
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Shared
 
 module BalanceProvider =
     open Errors

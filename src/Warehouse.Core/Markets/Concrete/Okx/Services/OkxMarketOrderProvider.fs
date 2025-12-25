@@ -2,11 +2,11 @@ namespace Warehouse.Core.Markets.Concrete.Okx.Services
 
 open System.Globalization
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Markets.Okx
-open Warehouse.Core.Functional.Orders.Contracts
-open Warehouse.Core.Functional.Orders.Domain
-open Warehouse.Core.Functional.Shared.Errors
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Okx
+open Warehouse.Core.Orders.Contracts
+open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Shared.Errors
 
 type OkxMarketOrderProvider(httpService: OkxHttpService, logger: ILogger<OkxMarketOrderProvider>) =
 

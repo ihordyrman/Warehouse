@@ -6,8 +6,8 @@ open System.Threading.Tasks
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Shared
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Shared
 
 module CredentialsStore =
     open Errors

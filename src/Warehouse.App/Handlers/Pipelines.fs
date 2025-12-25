@@ -1,4 +1,4 @@
-module Warehouse.App.Functional.Handlers.Pipelines
+module Warehouse.App.Handlers.Pipelines
 
 open System.Data
 open Dapper

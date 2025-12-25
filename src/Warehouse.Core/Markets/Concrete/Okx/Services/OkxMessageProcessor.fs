@@ -3,10 +3,10 @@
 open System.Text.Json
 open System.Text.Json.Serialization
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Infrastructure.WebSockets
-open Warehouse.Core.Functional.Markets.Contracts
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Markets.Okx
+open Warehouse.Core.Infrastructure.WebSockets
+open Warehouse.Core.Markets.Contracts
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Okx
 
 type OkxMessageProcessor(logger: ILogger<OkxMessageProcessor>, marketDataCache: IMarketDataCache) =
     let serializerOptions = JsonSerializerOptions()

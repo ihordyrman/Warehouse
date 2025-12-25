@@ -1,4 +1,4 @@
-module Warehouse.App.Functional.Handlers.Accounts
+module Warehouse.App.Handlers.Accounts
 
 open System.Data
 open Dapper

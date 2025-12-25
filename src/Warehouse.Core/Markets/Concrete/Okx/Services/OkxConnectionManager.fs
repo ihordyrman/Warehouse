@@ -5,8 +5,8 @@ open System.Net.WebSockets
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Infrastructure.WebSockets
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Infrastructure.WebSockets
+open Warehouse.Core.Markets.Domain
 
 type OkxConnectionManager
     (webSocketClient: IWebSocketClient, heartbeatService: OkxHeartbeatService, logger: ILogger<OkxConnectionManager>) as this

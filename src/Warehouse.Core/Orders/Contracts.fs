@@ -1,11 +1,11 @@
-namespace Warehouse.Core.Functional.Orders.Contracts
+namespace Warehouse.Core.Orders.Contracts
 
 open System
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Orders.Domain
-open Warehouse.Core.Functional.Shared.Errors
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Shared.Errors
 
 [<CLIMutable>]
 type CreateOrderRequest =

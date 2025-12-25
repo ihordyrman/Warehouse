@@ -4,7 +4,7 @@ open System
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Functional.Infrastructure.WebSockets
+open Warehouse.Core.Infrastructure.WebSockets
 
 type OkxHeartbeatService(logger: ILogger<OkxHeartbeatService>) =
     let timer = new PeriodicTimer(TimeSpan.FromSeconds(10.0))

@@ -1,7 +1,7 @@
-namespace Warehouse.Core.Functional.Shared
+namespace Warehouse.Core.Shared
 
 open System.Net
-open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.Domain
 
 module Errors =
     type ServiceError =
