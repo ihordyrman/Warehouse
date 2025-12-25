@@ -2,26 +2,38 @@ module Warehouse.App.Functional.Handlers.Balances
 
 open System.Data
 open System.Threading
-open Dapper
+open Dapper.FSharp.PostgreSQL
 open Falco
-open Warehouse.Core.Functional.Markets.Contracts
+open Serilog
+open Warehouse.Core
 open Warehouse.Core.Functional.Markets.Domain
+open Warehouse.Core.Markets.BalanceManager
+
+let marketsTable = table'<Market> "markets"
 
 let total: HttpHandler =
     fun ctx ->
         try
-            let db = ctx.Plug<IDbConnection>()
-            let balanceManager = ctx.Plug<IBalanceManager>()
+            use db = ctx.Plug<IDbConnection>()
+            let balanceManager = CompositionRoot.createBalanceManager ctx.RequestServices
 
-            db.Query<int>("SELECT DISTINCT type FROM markets")
-            |> Seq.map enum<MarketType>
-            |> Seq.map (fun marketType ->
+            select {
+                for m in marketsTable do
+                    selectAll
+            }
+            |> db.SelectAsync<Market>
+            |> Async.AwaitTask
+            |> Async.RunSynchronously
+            |> Seq.map (fun market ->
                 task {
-                    let! result = balanceManager.GetTotalUsdtValueAsync(marketType, CancellationToken.None)
+                    let! result = BalanceManager.getTotalUsdtValue balanceManager market.Type CancellationToken.None
 
                     match result with
-                    | Some value -> return value
-                    | None -> return 0M
+                    | Ok value -> return value
+                    | Error err ->
+                        let log = ctx.Plug<ILogger>()
+                        log.Error("Error getting balance for {MarketType}: {Error}", market.Type, err)
+                        return 0M
                 }
                 |> Async.AwaitTask
                 |> Async.RunSynchronously
@@ -30,6 +42,6 @@ let total: HttpHandler =
             |> fun totalBalance -> Response.ofPlainText (string totalBalance) ctx
 
         with ex ->
-            let log = ctx.Plug<Serilog.ILogger>()
+            let log = ctx.Plug<ILogger>()
             log.Error(ex, "Error getting total balance")
             Response.ofPlainText "0" ctx

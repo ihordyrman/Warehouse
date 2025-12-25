@@ -46,6 +46,7 @@
         <Compile Include="Pipelines\StepRegistry.fs" />
         <Compile Include="Pipelines\PipelineBuilder.fs" />
         <Compile Include="Pipelines\TradingSteps.fs" />
+        <Compile Include="CompositionRoot.fs" />
     </ItemGroup>
 
     <ItemGroup>
