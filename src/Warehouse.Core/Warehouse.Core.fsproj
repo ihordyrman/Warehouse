@@ -26,6 +26,8 @@
         <Compile Include="Markets\BalanceManager.fs" />
 
         <Compile Include="Markets\MarketDataCache.fs" />
+
+        <Compile Include="Markets\CredentialsStore.fs" />
         <Compile Include="Markets\Concrete\Okx\Constants.fs" />
         <Compile Include="Markets\Concrete\Okx\Messages.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxAuth.fs" />

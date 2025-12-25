@@ -6,7 +6,6 @@ open System.Collections.Frozen
 open System.Threading
 open System.Threading.Tasks
 open Warehouse.Core.Functional.Markets.Domain
-open Warehouse.Core.Functional.Shared
 open Warehouse.Core.Functional.Shared.Domain
 open Warehouse.Core.Functional.Shared.Errors
 
@@ -51,10 +50,6 @@ type MarketData =
     }
 
 type MarketDataEvent = { Symbol: string; Source: MarketType; Asks: string[][]; Bids: string[][] }
-
-type ICredentialsProvider =
-    abstract member GetCredentialsAsync:
-        marketType: MarketType * cancellationToken: CancellationToken -> Task<MarketCredentials option>
 
 type IMarketAdapter =
     abstract member MarketType: MarketType with get
