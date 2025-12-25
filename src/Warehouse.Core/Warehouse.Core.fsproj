@@ -38,9 +38,7 @@
         <Compile Include="Markets\Concrete\Okx\Services\OkxMessageProcessor.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxMarketOrderProvider.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxBalanceProvider.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxMarketAdapter.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxSynchronizationWorker.fs" />
-        <Compile Include="Markets\Concrete\Okx\DependencyInjection.fs" />
+        <Compile Include="Markets\CandlestickStore.fs" />
         <Compile Include="Pipelines\Parameters.fs" />
         <Compile Include="Pipelines\Steps.fs" />
         <Compile Include="Pipelines\Trading.fs" />
@@ -49,6 +47,9 @@
         <Compile Include="Pipelines\PipelineBuilder.fs" />
         <Compile Include="Pipelines\TradingSteps.fs" />
         <Compile Include="CompositionRoot.fs" />
+        <Compile Include="OkxSynchronizationWorker.fs" />
+        <Compile Include="OkxMarketAdapter.fs" />
+        <Compile Include="OkxServices.fs" />
     </ItemGroup>
 
     <ItemGroup>

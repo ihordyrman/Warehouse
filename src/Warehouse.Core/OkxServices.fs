@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Markets.Concrete.Okx
+namespace Warehouse.Core
 
 open System
 open System.Net
@@ -10,12 +10,13 @@ open Warehouse.Core.Infrastructure.WebSockets
 open Warehouse.Core.Markets.Concrete.Okx.Services
 open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Orders.Contracts
-open Warehouse.Core.Markets.Concrete.Okx.Services
 open Polly
 
-module DependencyInjection =
+module OkxServices =
     let AddOkxSupport (services: IServiceCollection, configuration: IConfiguration) =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore
+
+        // todo: refactor to use F#-ish modules
         services.AddSingleton<IWebSocketClient, WebSocketClient>() |> ignore
         services.AddSingleton<OkxHeartbeatService>() |> ignore
         services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>() |> ignore
@@ -34,7 +35,8 @@ module DependencyInjection =
                 Func<HttpMessageHandler>(fun () ->
                     new HttpClientHandler(
                         AutomaticDecompression = (DecompressionMethods.GZip ||| DecompressionMethods.Deflate)
-                    ))
+                    )
+                )
             )
             .AddPolicyHandler(fun (provider: IServiceProvider) (_: HttpRequestMessage) ->
                 let logger = provider.GetRequiredService<ILogger<HttpClient>>()
@@ -49,11 +51,14 @@ module DependencyInjection =
                                 "Retry attempt {RetryCount} after {TimeSpan} seconds",
                                 retryCount,
                                 timespan
-                            ))
+                            )
+                        )
                     )
-                :> IAsyncPolicy<HttpResponseMessage>)
+                :> IAsyncPolicy<HttpResponseMessage>
+            )
             .AddPolicyHandler(fun _ ->
-                Policy.TimeoutAsync<HttpResponseMessage>(10) :> IAsyncPolicy<HttpResponseMessage>)
+                Policy.TimeoutAsync<HttpResponseMessage>(10) :> IAsyncPolicy<HttpResponseMessage>
+            )
         |> ignore
 
         services

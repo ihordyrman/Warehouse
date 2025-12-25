@@ -7,12 +7,13 @@ open System
 open System.Data
 open Warehouse.Core.Orders.Contracts
 open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Pipelines
 open Warehouse.Core.Pipelines.Domain
-open Warehouse.Core.Pipelines.Parameters
 open Warehouse.Core.Pipelines.Trading
 
 module TradingSteps =
     open Steps
+    open Parameters
 
     let positionsTable = table'<Position> "positions"
 

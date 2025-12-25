@@ -1,19 +1,22 @@
-namespace Warehouse.Core.Markets.Concrete.Okx
+namespace Warehouse.Core
 
 open System
 open System.Threading
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
+open Warehouse.Core
+open Warehouse.Core.Markets.Concrete.Okx
+open Warehouse.Core.Markets.Concrete.Okx.Constants
+open Warehouse.Core.Shared.Errors
 open Warehouse.Core.Shared.Domain
 open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Markets.Contracts
 open FSharp.Control
 
 type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogger<OkxSynchronizationWorker>) =
     inherit BackgroundService()
 
-    let timeframe = "1m" // CandlestickTimeframes.OneMinute
+    let timeframe = CandlestickTimeframes.OneMinute
     let batchSize = 100
 
     let symbols =
@@ -31,14 +34,14 @@ type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogge
     let syncStartDate = DateTime.Today
     let periodicTimer = new PeriodicTimer(TimeSpan.FromMinutes(1.0))
 
-    let getCandlesticksAsync (symbol: string) (fromDate: DateTime) (okxHttpService: OkxHttpService) =
+    let getCandlesticksAsync (symbol: string) (fromDate: DateTime) (okxHttp: OkxHttp.T) =
         taskSeq {
             logger.LogInformation("Starting candlestick sync for {Symbol} from {FromDate}", symbol, fromDate)
 
             let before = DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString()
 
             let! result =
-                okxHttpService.GetCandlesticksAsync(symbol, bar = timeframe, before = before, limit = batchSize)
+                okxHttp.getCandlesticks symbol { Bar = Some timeframe; Before = Some before; After = None; Limit = Some batchSize }
                 |> Async.AwaitTask
 
             match result with
@@ -79,61 +82,31 @@ type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogge
 
                 if tick then
                     use scope = scopeFactory.CreateAsyncScope()
-                    let candlestickService = scope.ServiceProvider.GetRequiredService<ICandlestickService>()
-                    let okxHttpService = scope.ServiceProvider.GetRequiredService<OkxHttpService>()
+                    let candlestickStore = CompositionRoot.createCandlestickStore scope.ServiceProvider
+                    let http = CompositionRoot.createOkxHttp scope.ServiceProvider
 
                     for symbol in symbols do
                         let pairSymbol = { Left = symbol; Right = Instrument.USDT }.ToString()
 
-                        let! latestCandle =
-                            candlestickService.GetLatestCandlestickAsync(
-                                pairSymbol,
-                                MarketType.Okx,
-                                timeframe,
-                                stoppingToken
-                            )
+                        let! latestCandle = candlestickStore.GetLatest pairSymbol MarketType.Okx timeframe
 
                         let startFrom =
                             match latestCandle with
-                            | Some c -> c.Timestamp.AddMinutes(-2.0)
+                            | Some c -> c.Timestamp.AddMinutes -2.0
                             | None -> syncStartDate
-
-                        // Converting AsyncSeq to Task/Loop
-                        // System.Threading.Tasks.Extensions or similar providing AsyncEnumerable?
-                        // For simplicity using loop if GetCandlesticksAsync was enumerable
-                        // But I defined it as asyncSeq. F# Control.AsyncSeq is good but might need library.
-                        // Let's rewrite `getCandlesticksAsync` to return Task<seq<Candlestick>> or similar to avoid extra dependencies if AsyncSeq not present. Use simple recursion or loop inside task.
-
-                        // Re-implementing inner logic inline or via simple helper strictly Task based.
 
                         let rec fetchBatch fromDate =
                             task {
                                 let before = DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString()
 
-                                let! result =
-                                    okxHttpService.GetCandlesticksAsync(
-                                        pairSymbol,
-                                        bar = timeframe,
-                                        before = before,
-                                        limit = batchSize
-                                    )
+                                let! result = http.getCandlesticks pairSymbol { Bar = Some timeframe; Before = Some before; After = None; Limit = Some batchSize }
 
                                 match result with
-                                | Error error ->
-                                    // logger.LogError("Failed to fetch candlesticks: {Error}", error.Message)
-                                    return [||]
                                 | Ok okxCandles -> return okxCandles
+                                | Error error ->
+                                    logger.LogError("Failed to fetch candlesticks: {Error}", serviceMessage error)
+                                    return [||]
                             }
-
-                        // Just one batch for now per cycle per symbol?
-                        // The original C# code does `await foreach` so it might fetch multiple batches?
-                        // "GetCandlesticksAsync" in C# yields items from *one* result of "GetCandlesticksAsync".
-                        // Ah, the C# GetCandlesticksAsync method calls okxHttpService.GetCandlesticksAsync ONCE.
-                        // So it is NOT a recursive historical fetcher in the loop. It just fetches one batch.
-                        // Wait, `await foreach (Candlestick candlestick in GetCandlesticksAsync(...))` inside the loop.
-                        // And `GetCandlesticksAsync` calls `okxHttpService.GetCandlesticksAsync` ONCE.
-                        // So it is fundamentally fetching ONE batch of 100 candles every minute?
-                        // Yes, looks like a synchronization of RECENT candles, not full history.
 
                         let! batch = fetchBatch startFrom
 
@@ -159,13 +132,9 @@ type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogge
                                 )
 
                     if candlesticks.Count > 0 then
-                        let! saved = candlestickService.SaveCandlesticksAsync(candlesticks, stoppingToken)
+                        let! saved = candlestickStore.Save(candlesticks |> Seq.toList)
 
-                        logger.LogInformation(
-                            "Saved batch of {Count} candlesticks. Latest: {LatestTimestamp}.",
-                            saved,
-                            candlesticks |> Seq.map _.Timestamp |> Seq.max
-                        )
+                        logger.LogInformation("Saved batch of {Count} candlesticks. Latest: {LatestTimestamp}.", saved, candlesticks |> Seq.map _.Timestamp |> Seq.max)
 
                         candlesticks.Clear()
         }

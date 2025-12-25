@@ -13,7 +13,6 @@ open System.Data
 open Warehouse.App.Functional
 open Warehouse.Core.Infrastructure.Common
 open Warehouse.Core.Infrastructure.Persistence.Migrations
-open Warehouse.Core.Markets.Concrete.Okx
 
 let ensureDbReadiness (serviceProvider: IServiceProvider) =
     task {

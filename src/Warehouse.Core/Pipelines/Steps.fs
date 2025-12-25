@@ -3,9 +3,10 @@ namespace Warehouse.Core.Pipelines
 open System
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Pipelines.Parameters
+open Warehouse.Core.Pipelines
 
 module Steps =
+    open Parameters
 
     type StepResult<'ctx> =
         | Continue of 'ctx * message: string

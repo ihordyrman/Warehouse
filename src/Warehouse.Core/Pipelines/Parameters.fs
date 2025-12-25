@@ -35,7 +35,6 @@ module Parameters =
 
     type ValidatedParams = private { Values: Map<string, ParamValue> }
 
-
     module ValidatedParams =
         let tryGet key (param: ValidatedParams) = Map.tryFind key param.Values
 

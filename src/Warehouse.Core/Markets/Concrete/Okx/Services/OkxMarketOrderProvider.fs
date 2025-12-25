@@ -2,13 +2,14 @@ namespace Warehouse.Core.Markets.Concrete.Okx.Services
 
 open System.Globalization
 open Microsoft.Extensions.Logging
+open Warehouse.Core.Markets.Concrete.Okx
 open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.Okx
 open Warehouse.Core.Orders.Contracts
 open Warehouse.Core.Orders.Domain
 open Warehouse.Core.Shared.Errors
 
-type OkxMarketOrderProvider(httpService: OkxHttpService, logger: ILogger<OkxMarketOrderProvider>) =
+type OkxMarketOrderProvider(http: OkxHttp.T, logger: ILogger) =
 
     let toOkxSide (side: OrderSide) =
         match side with
@@ -50,7 +51,7 @@ type OkxMarketOrderProvider(httpService: OkxHttpService, logger: ILogger<OkxMark
                      | None -> "None")
                 )
 
-                let! result = httpService.PlaceOrderAsync(request)
+                let! result = http.placeOrder request
 
                 match result with
                 | Ok result ->

@@ -31,3 +31,9 @@ module CompositionRoot =
         let okxProvider = OkxBalanceProvider.create okxHttp okxLogger
 
         BalanceManager.create [ okxProvider ]
+
+    let createCandlestickStore (services: IServiceProvider) : CandlestickStore.T =
+        let serviceScopeFactory = services.GetRequiredService<IServiceScopeFactory>()
+        use scope = serviceScopeFactory.CreateScope()
+
+        CandlestickStore.create scope

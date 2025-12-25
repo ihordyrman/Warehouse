@@ -1,13 +1,10 @@
 namespace Warehouse.Core.Markets.Contracts
 
 open System
-open System.Collections.Generic
 open System.Collections.Frozen
 open System.Threading
 open System.Threading.Tasks
 open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Shared.Domain
-open Warehouse.Core.Shared.Errors
 
 [<CLIMutable>]
 type Balance =
@@ -62,20 +59,3 @@ type IMarketAdapter =
 type IMarketDataCache =
     abstract member GetData: symbol: string * marketType: MarketType -> MarketData option
     abstract member Update: marketDataEvent: MarketDataEvent -> unit
-
-type ICandlestickService =
-    abstract member SaveCandlesticksAsync:
-        candlesticks: IEnumerable<Candlestick> * cancellationToken: CancellationToken -> Task<int>
-
-    abstract member GetCandlesticksAsync:
-        symbol: string *
-        marketType: MarketType *
-        timeframe: string *
-        fromDate: Nullable<DateTime> *
-        toDate: Nullable<DateTime> *
-        limit: Nullable<int> ->
-            IAsyncEnumerable<Candlestick>
-
-    abstract member GetLatestCandlestickAsync:
-        symbol: string * marketType: MarketType * timeframe: string * cancellationToken: CancellationToken ->
-            Task<Candlestick option>

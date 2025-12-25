@@ -4,6 +4,7 @@ open System
 open System.Threading
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
+open Warehouse.Core
 open Warehouse.Core.Infrastructure.WebSockets
 open Warehouse.Core.Markets.Contracts
 open Warehouse.Core.Markets.Domain
@@ -27,12 +28,16 @@ type OkxMarketAdapter
 
     let credentials =
         use scope = scopeFactory.CreateScope()
+        let store = CompositionRoot.createCredentialsStore scope.ServiceProvider
 
-        scope.ServiceProvider
-            .GetRequiredService<ICredentialsProvider>()
-            .GetCredentialsAsync(MarketType.Okx, CancellationToken.None)
-            .GetAwaiter()
-            .GetResult()
+        store.GetCredentials MarketType.Okx CancellationToken.None
+        |> Async.AwaitTask
+        |> Async.RunSynchronously
+        |> function
+            | Ok creds -> Some creds
+            | Error err ->
+                logger.LogWarning("No credentials found for OKX: {Error}", err)
+                None
 
     let connectionManager =
         new OkxConnectionManager(webSocketClient, heartbeatService, loggerFactory.CreateLogger<OkxConnectionManager>())
@@ -64,14 +69,17 @@ type OkxMarketAdapter
 
     let getConnectionUri (channelType: OkxChannelType) =
         let endpoints =
-            if credentials.Value.IsSandbox then
-                match channelType with
-                | Public -> SocketEndpoints.DEMO_PUBLIC_WS_URL
-                | Private -> SocketEndpoints.DEMO_PRIVATE_WS_URL
-            else
-                match channelType with
-                | Public -> SocketEndpoints.PUBLIC_WS_URL
-                | Private -> SocketEndpoints.PRIVATE_WS_URL
+            match credentials with
+            | None -> SocketEndpoints.PUBLIC_WS_URL
+            | Some credentials ->
+                if credentials.IsSandbox then
+                    match channelType with
+                    | Public -> SocketEndpoints.DEMO_PUBLIC_WS_URL
+                    | Private -> SocketEndpoints.DEMO_PRIVATE_WS_URL
+                else
+                    match channelType with
+                    | Public -> SocketEndpoints.PUBLIC_WS_URL
+                    | Private -> SocketEndpoints.PRIVATE_WS_URL
 
         Uri(endpoints)
 
