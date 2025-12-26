@@ -15,13 +15,13 @@ open Polly
 module OkxServices =
     let AddOkxSupport (services: IServiceCollection, configuration: IConfiguration) =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore
+        services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 
         // todo: refactor to use F#-ish modules
         services.AddSingleton<IWebSocketClient, WebSocketClient>() |> ignore
         services.AddSingleton<OkxHeartbeatService>() |> ignore
         services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>() |> ignore
         services.AddSingleton<OkxMarketAdapter>() |> ignore
-        services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 
         services
             .AddHttpClient(
