@@ -37,3 +37,7 @@ module CompositionRoot =
     let createWebSocketClient (services: IServiceProvider) : WebSocketClient.T =
         let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("WebSocket")
         WebSocketClient.create logger
+
+    let createHeartbeat (services: IServiceProvider) (client: WebSocketClient.T) : OkxHeartbeat.T =
+        let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OkxHeartbeat")
+        OkxHeartbeat.create logger client
