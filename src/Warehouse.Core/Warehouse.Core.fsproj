@@ -46,8 +46,8 @@
         <Compile Include="Pipelines\StepRegistry.fs" />
         <Compile Include="Pipelines\PipelineBuilder.fs" />
         <Compile Include="Pipelines\TradingSteps.fs" />
-        <Compile Include="CompositionRoot.fs" />
         <Compile Include="Synchronization.fs" />
+        <Compile Include="CompositionRoot.fs" />
         <Compile Include="OkxMarketAdapter.fs" />
         <Compile Include="OkxServices.fs" />
     </ItemGroup>

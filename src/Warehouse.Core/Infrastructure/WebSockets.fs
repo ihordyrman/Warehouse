@@ -5,246 +5,223 @@ open System.Net.WebSockets
 open System.Threading
 open System.Threading.Tasks
 open System.Buffers
-open System.Collections.Generic
 open System.Text
 open System.Text.Json
 open Microsoft.Extensions.Logging
 
-type WebSocketMessage = { Text: string option; Binary: byte[] option; Type: WebSocketMessageType }
-type WebSocketError = { Exception: Exception; Message: string }
+type WebSocketMessage =
+    | Text of string
+    | Binary of byte[]
 
-type IWebSocketClient =
-    inherit IDisposable
-    abstract member State: WebSocketState
+type WebSocketEvent =
+    | Connected
+    | Disconnected of reason: string
+    | MessageReceived of WebSocketMessage
+    | Error of exn
 
-    [<CLIEvent>]
-    abstract member MessageReceived: IEvent<WebSocketMessage>
+type WebSocketCommand =
+    | Connect of uri: Uri * AsyncReplyChannel<Result<unit, exn>>
+    | Disconnect of reason: string * AsyncReplyChannel<uint>
+    | Send of byte[] * WebSocketMessageType * AsyncReplyChannel<Result<unit, exn>>
+    | GetState of AsyncReplyChannel<WebSocketState>
 
-    [<CLIEvent>]
-    abstract member ErrorOccurred: IEvent<WebSocketError>
+module MessageProcessing =
+    let assembleMessage (chunks: (byte[] * int) list) (finalChunk: byte[] * int) : byte[] =
+        let allChunks = chunks @ [ finalChunk ]
+        let totalLength = allChunks |> List.sumBy snd
+        let result = Array.zeroCreate<byte> totalLength
 
-    [<CLIEvent>]
-    abstract member StateChanged: IEvent<WebSocketState>
+        let mutable position = 0
 
-    abstract member ConnectAsync: uri: Uri * ?cancellationToken: CancellationToken -> Task
-    abstract member DisconnectAsync: ?reason: string * ?cancellationToken: CancellationToken -> Task
-    abstract member SendAsync: message: string * ?cancellationToken: CancellationToken -> Task
-    abstract member SendAsync<'T when 'T: not struct> : message: 'T * ?cancellationToken: CancellationToken -> Task
+        for (data, length) in allChunks do
+            Array.Copy(data, 0, result, position, length)
+            position <- position + length
 
+        result
 
-type WebSocketClient(logger: ILogger<WebSocketClient>) =
-    let arrayPool = ArrayPool<byte>.Shared
-    let sendSemaphore = new SemaphoreSlim(1, 1)
-    let webSocket = new ClientWebSocket()
+    let toWebSocketMessage (messageType: WebSocketMessageType) (data: byte[]) : WebSocketMessage option =
+        match messageType with
+        | WebSocketMessageType.Text -> Some(Text(Encoding.UTF8.GetString(data)))
+        | WebSocketMessageType.Binary -> Some(Binary data)
+        | _ -> None
 
-    let mutable disposed = false
-    let mutable listenCts: CancellationTokenSource option = None
-    let mutable listenTask: Task option = None
+module WebSocketClient =
 
-    let messageReceived = Event<WebSocketMessage>()
-    let errorOccurred = Event<WebSocketError>()
-    let stateChanged = Event<WebSocketState>()
+    type State = { Socket: ClientWebSocket; ListenCts: CancellationTokenSource option; IsDisposed: bool }
 
-    let raiseError ex message = errorOccurred.Trigger { Exception = ex; Message = message }
-
-    let sendAsyncInternal (data: byte[]) (messageType: WebSocketMessageType) (ct: CancellationToken) =
-        task {
-            if webSocket.State <> WebSocketState.Open then
-                invalidOp $"Cannot send message. WebSocket state: {webSocket.State}"
-
-            do! sendSemaphore.WaitAsync(ct)
-
-            try
-                do! webSocket.SendAsync(ArraySegment<byte>(data), messageType, true, ct)
-                logger.LogDebug("Message sent ({Size} bytes)", data.Length)
-            finally
-                sendSemaphore.Release() |> ignore
+    type T =
+        {
+            Connect: Uri -> CancellationToken -> Task<Result<unit, exn>>
+            Disconnect: string -> CancellationToken -> Task<unit>
+            Send: string -> CancellationToken -> Task<Result<unit, exn>>
+            SendBytes: byte[] -> CancellationToken -> Task<Result<unit, exn>>
+            SendJson: obj -> CancellationToken -> Task<Result<unit, exn>>
+            GetState: unit -> WebSocketState
+            Events: IObservable<WebSocketEvent>
+            Dispose: unit -> unit
         }
 
-    let handleCloseAsync (ct: CancellationToken) =
-        task {
-            do! webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", ct)
-            stateChanged.Trigger WebSocketState.Closed
-            logger.LogInformation("WebSocket connection closed")
-        }
+    let create (logger: ILogger) : T =
 
-    let processMessage (result: WebSocketReceiveResult) (buffer: byte[]) (chunks: List<byte[] * int>) =
-        if not result.EndOfMessage then
-            let chunk = arrayPool.Rent(result.Count)
-            Array.Copy(buffer, 0, chunk, 0, result.Count)
-            chunks.Add((chunk, result.Count))
-        else
-            try
-                let messageData =
-                    if chunks.Count > 0 then
-                        let lastChunk = arrayPool.Rent(result.Count)
-                        Array.Copy(buffer, 0, lastChunk, 0, result.Count)
-                        chunks.Add((lastChunk, result.Count))
+        let eventSubject = Event<WebSocketEvent>()
+        let arrayPool = ArrayPool<byte>.Shared
+        let sendLock = new SemaphoreSlim(1, 1)
 
-                        let totalLength = chunks |> Seq.sumBy snd
-                        let data = Array.zeroCreate<byte> totalLength
+        let mutable socket = new ClientWebSocket()
+        let mutable listenCts: CancellationTokenSource option = None
+        let mutable disposed = false
 
-                        let mutable position = 0
+        let raiseEvent evt = eventSubject.Trigger evt
 
-                        for array, length in chunks do
-                            Array.Copy(array, 0, data, position, length)
-                            position <- position + length
+        let receiveLoop (ws: ClientWebSocket) (ct: CancellationToken) =
+            task {
+                let buffer = arrayPool.Rent(4096)
+                let chunks = ResizeArray<byte[] * int>()
 
-                        data
-                    else
-                        let data = Array.zeroCreate<byte> result.Count
-                        Array.Copy(buffer, 0, data, 0, result.Count)
-                        data
-
-                let message =
-                    {
-                        Type = result.MessageType
-                        Binary = if result.MessageType = WebSocketMessageType.Binary then Some messageData else None
-                        Text =
-                            if result.MessageType = WebSocketMessageType.Text then
-                                Some(Encoding.UTF8.GetString(messageData))
-                            else
-                                None
-                    }
-
-                messageReceived.Trigger message
-            finally
-                for array, _ in chunks do
-                    arrayPool.Return(array)
-
-                chunks.Clear()
-
-    let listenAsync (ct: CancellationToken) =
-        task {
-            let buffer = arrayPool.Rent(4096)
-            let chunks = List<byte[] * int>()
-
-            try
-                while webSocket.State = WebSocketState.Open && not ct.IsCancellationRequested do
-                    try
-                        let! result = webSocket.ReceiveAsync(ArraySegment<byte>(buffer), ct)
-
-                        if result.MessageType = WebSocketMessageType.Close then
-                            do! handleCloseAsync ct
-                        else
-                            processMessage result buffer chunks
-                    with
-                    | :? OperationCanceledException -> ()
-                    | ex ->
-                        logger.LogError(ex, "Error receiving message")
-                        raiseError ex ex.Message
-            finally
-                arrayPool.Return(buffer)
-
-                for array, _ in chunks do
-                    arrayPool.Return(array)
-        }
-
-    member _.State = webSocket.State
-
-    [<CLIEvent>]
-    member _.MessageReceived = messageReceived.Publish
-
-    [<CLIEvent>]
-    member _.ErrorOccurred = errorOccurred.Publish
-
-    [<CLIEvent>]
-    member _.StateChanged = stateChanged.Publish
-
-    member _.ConnectAsync(uri: Uri, ?cancellationToken: CancellationToken) =
-        task {
-            if webSocket.State = WebSocketState.Open then
-                invalidOp "WebSocket is already connected"
-
-            try
-                let ct = defaultArg cancellationToken CancellationToken.None
-
-                do! webSocket.ConnectAsync(uri, ct)
-                logger.LogInformation("Connected to {Uri}", uri)
-                stateChanged.Trigger WebSocketState.Open
-
-                let cts = new CancellationTokenSource()
-                listenCts <- Some cts
-                listenTask <- Some(Task.Run(Func<Task>(fun () -> listenAsync cts.Token), cts.Token))
-            with ex ->
-                logger.LogError(ex, "Failed to connect to {Uri}", uri)
-                raiseError ex ex.Message
-        }
-
-    member _.DisconnectAsync(?reason: string, ?cancellationToken: CancellationToken) =
-        let ct = defaultArg cancellationToken CancellationToken.None
-
-        task {
-            if webSocket.State = WebSocketState.Open then
                 try
-                    let closeReason = defaultArg reason "Closing connection"
-                    do! webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, closeReason, ct)
+                    while ws.State = WebSocketState.Open && not ct.IsCancellationRequested do
+                        try
+                            let! result = ws.ReceiveAsync(ArraySegment<byte>(buffer), ct)
 
-                    match listenCts with
-                    | Some cts -> do! cts.CancelAsync()
-                    | None -> ()
+                            match result.MessageType with
+                            | WebSocketMessageType.Close ->
+                                raiseEvent (Disconnected "Server closed connection")
+                                return ()
 
-                    match listenTask with
-                    | Some t -> do! t
-                    | None -> ()
+                            | _ when not result.EndOfMessage ->
+                                let chunk = arrayPool.Rent(result.Count)
+                                Array.Copy(buffer, 0, chunk, 0, result.Count)
+                                chunks.Add((chunk, result.Count))
 
-                    stateChanged.Trigger WebSocketState.Closed
+                            | msgType ->
+                                let messageData =
+                                    if chunks.Count > 0 then
+                                        let finalChunk = Array.zeroCreate result.Count
+                                        Array.Copy(buffer, 0, finalChunk, 0, result.Count)
+
+                                        let assembled =
+                                            MessageProcessing.assembleMessage
+                                                (chunks |> Seq.toList)
+                                                (finalChunk, result.Count)
+
+                                        for arr, _ in chunks do
+                                            arrayPool.Return(arr)
+
+                                        chunks.Clear()
+                                        assembled
+                                    else
+                                        let data = Array.zeroCreate result.Count
+                                        Array.Copy(buffer, 0, data, 0, result.Count)
+                                        data
+
+                                match MessageProcessing.toWebSocketMessage msgType messageData with
+                                | Some msg -> raiseEvent (MessageReceived msg)
+                                | None -> ()
+
+                        with
+                        | :? OperationCanceledException -> ()
+                        | ex ->
+                            logger.LogError(ex, "Error in receive loop")
+                            raiseEvent (Error ex)
+                finally
+                    arrayPool.Return(buffer)
+
+                    for arr, _ in chunks do
+                        arrayPool.Return(arr)
+            }
+
+        let connectAsync (uri: Uri) (ct: CancellationToken) : Task<Result<unit, exn>> =
+            task {
+                try
+                    if socket.State = WebSocketState.Open then
+                        logger.LogInformation("Already connected to {Uri}", uri)
+                        return Result.Error(InvalidOperationException("WebSocket is already connected") :> exn)
+                    else
+                        if socket.State <> WebSocketState.None then
+                            socket.Dispose()
+                            socket <- new ClientWebSocket()
+
+                        do! socket.ConnectAsync(uri, ct)
+                        logger.LogInformation("Connected to {Uri}", uri)
+                        raiseEvent Connected
+
+                        let cts = new CancellationTokenSource()
+                        listenCts <- Some cts
+                        Task.Run(fun () -> receiveLoop socket cts.Token, cts.Token) |> ignore
+
+                        return Ok()
                 with ex ->
-                    logger.LogError(ex, "Error during disconnect")
-                    raiseError ex ex.Message
-        }
+                    logger.LogError(ex, "Failed to connect to {Uri}", uri)
+                    raiseEvent (Error ex)
+                    return Result.Error ex
+            }
 
-    member this.SendAsync(message: string, ?cancellationToken: CancellationToken) =
-        let ct = defaultArg cancellationToken CancellationToken.None
-        let bytes = Encoding.UTF8.GetBytes(message)
-        sendAsyncInternal bytes WebSocketMessageType.Text ct
+        let disconnectAsync (reason: string) (ct: CancellationToken) =
+            task {
+                try
+                    listenCts
+                    |> Option.iter (fun cts ->
+                        cts.Cancel()
+                        cts.Dispose()
+                    )
 
-    member this.SendAsync<'T when 'T: not struct>(message: 'T, ?cancellationToken: CancellationToken) =
-        let ct = defaultArg cancellationToken CancellationToken.None
-        let json = JsonSerializer.Serialize(message)
-        this.SendAsync(json, ct)
+                    listenCts <- None
 
-    interface IWebSocketClient with
-        member this.State = this.State
+                    if socket.State = WebSocketState.Open then
+                        do! socket.CloseAsync(WebSocketCloseStatus.NormalClosure, reason, ct)
+                        logger.LogInformation("Disconnected: {Reason}", reason)
 
-        [<CLIEvent>]
-        member this.MessageReceived = this.MessageReceived
+                    raiseEvent (Disconnected reason)
+                with ex ->
+                    logger.LogWarning(ex, "Error during disconnect")
+            }
 
-        [<CLIEvent>]
-        member this.ErrorOccurred = this.ErrorOccurred
+        let sendBytesAsync (data: byte[]) (msgType: WebSocketMessageType) (ct: CancellationToken) =
+            task {
+                if socket.State <> WebSocketState.Open then
+                    return Result.Error(InvalidOperationException($"Cannot send. State: {socket.State}") :> exn)
+                else
+                    try
+                        do! sendLock.WaitAsync(ct)
 
-        [<CLIEvent>]
-        member this.StateChanged = this.StateChanged
+                        try
+                            do! socket.SendAsync(ArraySegment<byte>(data), msgType, true, ct)
+                            logger.LogDebug("Sent {Size} bytes", data.Length)
+                            return Ok()
+                        finally
+                            sendLock.Release() |> ignore
+                    with ex ->
+                        logger.LogError(ex, "Send failed")
+                        return Result.Error ex
+            }
 
-        member this.ConnectAsync(uri, ct) =
-            let ct = defaultArg ct CancellationToken.None
-            this.ConnectAsync(uri, ct)
-
-        member this.DisconnectAsync(reason, ct) =
-            let ct = defaultArg ct CancellationToken.None
-            let reason = defaultArg reason ""
-            this.DisconnectAsync(reason, ct)
-
-        member this.SendAsync(message, ct) =
-            match ct with
-            | Some token -> this.SendAsync(message, token) :> Task
-            | None -> this.SendAsync(message) :> Task
-
-        member this.SendAsync<'T when 'T: not struct>(message: 'T, ct) =
-            match ct with
-            | Some token -> this.SendAsync<'T>(message, token) :> Task
-            | None -> this.SendAsync<'T>(message) :> Task
-
-    interface IDisposable with
-        member this.Dispose() =
+        let dispose () =
             if not disposed then
                 disposed <- true
 
-                try
-                    this.DisconnectAsync().GetAwaiter().GetResult()
-                with ex ->
-                    logger.LogWarning(ex, "Error during dispose")
+                listenCts
+                |> Option.iter (fun cts ->
+                    cts.Cancel()
+                    cts.Dispose()
+                )
 
-                listenCts |> Option.iter _.Dispose()
-                webSocket.Dispose()
-                sendSemaphore.Dispose()
+                socket.Dispose()
+                sendLock.Dispose()
+
+        {
+            Connect = connectAsync
+            Disconnect = disconnectAsync
+            Send =
+                fun text ct ->
+                    let bytes = Encoding.UTF8.GetBytes(text)
+                    sendBytesAsync bytes WebSocketMessageType.Text ct
+            SendBytes = fun bytes -> sendBytesAsync bytes WebSocketMessageType.Binary
+            SendJson =
+                fun obj ct ->
+                    let json = JsonSerializer.Serialize(obj)
+                    let bytes = Encoding.UTF8.GetBytes(json)
+                    sendBytesAsync bytes WebSocketMessageType.Text ct
+            GetState = fun () -> socket.State
+            Events = eventSubject.Publish
+            Dispose = dispose
+        }

@@ -6,7 +6,6 @@ open System.Net.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Infrastructure.WebSockets
 open Warehouse.Core.Markets.Concrete.Okx.Services
 open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Orders.Contracts
@@ -18,7 +17,6 @@ module OkxServices =
         services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 
         // todo: refactor to use F#-ish modules
-        services.AddSingleton<IWebSocketClient, WebSocketClient>() |> ignore
         services.AddSingleton<OkxHeartbeatService>() |> ignore
         services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>() |> ignore
         services.AddSingleton<OkxMarketAdapter>() |> ignore
