@@ -5,7 +5,6 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open System
 open System.Data
-open Warehouse.Core.Orders.Contracts
 open Warehouse.Core.Orders.Domain
 open Warehouse.Core.Pipelines
 open Warehouse.Core.Pipelines.Domain

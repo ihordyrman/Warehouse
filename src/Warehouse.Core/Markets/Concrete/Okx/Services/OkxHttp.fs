@@ -106,7 +106,7 @@ module OkxHttp =
 
                 if not response.IsSuccessStatusCode then
                     let! err = response.Content.ReadAsStringAsync()
-                    return Error(ApiError($"HTTP {int response.StatusCode}: {err}", Some response.StatusCode))
+                    return Error(ApiError($"HTTP {int response.StatusCode}: {err}", Some(int response.StatusCode)))
                 else
                     let! json = response.Content.ReadAsStringAsync()
                     let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T>>(json, jsonOpts)

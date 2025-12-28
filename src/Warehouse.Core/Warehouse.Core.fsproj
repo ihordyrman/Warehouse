@@ -17,7 +17,7 @@
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Configurations.fs" />
 
-        <Compile Include="Orders\Contracts.fs" />
+        <Compile Include="Orders\MarketOrderProvider.fs" />
 
         <Compile Include="Markets\Contracts.fs" />
 
@@ -36,7 +36,7 @@
         <Compile Include="Markets\Concrete\Okx\Services\OkxHeartbeat.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxSubscriptionManager.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxMessageProcessor.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxMarketOrderProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\Services\OkxOrderProvider.fs" />
         <Compile Include="Markets\Concrete\Okx\Services\OkxBalanceProvider.fs" />
         <Compile Include="Markets\CandlestickStore.fs" />
         <Compile Include="Pipelines\Parameters.fs" />
@@ -46,8 +46,9 @@
         <Compile Include="Pipelines\StepRegistry.fs" />
         <Compile Include="Pipelines\PipelineBuilder.fs" />
         <Compile Include="Pipelines\TradingSteps.fs" />
-        <Compile Include="Synchronization.fs" />
+        <Compile Include="OrdersManager.fs" />
         <Compile Include="CompositionRoot.fs" />
+        <Compile Include="Synchronization.fs" />
         <Compile Include="OkxMarketAdapter.fs" />
         <Compile Include="OkxServices.fs" />
     </ItemGroup>

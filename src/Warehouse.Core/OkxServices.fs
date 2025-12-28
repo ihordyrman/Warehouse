@@ -8,7 +8,6 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Markets.Concrete.Okx.Services
 open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Orders.Contracts
 open Polly
 
 module OkxServices =
@@ -17,8 +16,6 @@ module OkxServices =
         services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 
         // todo: refactor to use F#-ish modules
-        services.AddSingleton<OkxHeartbeatService>() |> ignore
-        services.AddScoped<IMarketOrderProvider, OkxMarketOrderProvider>() |> ignore
         services.AddSingleton<OkxMarketAdapter>() |> ignore
 
         services

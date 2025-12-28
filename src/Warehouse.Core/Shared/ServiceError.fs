@@ -1,11 +1,10 @@
 namespace Warehouse.Core.Shared
 
-open System.Net
 open Warehouse.Core.Markets.Domain
 
 module Errors =
     type ExternalError =
-        | HttpError of message: string * statusCode: HttpStatusCode option
+        | HttpError of message: string * statusCode: int option
         | Timeout of operation: string
         | Unexpected of exn
 
@@ -16,7 +15,7 @@ module Errors =
         | Unexpected ex -> ex.Message
 
     type ServiceError =
-        | ApiError of message: string * statusCode: HttpStatusCode option
+        | ApiError of message: string * statusCode: int option
         | NotFound of entity: string
         | NoProvider of MarketType
         | Unexpected of exn

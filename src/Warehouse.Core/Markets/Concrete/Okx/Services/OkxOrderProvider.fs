@@ -3,13 +3,13 @@ namespace Warehouse.Core.Markets.Concrete.Okx.Services
 open System.Globalization
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Markets.Concrete.Okx
-open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.Okx
-open Warehouse.Core.Orders.Contracts
+open Warehouse.Core.Orders
 open Warehouse.Core.Orders.Domain
-open Warehouse.Core.Shared.Errors
+open Warehouse.Core.Shared
 
-type OkxMarketOrderProvider(http: OkxHttp.T, logger: ILogger) =
+module OkxOrderProvider =
+    open Errors
 
     let toOkxSide (side: OrderSide) =
         match side with
@@ -33,10 +33,8 @@ type OkxMarketOrderProvider(http: OkxHttp.T, logger: ILogger) =
             TargetCurrency = None
         }
 
-    interface IMarketOrderProvider with
-        member this.MarketType = MarketType.Okx
-
-        member this.ExecuteOrderAsync(order, cancellationToken) =
+    let create (http: OkxHttp.T) (logger: ILogger) : MarketOrderProvider.T =
+        let executeOrder (order: Order) _ =
             task {
                 let request = mapToRequest order
 
@@ -54,29 +52,13 @@ type OkxMarketOrderProvider(http: OkxHttp.T, logger: ILogger) =
                 let! result = http.placeOrder request
 
                 match result with
-                | Ok result ->
-                    if not result.IsSuccess then
-                        logger.LogError(
-                            "OKX rejected order: {Code} - {Message}",
-                            result.StatusCode,
-                            result.StatusMessage
-                        )
-
-                        return Error(ServiceError.ApiError($"OKX order rejected: {result.StatusMessage}", None))
-                    else
-                        logger.LogInformation(
-                            "Order placed successfully. ExchangeOrderId={OrderId}, ClientOrderId={ClientOrderId}",
-                            result.OrderId,
-                            result.ClientOrderId
-                        )
-
-                        return Ok(result.OrderId)
-                | Error e ->
-                    match e with
-                    | ServiceError.ApiError(message, x) ->
-                        logger.LogError("Error placing order: {Error}", message)
-                        return Error(ServiceError.ApiError(message, x))
-                    | _ ->
-                        logger.LogError("Error placing order")
-                        return Error(ServiceError.ApiError("Error placing order", None))
+                | Ok response when response.IsSuccess ->
+                    logger.LogInformation("Order placed: {OrderId}", response.OrderId)
+                    return Ok response.OrderId
+                | Ok response ->
+                    logger.LogError("OKX rejected: {Message}", response.StatusMessage)
+                    return Error(ApiError(response.StatusMessage, Some(int response.StatusCode)))
+                | Error err -> return Error err
             }
+
+        MarketOrderProvider.Okx executeOrder

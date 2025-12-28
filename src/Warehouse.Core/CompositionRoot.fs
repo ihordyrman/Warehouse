@@ -1,6 +1,7 @@
 namespace Warehouse.Core
 
 open System
+open System.Data
 open System.Net.Http
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
@@ -9,6 +10,8 @@ open Warehouse.Core.Markets
 open Warehouse.Core.Markets.BalanceManager
 open Warehouse.Core.Markets.Concrete.Okx
 open Warehouse.Core.Markets.Concrete.Okx.Services
+open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Orders
 
 module CompositionRoot =
     let createCredentialsStore (services: IServiceProvider) : CredentialsStore.T =
@@ -41,3 +44,18 @@ module CompositionRoot =
     let createHeartbeat (services: IServiceProvider) (client: WebSocketClient.T) : OkxHeartbeat.T =
         let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OkxHeartbeat")
         OkxHeartbeat.create logger client
+
+    let createOrderProviders (services: IServiceProvider) : MarketOrderProvider.T list =
+        let okxHttp = createOkxHttp services
+        let okxLogger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OkxOrderProvider")
+
+        [ OkxOrderProvider.create okxHttp okxLogger ]
+
+    let createOrderManager (services: IServiceProvider) : OrdersManager.T =
+        let scopeFactory = services.GetRequiredService<IServiceScopeFactory>()
+        use scope = scopeFactory.CreateScope()
+        let db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+        let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OrderManager")
+        let providers = createOrderProviders services
+
+        OrdersManager.create db providers logger
