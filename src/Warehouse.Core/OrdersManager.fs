@@ -10,6 +10,7 @@ open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Orders.Domain
 open Warehouse.Core.Shared
 
+[<CLIMutable>]
 type CreateOrderRequest =
     {
         PipelineId: int option
@@ -24,6 +25,7 @@ type CreateOrderRequest =
         ExpireTime: DateTime option
     }
 
+[<CLIMutable>]
 type OrderHistoryFilter =
     {
         PipelineId: int option
@@ -35,6 +37,7 @@ type OrderHistoryFilter =
         ToDate: DateTime option
     }
 
+[<CLIMutable>]
 type UpdateOrderRequest =
     {
         Quantity: decimal option
@@ -389,26 +392,26 @@ module OrdersManager =
 
     type T =
         {
-            CreateOrder: CreateOrderRequest -> Task<Result<Order, ServiceError>>
-            ExecuteOrder: int64 -> CancellationToken -> Task<Result<Order, ServiceError>>
-            UpdateOrder: int64 -> UpdateOrderRequest -> Task<Result<Order, ServiceError>>
-            CancelOrder: int64 -> string option -> Task<Result<Order, ServiceError>>
-            GetOrder: int64 -> Task<Order option>
-            GetOrders: int -> OrderStatus option -> Task<Order list>
-            GetOrderHistory: int -> int -> OrderHistoryFilter option -> Task<Order list>
-            GetOrderByExchangeId: string -> MarketType -> Task<Order option>
-            GetTotalExposure: MarketType option -> Task<decimal>
+            createOrder: CreateOrderRequest -> Task<Result<Order, ServiceError>>
+            executeOrder: int64 -> CancellationToken -> Task<Result<Order, ServiceError>>
+            updateOrder: int64 -> UpdateOrderRequest -> Task<Result<Order, ServiceError>>
+            cancelOrder: int64 -> string option -> Task<Result<Order, ServiceError>>
+            getOrder: int64 -> Task<Order option>
+            getOrders: int -> OrderStatus option -> Task<Order list>
+            getOrderHistory: int -> int -> OrderHistoryFilter option -> Task<Order list>
+            getOrderByExchangeId: string -> MarketType -> Task<Order option>
+            getTotalExposure: MarketType option -> Task<decimal>
         }
 
     let create (db: IDbConnection) (providers: MarketOrderProvider.T list) (logger: ILogger) : T =
         {
-            CreateOrder = createOrder db logger
-            ExecuteOrder = executeOrder db providers logger
-            UpdateOrder = updateOrderFields db logger
-            CancelOrder = cancelOrder db logger
-            GetOrder = getOrder db
-            GetOrders = getOrders db
-            GetOrderHistory = getOrderHistory db
-            GetOrderByExchangeId = getOrderByExchangeId db
-            GetTotalExposure = getTotalExposure db
+            createOrder = createOrder db logger
+            executeOrder = executeOrder db providers logger
+            updateOrder = updateOrderFields db logger
+            cancelOrder = cancelOrder db logger
+            getOrder = getOrder db
+            getOrders = getOrders db
+            getOrderHistory = getOrderHistory db
+            getOrderByExchangeId = getOrderByExchangeId db
+            getTotalExposure = getTotalExposure db
         }

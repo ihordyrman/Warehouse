@@ -49,7 +49,7 @@ type OkxSubscriptionManager(connectionManager: OkxConnectionManager, logger: ILo
                         let request = {| op = "subscribe"; args = [| {| channel = channel; instId = symbol |} |] |}
                         do! connectionManager.SendAsync(request, ct)
 
-                        subscriptions.[key] <- { Channel = channel; Symbol = symbol; SubscribedAt = DateTime.UtcNow }
+                        subscriptions[key] <- { Channel = channel; Symbol = symbol; SubscribedAt = DateTime.UtcNow }
                         logger.LogInformation("Subscribed to {Channel} for {Symbol}", channel, symbol)
                         return true
                 with ex ->

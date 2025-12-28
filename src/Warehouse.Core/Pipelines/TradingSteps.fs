@@ -5,6 +5,8 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open System
 open System.Data
+open Warehouse.Core
+open Warehouse.Core.Orders
 open Warehouse.Core.Orders.Domain
 open Warehouse.Core.Pipelines
 open Warehouse.Core.Pipelines.Domain
@@ -66,15 +68,15 @@ module TradingSteps =
                     | TradingAction.Hold -> return Stop "No trade action required"
                     | TradingAction.Buy
                     | TradingAction.Sell ->
-                        use scope = services.CreateScope()
-                        let logger = scope.ServiceProvider.GetRequiredService<ILogger<_>>()
-                        let orderManager = scope.ServiceProvider.GetRequiredService<IOrderManager>()
+                        let orderManager = CompositionRoot.createOrderManager services
 
                         let side = if ctx.Action = TradingAction.Buy then OrderSide.Buy else OrderSide.Sell
                         let quantity = tradeAmount / ctx.CurrentPrice
 
-                        let request =
+                        let request: CreateOrderRequest =
                             {
+                                PipelineId = Some ctx.PipelineId
+                                MarketType = ctx.MarketType
                                 Symbol = ctx.Symbol
                                 Side = side
                                 Quantity = quantity
@@ -83,16 +85,12 @@ module TradingSteps =
                                 TakeProfit = Option.None
                                 StopLoss = Option.None
                                 ExpireTime = Option.None
-                                MarketType = ctx.MarketType
-                                PipelineId = Some ctx.PipelineId
                             }
 
-                        let! result = orderManager.CreateOrderAsync(request, ct)
+                        let! result = orderManager.createOrder request
 
                         match result with
-                        | Ok order ->
-                            logger.LogInformation("Order placed: {Id}", order.Id)
-                            return Continue(ctx, $"Order {order.Id} placed")
+                        | Ok order -> return Continue(ctx, $"Order {order.Id} placed")
                         | Error err -> return Fail $"Order failed: {err}"
                 }
 

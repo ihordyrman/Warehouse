@@ -10,7 +10,7 @@ open Npgsql
 open Serilog
 open System
 open System.Data
-open Warehouse.App.Functional
+open Warehouse.App
 open Warehouse.Core.Infrastructure.Common
 open Warehouse.Core.Infrastructure.Persistence.Migrations
 

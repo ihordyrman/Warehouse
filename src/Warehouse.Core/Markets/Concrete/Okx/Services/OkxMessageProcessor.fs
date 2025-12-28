@@ -15,11 +15,11 @@ type OkxMessageProcessor(logger: ILogger<OkxMessageProcessor>, marketDataCache: 
         match message.Arguments, message.Data with
         | Some args, Some dataArray when dataArray.Length > 0 ->
             let symbol = args.InstrumentId |> Option.defaultValue ""
-            let data = dataArray.[0]
+            let data = dataArray[0]
 
             match data.Asks, data.Bids with
             | Some asks, Some bids ->
-                marketDataCache.Update({ Symbol = symbol; Source = MarketType.Okx; Asks = asks; Bids = bids })
+                marketDataCache.Update { Symbol = symbol; Source = MarketType.Okx; Asks = asks; Bids = bids }
             | _ -> logger.LogWarning("Invalid market data for {Symbol}: missing asks or bids", symbol)
         | _ -> ()
 
