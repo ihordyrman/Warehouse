@@ -6,52 +6,53 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Domain\Entities.fs" />
+        <Compile Include="Domain\Common.fs" />
         <Compile Include="Domain\Markets.fs" />
-        <Compile Include="Domain\Pipelines.fs" />
         <Compile Include="Domain\Orders.fs" />
+        <Compile Include="Domain\Pipelines.fs" />
+        <Compile Include="Domain\Positions.fs" />
 
-        <Compile Include="Shared\ServiceError.fs" />
-
-        <Compile Include="Infrastructure\Persistence\Migrations\InitialMigration.fs" />
+        <Compile Include="Shared\Errors.fs" />
+        
+        <Compile Include="Infrastructure\Migrations\InitialMigration.fs" />
         <Compile Include="Infrastructure\WebSockets.fs" />
-        <Compile Include="Infrastructure\Configurations.fs" />
+        <Compile Include="Infrastructure\Settings.fs" />
 
-        <Compile Include="Markets\Contracts.fs" />
+        <Compile Include="Markets\Abstractions\Types.fs" />
+        <Compile Include="Markets\Abstractions\BalanceProvider.fs" />
+        <Compile Include="Markets\Abstractions\OrderExecutor.fs" />
+        
+        <Compile Include="Markets\Stores\CredentialsStore.fs" />
+        <Compile Include="Markets\Stores\CandlestickStore.fs" />
+        <Compile Include="Markets\Stores\LiveDataStore.fs" />
+        
+        <Compile Include="Markets\Exchanges\Okx\Constants.fs" />
+        <Compile Include="Markets\Exchanges\Okx\Types.fs" />
+        <Compile Include="Markets\Exchanges\Okx\Auth.fs" />
+        <Compile Include="Markets\Exchanges\Okx\Http.fs" />
+        <Compile Include="Markets\Exchanges\Okx\Heartbeat.fs" />
+        <Compile Include="Markets\Exchanges\Okx\MessageParser.fs" />
+        <Compile Include="Markets\Exchanges\Okx\BalanceProvider.fs" />
+        <Compile Include="Markets\Exchanges\Okx\OrderExecutor.fs" />
+        <Compile Include="Markets\Exchanges\Okx\Adapter.fs" />
 
-        <Compile Include="Markets\BalanceService.fs" />
-
-        <Compile Include="Markets\OrderService.fs" />
-
-        <Compile Include="Markets\BalanceManager.fs" />
-
-        <Compile Include="Markets\MarketDataCache.fs" />
-
-        <Compile Include="Markets\CredentialsStore.fs" />
-
-        <Compile Include="Markets\CandlestickStore.fs" />
-
-        <Compile Include="Markets\OrdersManager.fs" />
-        <Compile Include="Markets\Okx\Constants.fs" />
-        <Compile Include="Markets\Okx\Messages.fs" />
-        <Compile Include="Markets\Okx\OkxAuth.fs" />
-        <Compile Include="Markets\Okx\OkxHttp.fs" />
-        <Compile Include="Markets\Okx\OkxHeartbeat.fs" />
-        <Compile Include="Markets\Okx\OkxOrderProvider.fs" />
-        <Compile Include="Markets\Okx\OkxBalanceOperations.fs" />
-        <Compile Include="Markets\Okx\OkxMessages.fs" />
-        <Compile Include="Markets\Okx\OkxMarketAdapter.fs" />
-        <Compile Include="MarketConnections.fs" />
-        <Compile Include="CompositionRoot.fs" />
-        <Compile Include="Pipelines\Parameters.fs" />
-        <Compile Include="Pipelines\Steps.fs" />
-        <Compile Include="Pipelines\Trading.fs" />
-        <Compile Include="Pipelines\PipelineRunner.fs" />
-        <Compile Include="Pipelines\StepRegistry.fs" />
-        <Compile Include="Pipelines\PipelineBuilder.fs" />
-        <Compile Include="Pipelines\TradingSteps.fs" />
-        <Compile Include="Synchronization.fs" />
-        <Compile Include="CoreServices.fs" />
+        <Compile Include="Markets\Services\BalanceManager.fs" />
+        <Compile Include="Markets\Services\OrdersManager.fs" />
+        <Compile Include="Markets\Services\ConnectionManager.fs" />
+        
+        <Compile Include="Pipelines\Core\Parameters.fs" />
+        <Compile Include="Pipelines\Core\Steps.fs" />
+        <Compile Include="Pipelines\Core\Registry.fs" />
+        <Compile Include="Pipelines\Core\Builder.fs" />
+        <Compile Include="Pipelines\Core\Runner.fs" />
+        
+        <Compile Include="Pipelines\Trading\Context.fs" />
+        <Compile Include="Pipelines\Trading\TradingSteps.fs" />
+        
+        <Compile Include="Workers\Synchronization.fs" />
+        
+        <Compile Include="Composition\CompositionRoot.fs" />
+        <Compile Include="Composition\CoreServices.fs" />
     </ItemGroup>
 
     <ItemGroup>

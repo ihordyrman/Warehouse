@@ -9,11 +9,6 @@ type PipelineStatus =
     | Paused = 2
     | Error = 3
 
-type PositionStatus =
-    | Open = 0
-    | Closed = 1
-    | Cancelled = 2
-
 type Pipeline =
     {
         Id: int
@@ -40,23 +35,6 @@ and PipelineStep =
         Order: int
         IsEnabled: bool
         Parameters: Dictionary<string, string>
-        CreatedAt: DateTime
-        UpdatedAt: DateTime
-    }
-
-type Position =
-    {
-        Id: int
-        PipelineId: int
-        Pipeline: Pipeline
-        Symbol: string
-        EntryPrice: decimal
-        Quantity: decimal
-        BuyOrderId: string
-        SellOrderId: string
-        Status: PositionStatus
-        ExitPrice: Nullable<decimal>
-        ClosedAt: Nullable<DateTime>
         CreatedAt: DateTime
         UpdatedAt: DateTime
     }
