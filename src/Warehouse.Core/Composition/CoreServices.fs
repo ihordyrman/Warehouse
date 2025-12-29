@@ -10,9 +10,25 @@ open Warehouse.Core.Domain
 open Polly
 open Warehouse.Core.Markets.Services
 open Warehouse.Core.Markets.Stores
+open Warehouse.Core.Pipelines.Core
+open Warehouse.Core.Pipelines.Orchestration
+open Warehouse.Core.Pipelines.Trading
 open Warehouse.Core.Workers
 
 module CoreServices =
+
+    let private addPipelineOrchestrator (services: IServiceCollection) =
+        let registry = TradingSteps.all |> Registry.create
+
+        services.AddSingleton<Registry.T<TradingContext>>(registry) |> ignore
+
+        services.AddHostedService<Orchestrator.Worker>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            let logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Orchestrator.Worker>>()
+            new Orchestrator.Worker(scopeFactory, logger, registry)
+        )
+        |> ignore
+
     let AddCoreDependencies (services: IServiceCollection) =
         services.AddSingleton<ILiveDataStore, LiveDataStore>() |> ignore
 
@@ -23,6 +39,8 @@ module CoreServices =
             new MarketConnectionService.Worker(logger, scopeFactory, adapterFactory)
         )
         |> ignore
+
+        addPipelineOrchestrator services
 
     let AddOkxSupport (services: IServiceCollection, configuration: IConfiguration) =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore

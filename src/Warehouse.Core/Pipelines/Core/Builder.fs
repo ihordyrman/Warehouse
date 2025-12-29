@@ -23,9 +23,9 @@ module Builder =
             |> List.choose (fun config ->
                 registry
                 |> Registry.tryFind config.StepTypeKey
-                |> Option.map (fun def ->
-                    match Parameters.validate def.ParameterSchema config.Parameters with
-                    | Ok validParams -> Ok(def.Create validParams services)
+                |> Option.map (fun x ->
+                    match Parameters.validate x.ParameterSchema config.Parameters with
+                    | Ok validParams -> Ok(x.Create validParams services)
                     | Error errs -> Error { StepKey = config.StepTypeKey; Errors = errs }
                 )
             )

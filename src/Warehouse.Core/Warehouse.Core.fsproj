@@ -48,6 +48,8 @@
         
         <Compile Include="Pipelines\Trading\Context.fs" />
         <Compile Include="Pipelines\Trading\TradingSteps.fs" />
+        <Compile Include="Pipelines\Orchestration\Executor.fs" />
+        <Compile Include="Pipelines\Orchestration\Orchestrator.fs" />
         
         <Compile Include="Workers\Synchronization.fs" />
         
