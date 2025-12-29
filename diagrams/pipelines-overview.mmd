@@ -1,42 +1,51 @@
 flowchart TB
     subgraph Orchestration["Orchestration Layer"]
         direction TB
-        Orchestrator["PipelineOrchestrator<br/>─────────────<br/>• Starts pipelines via executor<br/>• Stops pipelines via executor<br/>• Synchronizes state with DB<br/>• BackgroundService"]
+        Orchestrator["Orchestrator.Worker<br/>─────────────<br/>• BackgroundService<br/>• Loads pipelines from DB<br/>• Creates/stops Executor.T<br/>• Syncs every 30 seconds"]
     end
 
-    subgraph Factory["Factory Layer"]
-        ExecutorFactory["IPipelineExecutorFactory<br/>─────────────<br/>Creates executor instances"]
-        Builder["IPipelineBuilder<br/>─────────────<br/>• Builds step instances<br/>• Validates pipeline config"]
+    subgraph ExecutorLayer["Executor Layer"]
+        Executor["Executor.T<br/>─────────────<br/>• Start / Stop / IsRunning<br/>• executeLoop task<br/>• Loads pipeline config<br/>• Creates TradingContext<br/>• Calls Runner.run"]
     end
 
-    subgraph Execution["Execution Layer"]
-        Executor["PipelineExecutor<br/>─────────────<br/>• Holds dependencies<br/>• Periodic execution loop<br/>• Executes each step<br/>• Creates TradingContext"]
+    subgraph BuilderLayer["Builder Layer"]
+        Builder["Builder.buildSteps<br/>─────────────<br/>• Validates parameters<br/>• Creates Step functions<br/>• Returns Result type"]
+        Registry["Registry.T&lt;'ctx&gt;<br/>─────────────<br/>• Map of StepDefinitions<br/>• tryFind / register / all"]
+    end
 
-        subgraph PipelineInstance["Pipeline Runtime"]
-            Steps["IPipelineStep[]<br/>─────────────<br/>Ordered step instances"]
-            Context["TradingContext<br/>─────────────<br/>Shared execution state"]
-        end
+    subgraph PipelineRuntime["Pipeline Runtime"]
+        Runner["Runner.run<br/>─────────────<br/>• Executes steps in order<br/>• Short-circuits on Stop/Fail<br/>• Returns final StepResult"]
+        Steps["Step&lt;'ctx&gt; list<br/>─────────────<br/>'ctx → CT → Task&lt;StepResult&gt;"]
+        Context["TradingContext<br/>─────────────<br/>• PipelineId, Symbol<br/>• CurrentPrice, MarketData<br/>• Action, BuyPrice, etc."]
+    end
+
+    subgraph StepTypes["Step Definitions"]
+        StepDef["StepDefinition&lt;'ctx&gt;<br/>─────────────<br/>• Key, Name, Category<br/>• ParameterSchema<br/>• Create function"]
+        Categories["StepCategory<br/>─────────────<br/>• Validation<br/>• Risk<br/>• Signal<br/>• Execution"]
     end
 
     subgraph Results["Result Types"]
-        StepResult["PipelineStepResult<br/>─────────────<br/>• Continue<br/>• Stop<br/>• Error"]
-        StepType["PipelineStepType<br/>─────────────<br/>• Validation<br/>• RiskManagement<br/>• SignalGeneration<br/>• Execution"]
+        StepResult["StepResult&lt;'ctx&gt;<br/>─────────────<br/>• Continue of 'ctx * msg<br/>• Stop of msg<br/>• Fail of error"]
+        BuildResult["BuildError<br/>─────────────<br/>• StepKey<br/>• ValidationErrors"]
     end
 
-    subgraph Registry["Step Registry"]
-        StepRegistry["IStepRegistry<br/>─────────────<br/>• Discovers definitions<br/>• Creates instances<br/>• Validates parameters"]
-        StepDef["IStepDefinition[]<br/>─────────────<br/>Step type metadata"]
+    subgraph DataSources["Data Sources"]
+        CandlestickStore["CandlestickStore.T<br/>─────────────<br/>• GetLatest<br/>• Query / Save"]
+        LiveDataStore["ILiveDataStore<br/>─────────────<br/>• GetData<br/>• Update"]
     end
 
-    Orchestrator -->|"Creates via"| ExecutorFactory
-    ExecutorFactory -->|"Produces"| Executor
-    Orchestrator -->|"Start/Stop"| Executor
-    Builder -->|"Uses"| StepRegistry
-    StepRegistry -->|"Contains"| StepDef
-    Executor -->|"Uses"| Builder
-    Builder -->|"Builds"| Steps
-    Executor -->|"Creates"| Context
-    Executor -->|"Executes"| Steps
-    Steps -->|"Returns"| StepResult
-    Steps -->|"Categorized by"| StepType
-    Steps -->|"Modifies"| Context
+    Orchestrator -->|" creates "| Executor
+    Orchestrator -->|" Start/Stop "| Executor
+    Executor -->|" uses "| Builder
+    Builder -->|" queries "| Registry
+    Registry -->|" contains "| StepDef
+    StepDef -->|" categorized by "| Categories
+    Builder -->|" produces "| Steps
+    Builder -->|" may return "| BuildResult
+    Executor -->|" creates "| Context
+    Executor -->|" calls "| Runner
+    Runner -->|" executes "| Steps
+    Steps -->|" transforms "| Context
+    Steps -->|" returns "| StepResult
+    Executor -->|" reads "| CandlestickStore
+    Executor -->|" reads "| LiveDataStore
