@@ -1,15 +1,21 @@
 module Warehouse.App.Handlers.Pipelines
 
-open System.Data
-open Dapper
 open Falco
+open Microsoft.Extensions.DependencyInjection
+open Warehouse.Core.Queries
 
 let count: HttpHandler =
     fun ctx ->
         try
-            let db = ctx.Plug<IDbConnection>()
-            let pipelines = db.QuerySingle<int>("SELECT COUNT(1) FROM public.pipeline_configurations")
-            Response.ofPlainText (string pipelines) ctx
+            let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+
+            let pipelines =
+                (DashboardQueries.create scopeFactory).CountPipelines()
+                |> Async.AwaitTask
+                |> Async.RunSynchronously
+                |> string
+
+            Response.ofPlainText pipelines ctx
         with ex ->
             let log = ctx.Plug<Serilog.ILogger>()
             log.Error(ex, "Error getting active pipelines")

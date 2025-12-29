@@ -13,7 +13,7 @@
         <Compile Include="Domain\Positions.fs" />
 
         <Compile Include="Shared\Errors.fs" />
-        
+
         <Compile Include="Infrastructure\Migrations\InitialMigration.fs" />
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Settings.fs" />
@@ -21,11 +21,11 @@
         <Compile Include="Markets\Abstractions\Types.fs" />
         <Compile Include="Markets\Abstractions\BalanceProvider.fs" />
         <Compile Include="Markets\Abstractions\OrderExecutor.fs" />
-        
+
         <Compile Include="Markets\Stores\CredentialsStore.fs" />
         <Compile Include="Markets\Stores\CandlestickStore.fs" />
         <Compile Include="Markets\Stores\LiveDataStore.fs" />
-        
+
         <Compile Include="Markets\Exchanges\Okx\Constants.fs" />
         <Compile Include="Markets\Exchanges\Okx\Types.fs" />
         <Compile Include="Markets\Exchanges\Okx\Auth.fs" />
@@ -39,22 +39,25 @@
         <Compile Include="Markets\Services\BalanceManager.fs" />
         <Compile Include="Markets\Services\OrdersManager.fs" />
         <Compile Include="Markets\Services\ConnectionManager.fs" />
-        
+
         <Compile Include="Pipelines\Core\Parameters.fs" />
         <Compile Include="Pipelines\Core\Steps.fs" />
         <Compile Include="Pipelines\Core\Registry.fs" />
         <Compile Include="Pipelines\Core\Builder.fs" />
         <Compile Include="Pipelines\Core\Runner.fs" />
-        
+
         <Compile Include="Pipelines\Trading\Context.fs" />
         <Compile Include="Pipelines\Trading\TradingSteps.fs" />
         <Compile Include="Pipelines\Orchestration\Executor.fs" />
         <Compile Include="Pipelines\Orchestration\Orchestrator.fs" />
-        
+
         <Compile Include="Workers\Synchronization.fs" />
-        
+
         <Compile Include="Composition\CompositionRoot.fs" />
         <Compile Include="Composition\CoreServices.fs" />
+        <Compile Include="Composition\Seeding.fs" />
+
+        <Compile Include="Queries\DashboardQueries.fs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -66,6 +69,7 @@
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
         <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+        <PackageReference Include="Npgsql" Version="10.0.1" />
     </ItemGroup>
 
 </Project>

@@ -1,13 +1,19 @@
 namespace Warehouse.Core
 
-open System
-open System.Net
-open System.Net.Http
+open FluentMigrator.Runner
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Domain
+open Microsoft.Extensions.Options
+open Npgsql
 open Polly
+open System
+open System.Data
+open System.Net
+open System.Net.Http
+open Warehouse.Core.Domain
+open Warehouse.Core.Infrastructure
+open Warehouse.Core.Infrastructure.Migrations
 open Warehouse.Core.Markets.Services
 open Warehouse.Core.Markets.Stores
 open Warehouse.Core.Pipelines.Core
@@ -29,7 +35,7 @@ module CoreServices =
         )
         |> ignore
 
-    let AddCoreDependencies (services: IServiceCollection) =
+    let AddCoreDependencies (services: IServiceCollection) (configuration: IConfiguration) =
         services.AddSingleton<LiveDataStore.T>(LiveDataStore.create ()) |> ignore
 
         services.AddHostedService<MarketConnectionService.Worker>(fun provider ->
@@ -40,9 +46,33 @@ module CoreServices =
         )
         |> ignore
 
+        services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName))
+        |> ignore
+
+        services
+            .AddFluentMigratorCore()
+            .ConfigureRunner(fun x ->
+                x
+                    .AddPostgres()
+                    .WithGlobalConnectionString(fun x ->
+                        let settings = x.GetRequiredService<IOptions<DatabaseSettings>>().Value
+                        settings.ConnectionString
+                    )
+                    .ScanIn(typeof<InitialMigration>.Assembly)
+                    .For.Migrations()
+                |> ignore
+            )
+        |> ignore
+
+        services.AddTransient<IDbConnection>(fun x ->
+            let settings = x.GetRequiredService<IOptions<DatabaseSettings>>().Value
+            new NpgsqlConnection(settings.ConnectionString)
+        )
+        |> ignore
+
         addPipelineOrchestrator services
 
-    let AddOkxSupport (services: IServiceCollection, configuration: IConfiguration) =
+    let AddOkxSupport (services: IServiceCollection) (configuration: IConfiguration) =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore
         services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 

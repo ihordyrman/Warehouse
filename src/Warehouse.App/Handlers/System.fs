@@ -1,19 +1,23 @@
 module Warehouse.App.Handlers.System
 
-open System.Data
-open Dapper
 open Falco
+open Microsoft.Extensions.DependencyInjection
 open Serilog
+open Warehouse.Core.Queries
 
 type private Status =
     | Idle
     | Online
     | Error
 
-let private getStatus (db: IDbConnection) (log: ILogger) : Status =
+let private getStatus (scopeFactory: IServiceScopeFactory) (log: ILogger) : Status =
     try
+        use scope = scopeFactory.CreateScope()
+
         let enabledPipelines =
-            db.QuerySingle<int>("SELECT COUNT(1) FROM pipeline_configurations WHERE enabled = true")
+            (DashboardQueries.create scopeFactory).CountEnabledPipelines()
+            |> Async.AwaitTask
+            |> Async.RunSynchronously
 
         match enabledPipelines with
         | x when x > 0 -> Online
@@ -24,9 +28,9 @@ let private getStatus (db: IDbConnection) (log: ILogger) : Status =
 
 let status: HttpHandler =
     fun ctx ->
-        let db = ctx.Plug<IDbConnection>()
+        let scopeFactory = ctx.Plug<IServiceScopeFactory>()
         let log = ctx.Plug<ILogger>()
-        let status = getStatus db log
+        let status = getStatus scopeFactory log
 
         Response.ofPlainText
             (match status with
