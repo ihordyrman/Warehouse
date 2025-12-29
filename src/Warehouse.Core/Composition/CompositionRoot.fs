@@ -59,10 +59,10 @@ module CompositionRoot =
 
     let private createOkxAdapter (services: IServiceProvider) : OkxAdapter.T =
         let loggerFactory = services.GetRequiredService<ILoggerFactory>()
-        let marketDataCache = services.GetRequiredService<ILiveDataStore>()
+        let liveDataStore = services.GetRequiredService<LiveDataStore.T>()
         let webSocket = WebSocketClient.create (loggerFactory.CreateLogger("WebSocket"))
         let logger = loggerFactory.CreateLogger("OkxAdapter")
-        OkxAdapter.create webSocket marketDataCache logger
+        OkxAdapter.create webSocket liveDataStore logger
 
     let createAdapterFactory (services: IServiceProvider) : MarketConnectionService.AdapterFactory =
         fun marketType ->

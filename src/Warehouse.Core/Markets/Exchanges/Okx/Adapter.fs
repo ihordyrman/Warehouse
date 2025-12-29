@@ -62,7 +62,7 @@ module OkxAdapter =
 
     let private subscriptionKey channel symbol = $"{channel}:{symbol}"
 
-    let create (webSocket: WebSocketClient.T) (marketDataCache: ILiveDataStore) (logger: ILogger) : T =
+    let create (webSocket: WebSocketClient.T) (liveDataStore: LiveDataStore.T) (logger: ILogger) : T =
 
         let mutable currentState = State.Initial
         let mutable heartbeatTimer: Timer option = None
@@ -141,7 +141,7 @@ module OkxAdapter =
                         state
 
                     | MessageParser.MarketData data ->
-                        marketDataCache.Update(data)
+                        liveDataStore.Update(data)
                         state
 
                     | MessageParser.OkxError(code, message) ->

@@ -44,4 +44,10 @@ type MarketData =
         Bids: FrozenDictionary<decimal, struct (decimal * int)>
     }
 
+    static member Empty =
+        {
+            Asks = FrozenDictionary<decimal, struct (decimal * int)>.Empty
+            Bids = FrozenDictionary<decimal, struct (decimal * int)>.Empty
+        }
+
 type MarketDataEvent = { Symbol: string; Source: MarketType; Asks: string[][]; Bids: string[][] }

@@ -8,6 +8,7 @@ open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
+open Warehouse.Core.Markets.Abstractions
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Trading
 open Warehouse.Core.Markets.Stores
@@ -40,11 +41,7 @@ module Executor =
             return results |> Seq.tryHead
         }
 
-    let private createContext
-        (pipeline: Pipeline)
-        (currentPrice: decimal)
-        (marketData: Warehouse.Core.Markets.Abstractions.MarketData option)
-        =
+    let private createContext (pipeline: Pipeline) (currentPrice: decimal) (marketData: MarketData option) =
         { TradingContext.empty pipeline.Id pipeline.Symbol pipeline.MarketType with
             CurrentPrice = currentPrice
             CurrentMarketData = marketData
@@ -111,9 +108,8 @@ module Executor =
                                 do! Task.Delay(pipeline.ExecutionInterval, ct)
 
                             | Some candle ->
-                                let liveDataStore = scope.ServiceProvider.GetRequiredService<ILiveDataStore>()
-
-                                let marketData = liveDataStore.GetData(pipeline.Symbol, pipeline.MarketType)
+                                let liveDataStore = scope.ServiceProvider.GetRequiredService<LiveDataStore.T>()
+                                let marketData = liveDataStore.Get pipeline.Symbol pipeline.MarketType
                                 let context = createContext pipeline candle.Close marketData
 
                                 logger.LogDebug(

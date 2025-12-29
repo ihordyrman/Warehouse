@@ -30,7 +30,7 @@ module CoreServices =
         |> ignore
 
     let AddCoreDependencies (services: IServiceCollection) =
-        services.AddSingleton<ILiveDataStore, LiveDataStore>() |> ignore
+        services.AddSingleton<LiveDataStore.T>(LiveDataStore.create ()) |> ignore
 
         services.AddHostedService<MarketConnectionService.Worker>(fun provider ->
             let logger = provider.GetRequiredService<ILogger<MarketConnectionService.Worker>>()

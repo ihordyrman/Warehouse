@@ -47,7 +47,7 @@ module Http =
         if Map.isEmpty req.Parameters then
             req.Endpoint
         else
-            let query = HttpUtility.ParseQueryString System.String.Empty
+            let query = HttpUtility.ParseQueryString String.Empty
             req.Parameters |> Map.iter (fun k v -> query[k] <- v)
             $"{req.Endpoint}?{query}"
 
