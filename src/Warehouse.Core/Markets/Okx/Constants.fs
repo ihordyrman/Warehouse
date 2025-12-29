@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Markets.Concrete.Okx.Constants
+﻿namespace Warehouse.Core.Markets.Okx.Constants
 
 module SocketEndpoints =
 

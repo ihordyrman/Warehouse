@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Shared.Domain
+﻿namespace Warehouse.Core.Domain
 
 open System
 

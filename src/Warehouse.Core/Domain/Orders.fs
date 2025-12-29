@@ -1,7 +1,6 @@
-namespace Warehouse.Core.Orders.Domain
+namespace Warehouse.Core.Domain
 
 open System
-open Warehouse.Core.Markets.Domain
 
 type OrderSide =
     | Buy = 0

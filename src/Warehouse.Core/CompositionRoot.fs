@@ -7,14 +7,11 @@ open System.Data
 open System.Net.Http
 open Warehouse.Core.Infrastructure.WebSockets
 open Warehouse.Core.Markets
-open Warehouse.Core.Markets.BalanceManager
 open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Markets.Concrete.Okx
-open Warehouse.Core.Markets.Concrete.Okx.Services
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Okx.Services
+open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Services
-open Warehouse.Core.Orders
 
 module CompositionRoot =
     let createCredentialsStore (services: IServiceProvider) : CredentialsStore.T =
@@ -32,8 +29,8 @@ module CompositionRoot =
         let loggerFactory = services.GetRequiredService<ILoggerFactory>()
         let okxHttp = createOkxHttp services
         let okxLogger = loggerFactory.CreateLogger("OkxBalanceProvider")
-        let okxProvider = OkxBalanceProvider.create okxHttp okxLogger
-        BalanceManager.create [ okxProvider ]
+        let okxBalance = OkxBalanceOperations.create okxHttp okxLogger
+        BalanceManager.create [ okxBalance ]
 
     let createCandlestickStore (services: IServiceProvider) : CandlestickStore.T =
         let serviceScopeFactory = services.GetRequiredService<IServiceScopeFactory>()
@@ -48,7 +45,7 @@ module CompositionRoot =
         let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OkxHeartbeat")
         OkxHeartbeat.create logger client
 
-    let createOrderProviders (services: IServiceProvider) : MarketOrderProvider.T list =
+    let createOrderProviders (services: IServiceProvider) : OrderService.T list =
         let okxHttp = createOkxHttp services
         let okxLogger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OkxOrderProvider")
 

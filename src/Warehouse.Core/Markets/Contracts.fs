@@ -1,10 +1,8 @@
-namespace Warehouse.Core.Markets.Contracts
+namespace Warehouse.Core.Markets
 
 open System
 open System.Collections.Frozen
-open System.Threading
-open System.Threading.Tasks
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 
 [<CLIMutable>]
 type Balance =
@@ -47,15 +45,3 @@ type MarketData =
     }
 
 type MarketDataEvent = { Symbol: string; Source: MarketType; Asks: string[][]; Bids: string[][] }
-
-type IMarketAdapter =
-    abstract member MarketType: MarketType with get
-    abstract member ConnectionState: ConnectionState with get
-    abstract member ConnectAsync: ct: CancellationToken -> Task<bool>
-    abstract member DisconnectAsync: ct: CancellationToken -> Task
-    abstract member SubscribeAsync: symbol: string * ct: CancellationToken -> Task
-    abstract member UnsubscribeAsync: symbol: string * ct: CancellationToken -> Task
-
-type IMarketDataCache =
-    abstract member GetData: symbol: string * marketType: MarketType -> MarketData option
-    abstract member Update: marketDataEvent: MarketDataEvent -> unit

@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Markets.Domain
+namespace Warehouse.Core.Domain
 
 open System
 

@@ -17,29 +17,31 @@
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Configurations.fs" />
 
-        <Compile Include="Orders\MarketOrderProvider.fs" />
-
         <Compile Include="Markets\Contracts.fs" />
 
-        <Compile Include="Markets\BalanceProvider.fs" />
+        <Compile Include="Markets\BalanceService.fs" />
+
+        <Compile Include="Markets\OrderService.fs" />
 
         <Compile Include="Markets\BalanceManager.fs" />
 
         <Compile Include="Markets\MarketDataCache.fs" />
 
         <Compile Include="Markets\CredentialsStore.fs" />
-        <Compile Include="Markets\Concrete\Okx\Constants.fs" />
-        <Compile Include="Markets\Concrete\Okx\Messages.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxAuth.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxHttp.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxHeartbeat.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxOrderProvider.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxBalanceProvider.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxMessages.fs" />
-        <Compile Include="Markets\Concrete\Okx\OkxMarketAdapter.fs" />
+
         <Compile Include="Markets\CandlestickStore.fs" />
-        <Compile Include="Markets\MarketConnections.fs" />
-        <Compile Include="OrdersManager.fs" />
+
+        <Compile Include="Markets\OrdersManager.fs" />
+        <Compile Include="Markets\Okx\Constants.fs" />
+        <Compile Include="Markets\Okx\Messages.fs" />
+        <Compile Include="Markets\Okx\OkxAuth.fs" />
+        <Compile Include="Markets\Okx\OkxHttp.fs" />
+        <Compile Include="Markets\Okx\OkxHeartbeat.fs" />
+        <Compile Include="Markets\Okx\OkxOrderProvider.fs" />
+        <Compile Include="Markets\Okx\OkxBalanceOperations.fs" />
+        <Compile Include="Markets\Okx\OkxMessages.fs" />
+        <Compile Include="Markets\Okx\OkxMarketAdapter.fs" />
+        <Compile Include="MarketConnections.fs" />
         <Compile Include="CompositionRoot.fs" />
         <Compile Include="Pipelines\Parameters.fs" />
         <Compile Include="Pipelines\Steps.fs" />

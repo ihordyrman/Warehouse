@@ -6,8 +6,8 @@ open System.Net.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets
+open Warehouse.Core.Domain
 open Polly
 open Warehouse.Core.Markets.Services
 
@@ -64,5 +64,3 @@ module CoreServices =
                 Policy.TimeoutAsync<HttpResponseMessage>(10) :> IAsyncPolicy<HttpResponseMessage>
             )
         |> ignore
-
-        services

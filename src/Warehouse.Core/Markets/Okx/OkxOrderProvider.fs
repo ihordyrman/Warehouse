@@ -2,10 +2,10 @@ namespace Warehouse.Core.Markets.Concrete.Okx
 
 open System.Globalization
 open Microsoft.Extensions.Logging
+open Warehouse.Core.Domain
+open Warehouse.Core.Markets
 open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Markets.Okx
-open Warehouse.Core.Orders
-open Warehouse.Core.Orders.Domain
 open Warehouse.Core.Shared
 
 module OkxOrderProvider =
@@ -33,7 +33,7 @@ module OkxOrderProvider =
             TargetCurrency = None
         }
 
-    let create (http: OkxHttp.T) (logger: ILogger) : MarketOrderProvider.T =
+    let create (http: OkxHttp.T) (logger: ILogger) : OrderService.T =
         let executeOrder (order: Order) _ =
             task {
                 let request = mapToRequest order
@@ -61,4 +61,4 @@ module OkxOrderProvider =
                 | Error err -> return Error err
             }
 
-        MarketOrderProvider.Okx executeOrder
+        OrderService.Okx executeOrder

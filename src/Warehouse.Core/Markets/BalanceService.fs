@@ -2,11 +2,10 @@ namespace Warehouse.Core.Markets
 
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 open Warehouse.Core.Shared
 
-module BalanceProvider =
+module BalanceService =
     open Errors
 
     type T =

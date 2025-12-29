@@ -9,12 +9,11 @@ open Microsoft.Extensions.Logging
 open Warehouse.Core
 open Warehouse.Core.Markets
 open Warehouse.Core.Markets.Concrete
-open Warehouse.Core.Markets.Concrete.Okx.Constants
+open Warehouse.Core.Markets.Okx.Constants
 open Warehouse.Core.Markets.Okx
-open Warehouse.Core.Shared.Domain
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 open FSharp.Control
-open Warehouse.Core.Shared.Errors
+open Warehouse.Core.Shared
 
 type SyncConfig =
     {
@@ -28,6 +27,7 @@ type SyncConfig =
 type SyncDependencies = { OkxHttp: OkxHttp.T; CandlestickStore: CandlestickStore.T; Logger: ILogger }
 
 module CandlestickSync =
+    open Errors
 
     let toPairSymbol (instrument: Instrument) = { Left = instrument; Right = Instrument.USDT }.ToString()
 

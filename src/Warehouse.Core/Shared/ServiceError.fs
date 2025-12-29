@@ -1,6 +1,6 @@
 namespace Warehouse.Core.Shared
 
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 
 module Errors =
     type ExternalError =

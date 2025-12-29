@@ -5,10 +5,9 @@ open Microsoft.Extensions.DependencyInjection
 open System
 open System.Data
 open Warehouse.Core
-open Warehouse.Core.Orders
-open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Domain
+open Warehouse.Core.Markets
 open Warehouse.Core.Pipelines
-open Warehouse.Core.Pipelines.Domain
 open Warehouse.Core.Pipelines.Trading
 
 module TradingSteps =

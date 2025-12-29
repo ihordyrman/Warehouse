@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Markets.Concrete.Okx.Services
+﻿namespace Warehouse.Core.Markets.Okx.Services
 
 open Microsoft.Extensions.Logging
 open System
@@ -6,11 +6,10 @@ open System.Threading
 open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Shared
 open Warehouse.Core.Markets
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Okx
 
-module OkxBalanceProvider =
+module OkxBalanceOperations =
     open Errors
 
     let private parseDecimal (value: string) =
@@ -51,7 +50,7 @@ module OkxBalanceProvider =
             UpdatedAt = DateTime.UtcNow
         }
 
-    let create (http: OkxHttp.T) (logger: ILogger) : BalanceProvider.T =
+    let create (http: OkxHttp.T) (logger: ILogger) : BalanceService.T =
 
         let getBalances (_: CancellationToken) =
             task {

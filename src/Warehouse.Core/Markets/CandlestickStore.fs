@@ -5,8 +5,7 @@ open System.Data
 open System.Threading.Tasks
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
-open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Shared.Domain
+open Warehouse.Core.Domain
 
 module CandlestickStore =
 

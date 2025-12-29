@@ -36,7 +36,8 @@ webapp.Host.UseSerilog(fun context services configuration ->
 )
 |> ignore
 
-// DependencyInjection.AddOkxSupport(webapp.Services, webapp.Configuration) |> ignore
+// CoreServices.AddCoreDependencies webapp.Services
+// CoreServices.AddOkxSupport(webapp.Services, webapp.Configuration)
 
 webapp.Services.Configure<DatabaseSettings>(webapp.Configuration.GetSection(DatabaseSettings.SectionName))
 |> ignore
@@ -78,12 +79,12 @@ app.UseDefaultFiles().UseStaticFiles() |> ignore
 
 app
     .UseFalco(
-        [
-            get "/" Views.Index.get
-            get "/system-status" Handlers.System.status
-            get "/accounts/count" Handlers.Accounts.count
-            get "/pipelines/count" Handlers.Pipelines.count
-            get "/balance/total" Handlers.Balances.total
-        ]
+    [
+        get "/" Views.Index.get
+        get "/system-status" Handlers.System.status
+        get "/accounts/count" Handlers.Accounts.count
+        get "/pipelines/count" Handlers.Pipelines.count
+        get "/balance/total" Handlers.Balances.total
+    ]
     )
     .Run(Response.ofPlainText "Not found")

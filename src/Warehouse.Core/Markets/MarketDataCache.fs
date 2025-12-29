@@ -1,11 +1,10 @@
-﻿namespace Warehouse.Core.Markets.Services
+﻿namespace Warehouse.Core.Markets
 
 open System
 open System.Collections.Concurrent
 open System.Collections.Frozen
 open System.Globalization
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 
 [<Struct>]
 type private MarketDataKey = { Symbol: string; MarketType: MarketType }
@@ -15,6 +14,10 @@ type private MarketDataSnapshot() =
     member val Bids = ConcurrentDictionary<decimal, struct (decimal * int)>()
 
     member this.ToMarketData() = { Asks = this.Asks.ToFrozenDictionary(); Bids = this.Bids.ToFrozenDictionary() }
+
+type IMarketDataCache =
+    abstract member GetData: symbol: string * marketType: MarketType -> MarketData option
+    abstract member Update: marketDataEvent: MarketDataEvent -> unit
 
 type MarketDataCache() =
     let cache = ConcurrentDictionary<MarketDataKey, MarketDataSnapshot>()

@@ -5,7 +5,7 @@ open System.Data
 open System.Threading.Tasks
 open Dapper
 open Microsoft.Extensions.Configuration
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 
 let ensureCredentialsPopulated (configuration: IConfiguration) (connection: IDbConnection) : Task<unit> =
     task {

@@ -12,6 +12,7 @@
         <Compile Include="Handlers\Accounts.fs" />
         <Compile Include="Handlers\Pipelines.fs" />
         <Compile Include="Handlers\Balances.fs" />
+        <Compile Include="Views\SystemView.fs" />
         <Compile Include="Views\Index.fs" />
         <Compile Include="Seeding.fs" />
         <Compile Include="Program.fs" />

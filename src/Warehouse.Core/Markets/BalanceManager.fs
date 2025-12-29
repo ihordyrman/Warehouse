@@ -1,25 +1,24 @@
-namespace Warehouse.Core.Markets.BalanceManager
+namespace Warehouse.Core.Markets
 
 open System.Threading
 open System.Threading.Tasks
 open Warehouse.Core.Markets
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 open Warehouse.Core.Shared
 
 module BalanceManager =
     open Errors
 
-    type T = private { Providers: Map<MarketType, BalanceProvider.T> }
+    type T = private { Providers: Map<MarketType, BalanceService.T> }
 
-    let create (providers: BalanceProvider.T list) : T =
+    let create (providers: BalanceService.T list) : T =
         let map = providers |> List.map (fun x -> x.MarketType, x) |> Map.ofList
         { Providers = map }
 
     let private withProvider
         (manager: T)
         (marketType: MarketType)
-        (f: BalanceProvider.T -> Task<Result<'a, ServiceError>>)
+        (f: BalanceService.T -> Task<Result<'a, ServiceError>>)
         =
         match Map.tryFind marketType manager.Providers with
         | Some provider -> f provider

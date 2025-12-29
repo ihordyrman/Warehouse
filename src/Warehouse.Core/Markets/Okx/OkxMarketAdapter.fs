@@ -5,9 +5,9 @@ open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Infrastructure.WebSockets
-open Warehouse.Core.Markets.Concrete.Okx.Constants
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets
+open Warehouse.Core.Markets.Okx.Constants
+open Warehouse.Core.Domain
 
 module OkxAdapter =
 

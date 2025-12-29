@@ -10,7 +10,7 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Markets.Concrete.Okx
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 
 type private MarketConnection = { Adapter: OkxAdapter.T; Symbols: Set<string>; ConnectedAt: DateTime }
 

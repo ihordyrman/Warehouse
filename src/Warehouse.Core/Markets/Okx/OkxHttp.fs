@@ -10,7 +10,7 @@ open System.Web
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Markets
 open Warehouse.Core.Markets.Concrete.Okx
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Okx
 open Warehouse.Core.Shared
 

@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Orders
+namespace Warehouse.Core.Markets
 
 open System
 open System.Data
@@ -6,8 +6,8 @@ open System.Threading
 open System.Threading.Tasks
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Markets
+open Warehouse.Core.Domain
 open Warehouse.Core.Shared
 
 [<CLIMutable>]
@@ -171,7 +171,7 @@ module OrdersManager =
 
     let executeOrder
         (db: IDbConnection)
-        (providers: MarketOrderProvider.T list)
+        (providers: OrderService.T list)
         (logger: ILogger)
         (orderId: int64)
         (_: CancellationToken)
@@ -185,10 +185,10 @@ module OrdersManager =
                     return Error(ApiError($"Cannot execute order in status {order.Status}", None))
 
                 | Some order ->
-                    match MarketOrderProvider.tryFind order.MarketType providers with
+                    match OrderService.tryFind order.MarketType providers with
                     | None -> return Error(NoProvider order.MarketType)
                     | Some provider ->
-                        let! result = MarketOrderProvider.executeOrder order CancellationToken.None provider
+                        let! result = OrderService.executeOrder order CancellationToken.None provider
 
                         match result with
                         | Error err ->
@@ -403,7 +403,7 @@ module OrdersManager =
             getTotalExposure: MarketType option -> Task<decimal>
         }
 
-    let create (db: IDbConnection) (providers: MarketOrderProvider.T list) (logger: ILogger) : T =
+    let create (db: IDbConnection) (providers: OrderService.T list) (logger: ILogger) : T =
         {
             createOrder = createOrder db logger
             executeOrder = executeOrder db providers logger

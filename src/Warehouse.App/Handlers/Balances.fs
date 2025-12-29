@@ -6,8 +6,8 @@ open Dapper.FSharp.PostgreSQL
 open Falco
 open Serilog
 open Warehouse.Core
-open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Markets.BalanceManager
+open Warehouse.Core.Domain
+open Warehouse.Core.Markets
 
 let marketsTable = table'<Market> "markets"
 

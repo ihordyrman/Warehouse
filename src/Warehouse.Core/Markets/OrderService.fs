@@ -1,12 +1,11 @@
-namespace Warehouse.Core.Orders
+namespace Warehouse.Core.Markets
 
 open System.Threading
 open System.Threading.Tasks
-open Warehouse.Core.Markets.Domain
-open Warehouse.Core.Orders.Domain
+open Warehouse.Core.Domain
 open Warehouse.Core.Shared
 
-module MarketOrderProvider =
+module OrderService =
     open Errors
     type T =
         | Okx of executeOrder: (Order -> CancellationToken -> Task<Result<string, ServiceError>>)

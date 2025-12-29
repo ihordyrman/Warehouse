@@ -27,9 +27,7 @@ let header =
                 ]
                 _div [ _class_ "flex items-center space-x-4" ] [
                     _span [ _class_ "text-sm text-gray-500" ] [ Text.raw "Status:" ]
-                    _span [ _id_ "system-status"; Hx.get "/system-status"; Hx.trigger loadEvery30s; Hx.swapOuterHtml ] [
-                        _span [ _class_ "badge" ] [ Text.raw "Loading..." ]
-                    ]
+                    SystemView.statusPlaceholder
                     _button [
                         Hx.post "/refresh"
                         Hx.targetCss "#main-content"

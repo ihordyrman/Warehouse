@@ -1,7 +1,7 @@
 namespace Warehouse.Core.Pipelines.Trading
 
-open Warehouse.Core.Markets.Contracts
-open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Domain
+open Warehouse.Core.Markets
 
 type TradingAction =
     | None
