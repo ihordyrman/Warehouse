@@ -30,15 +30,15 @@
         <Compile Include="Markets\CredentialsStore.fs" />
         <Compile Include="Markets\Concrete\Okx\Constants.fs" />
         <Compile Include="Markets\Concrete\Okx\Messages.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxAuth.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxHttp.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxConnectionManager.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxHeartbeat.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxSubscriptionManager.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxMessageProcessor.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxOrderProvider.fs" />
-        <Compile Include="Markets\Concrete\Okx\Services\OkxBalanceProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxAuth.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxHttp.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxHeartbeat.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxOrderProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxBalanceProvider.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxMessages.fs" />
+        <Compile Include="Markets\Concrete\Okx\OkxMarketAdapter.fs" />
         <Compile Include="Markets\CandlestickStore.fs" />
+        <Compile Include="Markets\MarketConnections.fs" />
         <Compile Include="OrdersManager.fs" />
         <Compile Include="CompositionRoot.fs" />
         <Compile Include="Pipelines\Parameters.fs" />
@@ -49,8 +49,7 @@
         <Compile Include="Pipelines\PipelineBuilder.fs" />
         <Compile Include="Pipelines\TradingSteps.fs" />
         <Compile Include="Synchronization.fs" />
-        <Compile Include="OkxMarketAdapter.fs" />
-        <Compile Include="OkxServices.fs" />
+        <Compile Include="CoreServices.fs" />
     </ItemGroup>
 
     <ItemGroup>

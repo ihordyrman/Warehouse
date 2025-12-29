@@ -8,7 +8,7 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Warehouse.Core
 open Warehouse.Core.Markets
-open Warehouse.Core.Markets.Concrete.Okx
+open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Markets.Concrete.Okx.Constants
 open Warehouse.Core.Markets.Okx
 open Warehouse.Core.Shared.Domain

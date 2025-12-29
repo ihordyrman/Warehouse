@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Markets.Concrete.Okx.Services
+﻿namespace Warehouse.Core.Markets.Concrete.Okx
 
 open System
 open System.Globalization
@@ -23,5 +23,10 @@ module OkxAuth =
 
         let sign = generateSignature timestamp, config.SecretKey, "GET", "/users/self/verify", ""
 
-        {| op = "login"
-           args = [| {| apiKey = config.ApiKey; passphrase = config.Passphrase; timestamp = timestamp; sign = sign |} |] |}
+        {|
+            op = "login"
+            args =
+                [|
+                    {| apiKey = config.ApiKey; passphrase = config.Passphrase; timestamp = timestamp; sign = sign |}
+                |]
+        |}

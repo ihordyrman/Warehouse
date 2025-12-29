@@ -1,4 +1,4 @@
-﻿namespace Warehouse.Core.Markets.Concrete.Okx.Services
+﻿namespace Warehouse.Core.Markets.Concrete.Okx
 
 open System
 open System.Threading

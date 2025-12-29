@@ -1,15 +1,14 @@
 ﻿namespace Warehouse.Core.Markets.Concrete.Okx.Services
 
-
 open Microsoft.Extensions.Logging
 open System
 open System.Threading
+open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Shared
 open Warehouse.Core.Markets
 open Warehouse.Core.Markets.Contracts
 open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.Okx
-open Warehouse.Core.Markets.Concrete.Okx
 
 module OkxBalanceProvider =
     open Errors

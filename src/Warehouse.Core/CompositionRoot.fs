@@ -1,16 +1,19 @@
 namespace Warehouse.Core
 
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
 open System
 open System.Data
 open System.Net.Http
-open Microsoft.Extensions.DependencyInjection
-open Microsoft.Extensions.Logging
 open Warehouse.Core.Infrastructure.WebSockets
 open Warehouse.Core.Markets
 open Warehouse.Core.Markets.BalanceManager
+open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Markets.Concrete.Okx
 open Warehouse.Core.Markets.Concrete.Okx.Services
+open Warehouse.Core.Markets.Contracts
 open Warehouse.Core.Markets.Domain
+open Warehouse.Core.Markets.Services
 open Warehouse.Core.Orders
 
 module CompositionRoot =
@@ -57,5 +60,17 @@ module CompositionRoot =
         let db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
         let logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("OrderManager")
         let providers = createOrderProviders services
-
         OrdersManager.create db providers logger
+
+    let private createOkxAdapter (services: IServiceProvider) : OkxAdapter.T =
+        let loggerFactory = services.GetRequiredService<ILoggerFactory>()
+        let marketDataCache = services.GetRequiredService<IMarketDataCache>()
+        let webSocket = WebSocketClient.create (loggerFactory.CreateLogger("WebSocket"))
+        let logger = loggerFactory.CreateLogger("OkxAdapter")
+        OkxAdapter.create webSocket marketDataCache logger
+
+    let createAdapterFactory (services: IServiceProvider) : MarketConnectionService.AdapterFactory =
+        fun marketType ->
+            match marketType with
+            | MarketType.Okx -> createOkxAdapter services
+            | _ -> failwithf $"Unsupported market type: %A{marketType}"

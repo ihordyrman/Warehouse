@@ -1,4 +1,4 @@
-namespace Warehouse.Core.Markets.Concrete.Okx
+namespace Warehouse.Core.Markets.Concrete
 
 open System
 open System.Net.Http
@@ -9,10 +9,10 @@ open System.Threading.Tasks
 open System.Web
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Markets
+open Warehouse.Core.Markets.Concrete.Okx
 open Warehouse.Core.Markets.Domain
 open Warehouse.Core.Markets.Okx
 open Warehouse.Core.Shared
-open Warehouse.Core.Markets.Concrete.Okx.Services
 
 module OkxHttp =
     open Errors
@@ -60,18 +60,18 @@ module OkxHttp =
 
     let private addAuthHeaders
         (client: HttpClient)
-        (creds: MarketCredentials)
+        (credentials: MarketCredentials)
         (timestamp: string)
         (method: string)
         (path: string)
         (body: string)
         =
-        let signature = OkxAuth.generateSignature timestamp creds.SecretKey method path body
+        let signature = OkxAuth.generateSignature timestamp credentials.SecretKey method path body
         client.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature)
         client.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp)
-        client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", creds.ApiKey)
-        client.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", creds.Passphrase)
-        client.DefaultRequestHeaders.Add("x-simulated-trading", if creds.IsSandbox then "1" else "0")
+        client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", credentials.ApiKey)
+        client.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", credentials.Passphrase)
+        client.DefaultRequestHeaders.Add("x-simulated-trading", if credentials.IsSandbox then "1" else "0")
 
     let private clearAuthHeaders (client: HttpClient) =
         [
@@ -86,7 +86,7 @@ module OkxHttp =
     let private execute<'T>
         (client: HttpClient)
         (jsonOpts: JsonSerializerOptions)
-        (creds: MarketCredentials)
+        (credentials: MarketCredentials)
         (req: Request)
         : Task<Result<'T, ServiceError>>
         =
@@ -96,7 +96,7 @@ module OkxHttp =
             let body = serializeBody jsonOpts req.Body
             let timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 
-            addAuthHeaders client creds timestamp method path body
+            addAuthHeaders client credentials timestamp method path body
 
             try
                 let! response =
@@ -144,7 +144,7 @@ module OkxHttp =
                 |> Async.AwaitTask
                 |> Async.RunSynchronously
             with
-            | Ok creds -> creds
+            | Ok credentials -> credentials
             | Error err ->
                 logger.LogError("Failed to retrieve OKX credentials: {Error}", err)
                 failwith "Cannot create OkxHttp without valid credentials"

@@ -2,7 +2,6 @@ namespace Warehouse.Core.Pipelines
 
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
-open Microsoft.Extensions.Logging
 open System
 open System.Data
 open Warehouse.Core

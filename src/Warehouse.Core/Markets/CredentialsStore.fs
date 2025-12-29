@@ -42,9 +42,9 @@ module CredentialsStore =
                                 |> db.SelectAsync<MarketCredentials>
 
                             match results |> Seq.tryHead with
-                            | Some creds ->
+                            | Some credentials ->
                                 logger.LogDebug("Retrieved credentials for {MarketType}", marketType)
-                                return Ok creds
+                                return Ok credentials
                             | None -> return Error(NotFound($"No credentials found for {marketType}"))
                         with ex ->
                             logger.LogError(ex, "Failed to get credentials for {MarketType}", marketType)

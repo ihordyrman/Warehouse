@@ -1,8 +1,8 @@
-namespace Warehouse.Core.Markets.Concrete.Okx.Services
+namespace Warehouse.Core.Markets.Concrete.Okx
 
 open System.Globalization
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Markets.Concrete.Okx
+open Warehouse.Core.Markets.Concrete
 open Warehouse.Core.Markets.Okx
 open Warehouse.Core.Orders
 open Warehouse.Core.Orders.Domain

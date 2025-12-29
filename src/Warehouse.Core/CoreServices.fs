@@ -6,17 +6,26 @@ open System.Net.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Markets.Concrete.Okx.Services
+open Warehouse.Core.Markets.Contracts
 open Warehouse.Core.Markets.Domain
 open Polly
+open Warehouse.Core.Markets.Services
 
-module OkxServices =
+module CoreServices =
+    let AddCoreDependencies (services: IServiceCollection) =
+        services.AddSingleton<IMarketDataCache, MarketDataCache>() |> ignore
+
+        services.AddHostedService<MarketConnectionService.Worker>(fun provider ->
+            let logger = provider.GetRequiredService<ILogger<MarketConnectionService.Worker>>()
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            let adapterFactory = CompositionRoot.createAdapterFactory provider
+            new MarketConnectionService.Worker(logger, scopeFactory, adapterFactory)
+        )
+        |> ignore
+
     let AddOkxSupport (services: IServiceCollection, configuration: IConfiguration) =
         services.Configure<MarketCredentials>(configuration.GetSection(nameof MarketCredentials)) |> ignore
         services.AddHostedService<OkxSynchronizationWorker>() |> ignore
-
-        // todo: refactor to use F#-ish modules
-        services.AddSingleton<OkxMarketAdapter>() |> ignore
 
         services
             .AddHttpClient(
