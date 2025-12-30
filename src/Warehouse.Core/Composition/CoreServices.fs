@@ -1,6 +1,6 @@
 namespace Warehouse.Core
 
-open FluentMigrator.Runner
+open Dapper
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
@@ -11,9 +11,7 @@ open System
 open System.Data
 open System.Net
 open System.Net.Http
-open Warehouse.Core.Domain
 open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Migrations
 open Warehouse.Core.Markets.Abstractions
 open Warehouse.Core.Markets.Exchanges.Okx
 open Warehouse.Core.Markets.Services
@@ -51,12 +49,6 @@ module CoreServices =
             OkxAdapter.create webSocket liveDataStore logger
         )
         |> ignore
-
-    let createAdapterFactory (services: IServiceProvider) : MarketConnectionService.AdapterFactory =
-        fun marketType ->
-            match marketType with
-            | MarketType.Okx -> services.GetRequiredService<OkxAdapter.T>()
-            | _ -> failwithf $"Unsupported market type: %A{marketType}"
 
     let private pipelineOrchestrator (services: IServiceCollection) =
         let registry = TradingSteps.all |> Registry.create
@@ -96,13 +88,10 @@ module CoreServices =
         |> ignore
 
     let private marketConnectionService (services: IServiceCollection) =
-        services.AddHostedService<MarketConnectionService.Worker>(fun provider ->
-            let logger = provider.GetRequiredService<ILogger<MarketConnectionService.Worker>>()
-            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
-            let adapterFactory = provider.GetRequiredService<MarketConnectionService.AdapterFactory>()
-            new MarketConnectionService.Worker(logger, scopeFactory, adapterFactory)
-        )
-        |> ignore
+        services.AddHostedService<MarketConnectionService.Worker>() |> ignore
+
+    let private okxWorker (services: IServiceCollection) =
+        services.AddHostedService<OkxSynchronizationWorker>() |> ignore
 
     let private orderExecutor (services: IServiceCollection) =
         services.AddScoped<OrderExecutor.T>(fun provider ->
@@ -114,7 +103,6 @@ module CoreServices =
 
     let private candlestickStore (services: IServiceCollection) =
         services.AddScoped<CandlestickStore.T>(fun provider ->
-            let serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
             let db = provider.GetRequiredService<IDbConnection>()
             CandlestickStore.create db
         )
@@ -135,20 +123,7 @@ module CoreServices =
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName))
         |> ignore
 
-        services
-            .AddFluentMigratorCore()
-            .ConfigureRunner(fun x ->
-                x
-                    .AddPostgres()
-                    .WithGlobalConnectionString(fun sp ->
-                        let settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value
-                        settings.ConnectionString
-                    )
-                    .ScanIn(typeof<InitialMigration>.Assembly)
-                    .For.Migrations()
-                |> ignore
-            )
-        |> ignore
+        DefaultTypeMap.MatchNamesWithUnderscores <- true
 
         services.AddScoped<IDbConnection>(fun sp ->
             let settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value
@@ -196,6 +171,8 @@ module CoreServices =
         |> ignore
 
     let register (services: IServiceCollection) (configuration: IConfiguration) =
+        database services configuration
+
         [
             liveDataStore
             balanceManager
@@ -206,14 +183,10 @@ module CoreServices =
             httpClientFactory
             marketConnectionService
             okxAdapter
+            okxWorker
             orderExecutor
             orderManager
             pipelineOrchestrator
             webSocketClient
-
         ]
         |> List.iter (fun addService -> addService services)
-
-        database services configuration
-
-        services.AddHostedService<OkxSynchronizationWorker>() |> ignore

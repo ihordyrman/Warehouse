@@ -14,6 +14,9 @@ open Warehouse.Core.Markets.Exchanges.Okx
 
 type private MarketConnection = { Adapter: OkxAdapter.T; Symbols: Set<string>; ConnectedAt: DateTime }
 
+[<CLIMutable>]
+type private PipelineSubscription = { Symbol: string; MarketType: int }
+
 module MarketConnectionService =
 
     [<Literal>]
@@ -25,14 +28,14 @@ module MarketConnectionService =
     let private getRequiredSubscriptions (db: IDbConnection) =
         task {
             let! results =
-                db.QueryAsync<{| Symbol: string; MarketType: MarketType |}>(
-                    "SELECT symbol as Symbol, market_type as MarketType FROM pipeline_configurations WHERE enabled = true"
+                db.QueryAsync<PipelineSubscription>(
+                    "SELECT symbol, market_type as markettype FROM pipeline_configurations WHERE enabled = true"
                 )
 
             return
                 results
                 |> Seq.groupBy _.MarketType
-                |> Seq.map (fun (market, items) -> market, items |> Seq.map _.Symbol |> Set.ofSeq)
+                |> Seq.map (fun (market, items) -> enum<MarketType> market, items |> Seq.map _.Symbol |> Set.ofSeq)
                 |> Map.ofSeq
         }
 
@@ -61,9 +64,12 @@ module MarketConnectionService =
             return Set.union (Set.difference currentSymbols unusedSymbols) newSymbols
         }
 
-    type AdapterFactory = MarketType -> OkxAdapter.T
+    let private createAdapter (marketType: MarketType) (provider: IServiceProvider) =
+        match marketType with
+        | MarketType.Okx -> provider.GetRequiredService<OkxAdapter.T>()
+        | _ -> failwithf $"Unsupported market type: %A{marketType}"
 
-    type Worker(logger: ILogger<Worker>, scopeFactory: IServiceScopeFactory, createAdapter: AdapterFactory) =
+    type Worker(logger: ILogger<Worker>, scopeFactory: IServiceScopeFactory) =
         inherit BackgroundService()
 
         let connections = Dictionary<MarketType, MarketConnection>()
@@ -93,7 +99,7 @@ module MarketConnectionService =
 
                     | false, _ ->
                         logger.LogInformation("Establishing connection to {MarketType}", marketType)
-                        let adapter = createAdapter marketType
+                        let adapter = createAdapter marketType (scopeFactory.CreateScope().ServiceProvider)
                         let! result = adapter.Connect None ct
 
                         match result with

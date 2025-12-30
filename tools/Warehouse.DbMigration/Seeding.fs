@@ -1,16 +1,13 @@
-module Warehouse.Core.Composition.Seeding
+namespace Warehouse.Tools
 
 open System
 open System.Data
 open System.Threading.Tasks
 open Dapper
-open FluentMigrator.Runner
 open Microsoft.Extensions.Configuration
-open Microsoft.Extensions.DependencyInjection
-open Warehouse.Core.Domain
 
 module Seeding =
-    let private ensureCredentialsPopulated (configuration: IConfiguration) (connection: IDbConnection) : Task<unit> =
+    let ensureCredentialsPopulated (configuration: IConfiguration) (connection: IDbConnection) : Task<unit> =
         task {
             let! credentialCount = connection.QuerySingleAsync<int>("SELECT count(*) FROM market_credentials")
 
@@ -33,7 +30,7 @@ module Seeding =
                         let! existingMarketId =
                             connection.QuerySingleOrDefaultAsync<Nullable<int>>(
                                 "SELECT id FROM markets WHERE type = @Type",
-                                {| Type = (int) MarketType.Okx |}
+                                {| Type = 0 |}
                             )
 
                         match existingMarketId with
@@ -43,7 +40,7 @@ module Seeding =
                                 connection.QuerySingleAsync<int>(
                                     "INSERT INTO markets (type, created_at, updated_at)
                                      VALUES (@Type, now(), now()) RETURNING id",
-                                    {| Type = (int) MarketType.Okx |}
+                                    {| Type = 0 |}
                                 )
                     }
 
@@ -63,14 +60,4 @@ module Seeding =
                     )
 
                 return ()
-        }
-
-    let ensureDbReadiness (serviceProvider: IServiceProvider) =
-        task {
-            use scope = serviceProvider.CreateScope()
-            let connection = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-            let configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>()
-            let migrationRunner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>()
-            migrationRunner.MigrateUp()
-            do! ensureCredentialsPopulated configuration connection
         }

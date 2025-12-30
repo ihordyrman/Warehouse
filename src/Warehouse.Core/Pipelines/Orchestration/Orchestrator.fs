@@ -4,6 +4,7 @@ open System
 open System.Collections.Concurrent
 open System.Data
 open System.Threading
+open Dapper
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting

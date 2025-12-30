@@ -7,7 +7,6 @@ open Serilog
 open System
 open Warehouse.App
 open Warehouse.Core
-open Warehouse.Core.Composition.Seeding
 
 let webapp = WebApplication.CreateBuilder()
 
@@ -29,8 +28,6 @@ webapp.Services.AddHttpLogging(
 |> ignore
 
 let app = webapp.Build()
-
-Seeding.ensureDbReadiness app.Services |> Async.AwaitTask |> Async.RunSynchronously
 
 app.UseHttpLogging() |> ignore
 app.UseHttpsRedirection() |> ignore

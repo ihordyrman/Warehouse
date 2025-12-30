@@ -13,8 +13,6 @@
         <Compile Include="Domain\Positions.fs" />
 
         <Compile Include="Shared\Errors.fs" />
-
-        <Compile Include="Infrastructure\Migrations\InitialMigration.fs" />
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Settings.fs" />
 
@@ -52,7 +50,6 @@
         <Compile Include="Pipelines\Orchestration\Orchestrator.fs" />
 
         <Compile Include="Workers\Synchronization.fs" />
-        <Compile Include="Composition\Seeding.fs" />
         <Compile Include="Composition\CoreServices.fs" />
 
         <Compile Include="Queries\DashboardQueries.fs" />
@@ -60,7 +57,6 @@
 
     <ItemGroup>
         <PackageReference Include="Dapper.FSharp" Version="4.9.0" />
-        <PackageReference Include="FluentMigrator.Runner" Version="7.2.0" />
         <PackageReference Include="FSharp.Control.TaskSeq" Version="0.4.0" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.1" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />

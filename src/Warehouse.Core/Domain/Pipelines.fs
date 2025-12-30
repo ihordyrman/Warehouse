@@ -2,6 +2,7 @@ namespace Warehouse.Core.Domain
 
 open System
 open System.Collections.Generic
+open System.Runtime.Serialization
 
 type PipelineStatus =
     | Idle = 0
