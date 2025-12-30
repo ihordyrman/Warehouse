@@ -403,10 +403,10 @@ module OrdersManager =
             getTotalExposure: MarketType option -> Task<decimal>
         }
 
-    let create (db: IDbConnection) (providers: OrderExecutor.T list) (logger: ILogger) : T =
+    let create (db: IDbConnection) (executors: OrderExecutor.T list) (logger: ILogger) : T =
         {
             createOrder = createOrder db logger
-            executeOrder = executeOrder db providers logger
+            executeOrder = executeOrder db executors logger
             updateOrder = updateOrderFields db logger
             cancelOrder = cancelOrder db logger
             getOrder = getOrder db

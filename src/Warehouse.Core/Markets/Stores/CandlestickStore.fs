@@ -4,7 +4,6 @@ open System
 open System.Data
 open System.Threading.Tasks
 open Dapper.FSharp.PostgreSQL
-open Microsoft.Extensions.DependencyInjection
 open Warehouse.Core.Domain
 
 module CandlestickStore =
@@ -55,10 +54,15 @@ module CandlestickStore =
     type T =
         {
             Save: Candlestick list -> Task<int>
-            Query: string -> MarketType -> string -> DateTime option -> DateTime option -> int option -> Task<Candlestick list>
+            Query:
+                string
+                    -> MarketType
+                    -> string
+                    -> DateTime option
+                    -> DateTime option
+                    -> int option
+                    -> Task<Candlestick list>
             GetLatest: string -> MarketType -> string -> Task<Candlestick option>
         }
 
-    let create (scope: IServiceScope) : T =
-        use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-        { Save = save db; Query = query db; GetLatest = getLatest db }
+    let create (db: IDbConnection) : T = { Save = save db; Query = query db; GetLatest = getLatest db }

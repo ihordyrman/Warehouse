@@ -21,8 +21,7 @@ webapp.Host.UseSerilog(fun context services configuration ->
 )
 |> ignore
 
-CoreServices.AddCoreDependencies webapp.Services webapp.Configuration
-CoreServices.AddOkxSupport webapp.Services webapp.Configuration
+CoreServices.register webapp.Services webapp.Configuration
 
 webapp.Services.AddHttpLogging(
     Action<HttpLoggingOptions>(fun options -> options.LoggingFields <- HttpLoggingFields.All)

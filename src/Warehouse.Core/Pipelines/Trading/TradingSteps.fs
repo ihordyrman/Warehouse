@@ -65,7 +65,8 @@ module TradingSteps =
                     | TradingAction.Hold -> return Stop "No trade action required"
                     | TradingAction.Buy
                     | TradingAction.Sell ->
-                        let orderManager = CompositionRoot.createOrderManager services
+                        use scope = services.CreateScope()
+                        let orderManager = scope.ServiceProvider.GetRequiredService<OrdersManager.T>()
 
                         let side = if ctx.Action = TradingAction.Buy then OrderSide.Buy else OrderSide.Sell
                         let quantity = tradeAmount / ctx.CurrentPrice

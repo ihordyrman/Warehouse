@@ -7,7 +7,6 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.Logging
-open Warehouse.Core
 open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Services
 
@@ -34,7 +33,7 @@ module DashboardQueries =
         task {
             use scope = scopeFactory.CreateScope()
             use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-            let balanceManager = CompositionRoot.createBalanceManager scope.ServiceProvider
+            let balanceManager = scope.ServiceProvider.GetRequiredService<BalanceManager.T>()
 
             return
                 select {

@@ -95,7 +95,7 @@ module Executor =
                             do! Task.Delay(pipeline.ExecutionInterval, ct)
 
                         | Ok steps ->
-                            let candlestickStore = CompositionRoot.createCandlestickStore scope.ServiceProvider
+                            let candlestickStore = scope.ServiceProvider.GetRequiredService<CandlestickStore.T>()
                             let! latestCandle = candlestickStore.GetLatest pipeline.Symbol pipeline.MarketType "1m"
 
                             match latestCandle with

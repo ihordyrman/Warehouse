@@ -97,11 +97,11 @@ module CandlestickSync =
         }
 
 module SyncDependencies =
-    let create (scope: IServiceScope) (logger: ILogger) : SyncDependencies =
+    let create (provider: IServiceProvider) : SyncDependencies =
         {
-            OkxHttp = CompositionRoot.createOkxHttp scope.ServiceProvider
-            CandlestickStore = CompositionRoot.createCandlestickStore scope.ServiceProvider
-            Logger = logger
+            OkxHttp = provider.GetRequiredService<Http.T>()
+            CandlestickStore = provider.GetRequiredService<CandlestickStore.T>()
+            Logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("OkxSynchronizationWorker")
         }
 
 type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogger<OkxSynchronizationWorker>) =
@@ -135,7 +135,7 @@ type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogge
 
                 if tick then
                     use scope = scopeFactory.CreateScope()
-                    let deps = SyncDependencies.create scope logger
+                    let deps = SyncDependencies.create scope.ServiceProvider
 
                     try
                         let! _ = CandlestickSync.runSyncCycle deps config
