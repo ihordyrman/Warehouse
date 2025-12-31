@@ -5,31 +5,25 @@ open System.Collections.Concurrent
 open System.Data
 open System.Threading
 open Dapper
-open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
+open Warehouse.Core.Infrastructure
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Trading
 
 module Orchestrator =
+    open Entities
+    open EntityMapping
 
     [<Literal>]
     let private SyncIntervalSeconds = 30
 
-    let private pipelinesTable = table'<Pipeline> "pipeline_configurations"
-
     let private loadAllPipelines (db: IDbConnection) =
         task {
-            let! results =
-                select {
-                    for p in pipelinesTable do
-                        selectAll
-                }
-                |> db.SelectAsync<Pipeline>
-
-            return results |> Seq.toList
+            let! pipelines = db.QueryAsync<PipelineConfigurationEntity>("SELECT * FROM pipeline_configurations")
+            return Seq.map toPipeline pipelines |> Seq.toList
         }
 
     let private shouldRun (pipeline: Pipeline) =
@@ -142,19 +136,19 @@ module Orchestrator =
                     use scope = scopeFactory.CreateScope()
                     use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                    let! results =
-                        select {
-                            for p in pipelinesTable do
-                                where (p.Id = pipelineId)
-                                take 1
-                        }
-                        |> db.SelectAsync<Pipeline>
+                    let! result =
+                        db.QuerySingleOrDefaultAsync<PipelineConfigurationEntity>(
+                            "SELECT * FROM pipeline_configurations WHERE id = @Id",
+                            {| Id = pipelineId |}
+                        )
 
-                    match results |> Seq.tryHead with
-                    | Option.None ->
+                    match box result with
+                    | null ->
                         logger.LogWarning("Pipeline {PipelineId} not found", pipelineId)
                         return false
-                    | Some pipeline -> return! startExecutor scope.ServiceProvider pipeline ct
+                    | _ ->
+                        let pipeline = toPipeline result
+                        return! startExecutor scope.ServiceProvider pipeline ct
             }
 
         member _.StopPipelineAsync(pipelineId: int) = stopExecutor pipelineId

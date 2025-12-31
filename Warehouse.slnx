@@ -17,5 +17,6 @@
     </Folder>
     <Folder Name="/tools/">
         <Project Path="tools/Warehouse.DbMigration/Warehouse.DbMigration.fsproj" />
+        <Project Path="tools/Warehouse.Sandbox/Warehouse.Sandbox.fsproj" />
     </Folder>
 </Solution>

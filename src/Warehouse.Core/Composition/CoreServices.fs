@@ -123,10 +123,10 @@ module CoreServices =
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName))
         |> ignore
 
-        DefaultTypeMap.MatchNamesWithUnderscores <- true
 
         services.AddScoped<IDbConnection>(fun sp ->
             let settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value
+            DefaultTypeMap.MatchNamesWithUnderscores <- true
             new NpgsqlConnection(settings.ConnectionString)
         )
         |> ignore

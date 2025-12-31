@@ -15,6 +15,7 @@
         <Compile Include="Shared\Errors.fs" />
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Settings.fs" />
+        <Compile Include="Infrastructure\Entities.fs" />
 
         <Compile Include="Markets\Abstractions\Types.fs" />
         <Compile Include="Markets\Abstractions\BalanceProvider.fs" />
