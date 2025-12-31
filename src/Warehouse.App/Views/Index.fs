@@ -138,6 +138,24 @@ let get: HttpHandler =
                         activePipelines
                         totalBalance
                     ]
+
+                    _section [ _class_ "mb-10" ] [
+                        _div [ _class_ "flex justify-between items-center mb-6" ] [
+                            _div [] [
+                                _h2 [ _class_ "text-2xl font-bold text-gray-900" ] [ Text.raw "Market Accounts" ]
+                                _p [ _class_ "text-gray -500 text-sm mt-1" ] [
+                                    Text.raw "Manage your exchange connections"
+                                ]
+                            ]
+                            _a [
+                                _href_ "/AccountsCreate"
+                                _class_
+                                    "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700
+                                     text-white font-medium rounded-lg shadow-sm hover:shadow-md
+                                     transition-all duration-200"
+                            ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Account" ]
+                        ]
+                    ]
                 ]
             ]
         ]
