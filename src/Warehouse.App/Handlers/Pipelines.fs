@@ -32,7 +32,8 @@ let pipelinesSection tags marketTypes =
                 _p [ _class_ "text-gray-600" ] [ Text.raw "Manage your automated trading pipelines" ]
             ]
             _a [
-                _href_ "/PipelinesCreate"
+                // ex PipelinesCreate
+                _href_ "/create-pipeline"
                 _class_
                     "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
             ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Pipeline" ]

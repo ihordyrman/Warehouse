@@ -38,12 +38,14 @@ app
     .UseFalco(
         [
             get "/" Views.Index.get
-            get "/system-status" Handlers.System.status
+            get "/balance/total" Handlers.Balances.total
+            get "/create-pipeline" Views.CreatePipeline.get
             get "/markets/count" Handlers.Markets.count
             get "/markets/grid" Handlers.Markets.grid
             get "/pipelines/count" Handlers.Pipelines.count
             get "/pipelines/grid" Handlers.Pipelines.grid
-            get "/balance/total" Handlers.Balances.total
+            get "/system-status" Handlers.System.status
+            post "/pipelines/create" Handlers.CreatePipeline.create
             mapGet "/balance/{marketType:int}" _.GetInt("marketType") Handlers.Balances.market
         ]
     )

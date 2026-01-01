@@ -12,8 +12,10 @@
         <Compile Include="Handlers\Markets.fs" />
         <Compile Include="Handlers\Pipelines.fs" />
         <Compile Include="Handlers\Balances.fs" />
+        <Compile Include="Handlers\CreatePipeline.fs" />
         <Compile Include="Views\SystemView.fs" />
         <Compile Include="Views\Index.fs" />
+        <Compile Include="Views\CreatePipeline.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
