@@ -3,7 +3,6 @@ module Warehouse.App.Handlers.Pipelines
 open Falco
 open Falco.Htmx
 open Falco.Markup
-open Falco.Markup.Elem
 open Microsoft.Extensions.DependencyInjection
 open Warehouse.Core.Queries
 
