@@ -25,21 +25,23 @@ let count: HttpHandler =
 
 let pipelinesSection tags marketTypes =
     _section [] [
-        // Page Header
+        // section header
         _div [ _class_ "flex justify-between items-center mb-6" ] [
             _div [] [
                 _h1 [ _class_ "text-2xl font-bold text-gray-900" ] [ Text.raw "Trading Pipelines" ]
                 _p [ _class_ "text-gray-600" ] [ Text.raw "Manage your automated trading pipelines" ]
             ]
-            _a [
-                // ex PipelinesCreate
-                _href_ "/create-pipeline"
+            _button [
+                _type_ "button"
+                Hx.get "/pipelines/modal"
+                Hx.targetCss "#modal-container"
+                Hx.swapInnerHtml
                 _class_
                     "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
             ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Pipeline" ]
         ]
 
-        // Filter Bar
+        // filter bar
         _div [ _class_ "card mb-6" ] [
             _form [
                 Hx.get "/pipelines"
@@ -114,7 +116,7 @@ let pipelinesSection tags marketTypes =
             ]
         ]
 
-        // Pipelines Table
+        // pipelines table
         _div [ _class_ "card overflow-hidden" ] [
             _div [ _class_ "overflow-x-auto" ] [
                 _table [ _class_ "min-w-full divide-y divide-gray-200" ] [

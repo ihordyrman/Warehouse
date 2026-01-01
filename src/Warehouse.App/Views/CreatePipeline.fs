@@ -7,19 +7,6 @@ open Warehouse.Core.Domain
 
 let private marketTypes = [ MarketType.Okx; MarketType.Binance ]
 
-let private pageHeader =
-    _div [ _class_ "mb-6" ] [
-        _div [ _class_ "flex items-center mb-2" ] [
-            _a [ _href_ "/"; _class_ "text-gray-600 hover:text-gray-900 mr-2" ] [
-                _i [ _class_ "fas fa-arrow-left" ] []
-            ]
-            _h1 [ _class_ "text-2xl font-bold text-gray-900" ] [ Text.raw "Create New Pipeline" ]
-        ]
-        _p [ _class_ "text-gray-600" ] [
-            Text.raw "Configure a new trading pipeline for a specific market and symbol"
-        ]
-    ]
-
 let private marketTypeField =
     _div [] [
         _label [ _for_ "marketType"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [
@@ -29,7 +16,8 @@ let private marketTypeField =
         _select [
             _id_ "marketType"
             _name_ "marketType"
-            _class_ "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            _class_
+                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         ] [
             for marketType in marketTypes do
                 _option [ _value_ (string (int marketType)) ] [ Text.raw (marketType.ToString()) ]
@@ -47,7 +35,8 @@ let private symbolField =
             _name_ "symbol"
             _type_ "text"
             Attr.create "placeholder" "e.g., BTC-USDT, ETH-USDT"
-            _class_ "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            _class_
+                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             Attr.create "required" "required"
         ]
         _p [ _class_ "text-sm text-gray-500 mt-1" ] [
@@ -57,15 +46,14 @@ let private symbolField =
 
 let private tagsField =
     _div [] [
-        _label [ _for_ "tags"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [
-            Text.raw "Tags"
-        ]
+        _label [ _for_ "tags"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [ Text.raw "Tags" ]
         _input [
             _id_ "tags"
             _name_ "tags"
             _type_ "text"
             Attr.create "placeholder" "e.g., scalping, high-frequency, btc"
-            _class_ "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            _class_
+                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         ]
         _p [ _class_ "text-sm text-gray-500 mt-1" ] [
             Text.raw "Enter tags separated by commas. Tags help organize and filter pipelines."
@@ -84,7 +72,8 @@ let private executionIntervalField =
             _type_ "number"
             Attr.create "min" "1"
             Attr.create "placeholder" "e.g., 5"
-            _class_ "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            _class_
+                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             Attr.create "required" "required"
         ]
         _p [ _class_ "text-sm text-gray-500 mt-1" ] [
@@ -105,76 +94,97 @@ let private enabledField =
         ]
     ]
 
-let private formButtons =
-    _div [ _class_ "flex justify-end space-x-3 pt-4 border-t" ] [
-        _a [
-            _href_ "/"
-            _class_ "inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg shadow-sm transition-all duration-200"
-        ] [
-            _i [ _class_ "fas fa-times mr-2" ] []
-            Text.raw "Cancel"
-        ]
-        _button [
-            _type_ "submit"
-            _class_ "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-        ] [
-            _i [ _class_ "fas fa-plus mr-2" ] []
-            Text.raw "Create Pipeline"
-        ]
-    ]
-
-let private pipelineForm =
-    _div [ _class_ "card bg-white rounded-xl shadow-sm border border-gray-200 p-6" ] [
-        _form [ _method_ "post"; Hx.post "/pipelines/create"; Hx.targetCss "#form-result" ] [
-            _div [ _class_ "space-y-6" ] [
-                marketTypeField
-                symbolField
-                tagsField
-                executionIntervalField
-                enabledField
-                formButtons
-            ]
-        ]
-        _div [ _id_ "form-result" ] []
-    ]
-
 let private helpSection =
-    _div [ _class_ "mt-6 bg-blue-50 border border-blue-200 rounded-md p-4" ] [
-        _h3 [ _class_ "text-sm font-semibold text-blue-900 mb-2" ] [
+    _div [ _class_ "mt-4 bg-blue-50 border border-blue-200 rounded-md p-3" ] [
+        _h4 [ _class_ "text-xs font-semibold text-blue-900 mb-1" ] [
             _i [ _class_ "fas fa-info-circle mr-1" ] []
-            Text.raw "Pipeline Configuration Tips"
+            Text.raw "Tips"
         ]
-        _ul [ _class_ "text-sm text-blue-800 space-y-1" ] [
-            _li [] [ Text.raw "• Choose the market type that matches your trading account" ]
-            _li [] [ Text.raw "• Symbol must match the exact format used by the exchange (e.g., BTC-USDT for OKX)" ]
-            _li [] [ Text.raw "• Pipelines can be enabled/disabled at any time from the Pipelines list" ]
-            _li [] [ Text.raw "• Each market type + symbol combination must be unique" ]
+        _ul [ _class_ "text-xs text-blue-800 space-y-0.5" ] [
+            _li [] [ Text.raw "• Symbol must match exchange format (e.g., BTC-USDT)" ]
+            _li [] [ Text.raw "• Each market + symbol combination must be unique" ]
         ]
     ]
 
-let content =
-    _div [ _class_ "max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6" ] [
-        pageHeader
-        pipelineForm
-        helpSection
-    ]
+/// Modal content returned by the handler (loaded via HTMX)
+let modalContent =
+    _div [
+        _id_ "pipeline-modal"
+        _class_ "fixed inset-0 z-50 overflow-y-auto"
+        Attr.create "aria-labelledby" "modal-title"
+        Attr.create "role" "dialog"
+        Attr.create "aria-modal" "true"
+    ] [
+        // backdrop
+        _div [
+            _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+            Hx.get "/pipelines/modal/close"
+            Hx.targetCss "#modal-container"
+            Hx.swapInnerHtml
+        ] []
 
-let get: HttpHandler =
-    let html =
-        _html [] [
-            _head [] [
-                _link [ _href_ "./styles.css"; _rel_ "stylesheet" ]
-                _link [
-                    _href_ "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
-                    _rel_ "stylesheet"
+        // modal panel
+        _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+            _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                _div [
+                    _class_
+                        "relative transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all w-full max-w-lg"
+                ] [
+                    // header
+                    _div [ _class_ "bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4" ] [
+                        _div [ _class_ "flex items-center justify-between" ] [
+                            _h3 [ _id_ "modal-title"; _class_ "text-lg font-semibold text-white" ] [
+                                _i [ _class_ "fas fa-plus-circle mr-2" ] []
+                                Text.raw "Create New Pipeline"
+                            ]
+                            _button [
+                                _type_ "button"
+                                _class_ "text-white hover:text-gray-200 transition-colors"
+                                Hx.get "/pipelines/modal/close"
+                                Hx.targetCss "#modal-container"
+                                Hx.swapInnerHtml
+                            ] [ _i [ _class_ "fas fa-times text-xl" ] [] ]
+                        ]
+                        _p [ _class_ "text-blue-100 text-sm mt-1" ] [ Text.raw "Configure a new trading pipeline" ]
+                    ]
+
+                    // form
+                    _form [
+                        _method_ "post"
+                        Hx.post "/pipelines/create"
+                        Hx.targetCss "#modal-container"
+                        Hx.swapInnerHtml
+                    ] [
+                        _div [ _class_ "px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto" ] [
+                            marketTypeField
+                            symbolField
+                            tagsField
+                            executionIntervalField
+                            enabledField
+                            helpSection
+                        ]
+
+                        // footer with buttons
+                        _div [ _class_ "bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t" ] [
+                            _button [
+                                _type_ "button"
+                                _class_
+                                    "px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                                Hx.get "/pipelines/modal/close"
+                                Hx.targetCss "#modal-container"
+                                Hx.swapInnerHtml
+                            ] [ _i [ _class_ "fas fa-times mr-2" ] []; Text.raw "Cancel" ]
+                            _button [
+                                _type_ "submit"
+                                _class_
+                                    "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all"
+                            ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Create Pipeline" ]
+                        ]
+                    ]
                 ]
-                _script [ _src_ HtmxScript.cdnSrc ] []
-                _script [ _src_ "https://cdn.tailwindcss.com" ] []
-            ]
-            _body [ _class_ "min-h-screen bg-gray-50" ] [
-                Index.header
-                content
             ]
         ]
+    ]
 
-    Response.ofHtml html
+let getModal: HttpHandler = Response.ofHtml modalContent
+let getCloseModal: HttpHandler = Response.ofHtml (_div [] [])

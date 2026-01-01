@@ -170,6 +170,8 @@ let get: HttpHandler =
                         ]
                     ]
                 ]
+
+                _div [ _id_ "modal-container" ] []
             ]
         ]
 

@@ -2,25 +2,75 @@ module Warehouse.App.Handlers.CreatePipeline
 
 open Falco
 open Falco.Markup
+open Falco.Htmx
 open Warehouse.Core.Domain
 
 type CreatePipelineInput = { MarketType: int; Symbol: string; Tags: string; ExecutionInterval: int; Enabled: bool }
 
 let private successResponse (symbol: string) =
-    _div [ _class_ "mt-4 p-4 bg-green-50 border border-green-200 rounded-md" ] [
-        _div [ _class_ "flex items-center" ] [
-            _i [ _class_ "fas fa-check-circle text-green-500 mr-2" ] []
-            _span [ _class_ "text-green-800 font-medium" ] [ Text.raw $"Pipeline for {symbol} created successfully!" ]
+    _div [ _id_ "pipeline-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+        _div [ _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" ] []
+        _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+            _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                _div [
+                    _class_
+                        "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                ] [
+                    _div [ _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4" ] [
+                        _i [ _class_ "fas fa-check text-3xl text-green-600" ] []
+                    ]
+                    _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Pipeline Created!" ]
+                    _p [ _class_ "text-gray-600 mb-4" ] [
+                        Text.raw $"Pipeline for {symbol} has been created successfully."
+                    ]
+                    _button [
+                        _type_ "button"
+                        _class_
+                            "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                        Hx.get "/pipelines/modal/close"
+                        Hx.targetCss "#modal-container"
+                        Hx.swapInnerHtml
+                        Attr.create "hx-on::after-request" "htmx.trigger('#pipelines-container', 'load')"
+                    ] [ Text.raw "Close" ]
+                ]
+            ]
         ]
-        _p [ _class_ "text-green-700 text-sm mt-2" ] [ Text.raw "Redirecting to dashboard..." ]
-        _script [] [ Text.raw "setTimeout(() => window.location.href = '/', 2000);" ]
     ]
 
 let private errorResponse (message: string) =
-    _div [ _class_ "mt-4 p-4 bg-red-50 border border-red-200 rounded-md" ] [
-        _div [ _class_ "flex items-center" ] [
-            _i [ _class_ "fas fa-exclamation-circle text-red-500 mr-2" ] []
-            _span [ _class_ "text-red-800 font-medium" ] [ Text.raw message ]
+    _div [ _id_ "pipeline-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+        _div [ _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" ] []
+        _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+            _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                _div [
+                    _class_
+                        "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                ] [
+                    _div [ _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4" ] [
+                        _i [ _class_ "fas fa-exclamation-triangle text-3xl text-red-600" ] []
+                    ]
+                    _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Error" ]
+                    _p [ _class_ "text-gray-600 mb-4" ] [ Text.raw message ]
+                    _div [ _class_ "flex justify-center space-x-3" ] [
+                        _button [
+                            _type_ "button"
+                            _class_
+                                "px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                            Hx.get "/pipelines/modal/close"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                        ] [ Text.raw "Close" ]
+                        _button [
+                            _type_ "button"
+                            _class_
+                                "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            Hx.get "/pipelines/modal"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                        ] [ Text.raw "Try Again" ]
+                    ]
+                ]
+            ]
         ]
     ]
 

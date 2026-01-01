@@ -39,13 +39,14 @@ app
         [
             get "/" Views.Index.get
             get "/balance/total" Handlers.Balances.total
-            get "/create-pipeline" Views.CreatePipeline.get
             get "/markets/count" Handlers.Markets.count
             get "/markets/grid" Handlers.Markets.grid
             get "/pipelines/count" Handlers.Pipelines.count
             get "/pipelines/grid" Handlers.Pipelines.grid
-            get "/system-status" Handlers.System.status
+            get "/pipelines/modal" Views.CreatePipeline.getModal
+            get "/pipelines/modal/close" Views.CreatePipeline.getCloseModal
             post "/pipelines/create" Handlers.CreatePipeline.create
+            get "/system-status" Handlers.System.status
             mapGet "/balance/{marketType:int}" _.GetInt("marketType") Handlers.Balances.market
         ]
     )
