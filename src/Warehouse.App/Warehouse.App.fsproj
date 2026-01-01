@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <Compile Include="Handlers\System.fs" />
-        <Compile Include="Handlers\Accounts.fs" />
+        <Compile Include="Handlers\Markets.fs" />
         <Compile Include="Handlers\Pipelines.fs" />
         <Compile Include="Handlers\Balances.fs" />
         <Compile Include="Views\SystemView.fs" />

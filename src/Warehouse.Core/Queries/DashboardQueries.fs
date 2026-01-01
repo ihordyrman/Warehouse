@@ -8,18 +8,24 @@ open Microsoft.Extensions.DependencyInjection
 open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
+open Warehouse.Core.Infrastructure
 open Warehouse.Core.Markets.Services
 
 module DashboardQueries =
+    open Entities
+    open EntityMapping
 
     let marketsTable = table'<Market> "markets"
+    let pipelinesTable = table'<Pipeline> "pipeline_configurations"
 
     type T =
         {
             CountMarkets: unit -> Task<int>
             CountPipelines: unit -> Task<int>
             CountEnabledPipelines: unit -> Task<int>
+            GetAllTags: unit -> Task<string list>
             TotalBalanceUsdt: unit -> Task<decimal>
+            ActiveMarkets: unit -> Task<Market list>
         }
 
     let private queryInt (scopeFactory: IServiceScopeFactory) (sql: string) =
@@ -50,7 +56,7 @@ module DashboardQueries =
 
                         match result with
                         | Ok value -> return value
-                        | Error err ->
+                        | Result.Error err ->
                             let log = scope.ServiceProvider.GetService<ILogger>()
                             log.LogError("Error getting balance for {MarketType}: {Error}", market.Type, err)
                             return 0M
@@ -61,11 +67,53 @@ module DashboardQueries =
                 |> Seq.sum
         }
 
+    let private getActiveMarkets (scopeFactory: IServiceScopeFactory) : Task<Market list> =
+        task {
+            use scope = scopeFactory.CreateScope()
+            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+            let! results =
+                db.QueryAsync<MarketEntity, MarketCredentialsEntity, MarketEntity * MarketCredentialsEntity>(
+                    "SELECT m.*, mc.* FROM markets m
+                     INNER JOIN market_credentials mc ON m.id = mc.market_id",
+                    (fun market creds -> (market, creds)),
+                    splitOn = "id"
+                )
+
+            return
+                results
+                |> Seq.map (fun (marketEntity, credsEntity) ->
+                    toMarket marketEntity (Some(toMarketCredentials credsEntity None))
+                )
+                |> Seq.toList
+        }
+
+    let private getTags (scopeFactory: IServiceScopeFactory) : Task<string list> =
+        task {
+            use scope = scopeFactory.CreateScope()
+            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+            let! tags =
+                db.QueryAsync<string>(
+                    "SELECT tags FROM pipeline_configurations
+                     GROUP BY tags
+                     ORDER BY tags ASC"
+                )
+
+            // todo: improve this query
+            // since tags are strings, we need additionally parse the result to list
+            // and remove duplicates
+
+            return tags |> Seq.toList
+        }
+
     let create (scopeFactory: IServiceScopeFactory) : T =
         {
             CountMarkets = fun () -> queryInt scopeFactory "SELECT COUNT(1) FROM markets"
             CountPipelines = fun () -> queryInt scopeFactory "SELECT COUNT(1) FROM pipeline_configurations"
             CountEnabledPipelines =
                 fun () -> queryInt scopeFactory "SELECT COUNT(1) FROM pipeline_configurations WHERE enabled = true"
+            GetAllTags = fun () -> getTags scopeFactory
             TotalBalanceUsdt = fun () -> getTotalBalanceUsdt scopeFactory
+            ActiveMarkets = fun () -> getActiveMarkets scopeFactory
         }
