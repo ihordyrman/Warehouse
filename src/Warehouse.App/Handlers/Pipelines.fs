@@ -3,25 +3,22 @@ module Warehouse.App.Handlers.Pipelines
 open Falco
 open Falco.Htmx
 open Falco.Markup
+open Falco.Markup.Elem
 open Microsoft.Extensions.DependencyInjection
 open Warehouse.Core.Queries
 
 let count: HttpHandler =
     fun ctx ->
-        try
-            let scopeFactory = ctx.Plug<IServiceScopeFactory>()
-
-            let pipelines =
-                (DashboardQueries.create scopeFactory).CountPipelines()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-                |> string
-
-            Response.ofPlainText pipelines ctx
-        with ex ->
-            let log = ctx.Plug<Serilog.ILogger>()
-            log.Error(ex, "Error getting active pipelines")
-            Response.ofPlainText "0" ctx
+        task {
+            try
+                let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                let! pipelines = (DashboardQueries.create scopeFactory).CountPipelines()
+                return Response.ofPlainText (pipelines |> string) ctx
+            with ex ->
+                let log = ctx.Plug<Serilog.ILogger>()
+                log.Error(ex, "Error getting active pipelines")
+                return Response.ofPlainText "0" ctx
+        }
 
 let pipelinesSection tags marketTypes =
     _section [] [
@@ -158,23 +155,17 @@ let pipelinesSection tags marketTypes =
 
 let grid: HttpHandler =
     fun ctx ->
-        try
-            let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+        task {
+            try
+                let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                let! tags = (DashboardQueries.create scopeFactory).GetAllTags()
+                let! markets = (DashboardQueries.create scopeFactory).ActiveMarkets()
+                let types = markets |> List.map _.Type.ToString()
+                let html = pipelinesSection tags types
+                return Response.ofHtml html ctx
 
-            let tags =
-                (DashboardQueries.create scopeFactory).GetAllTags() |> Async.AwaitTask |> Async.RunSynchronously
-
-            let markets =
-                (DashboardQueries.create scopeFactory).ActiveMarkets()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-                |> List.map _.Type.ToString()
-
-            let html = pipelinesSection tags markets
-
-            Response.ofHtml html ctx
-
-        with ex ->
-            let log = ctx.Plug<Serilog.ILogger>()
-            log.Error(ex, "Error getting pipelines grid")
-            Response.ofPlainText "Error" ctx
+            with ex ->
+                let log = ctx.Plug<Serilog.ILogger>()
+                log.Error(ex, "Error getting pipelines grid")
+                return Response.ofPlainText "Error" ctx
+        }

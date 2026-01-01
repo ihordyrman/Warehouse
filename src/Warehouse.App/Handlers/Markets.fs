@@ -11,20 +11,16 @@ type MarketInfo = { Id: int; Type: MarketType; Name: string; Enabled: bool; HasC
 
 let count: HttpHandler =
     fun ctx ->
-        try
-            let scopeFactory = ctx.Plug<IServiceScopeFactory>()
-
-            let activeAccounts =
-                (DashboardQueries.create scopeFactory).CountMarkets()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-                |> string
-
-            Response.ofPlainText activeAccounts ctx
-        with ex ->
-            let log = ctx.Plug<Serilog.ILogger>()
-            log.Error(ex, "Error getting active markets count")
-            Response.ofPlainText "0" ctx
+        task {
+            try
+                let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                let! activeAccounts = (DashboardQueries.create scopeFactory).CountMarkets()
+                return Response.ofPlainText (activeAccounts |> string) ctx
+            with ex ->
+                let log = ctx.Plug<Serilog.ILogger>()
+                log.Error(ex, "Error getting active markets count")
+                return Response.ofPlainText "0" ctx
+        }
 
 let private emptyAccountsState =
     _div [ _class_ "bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center" ] [
@@ -116,29 +112,34 @@ let private marketCard (market: MarketInfo) =
 
 let grid: HttpHandler =
     fun ctx ->
-        try
-            let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+        task {
+            try
+                let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                let! markets = (DashboardQueries.create scopeFactory).ActiveMarkets()
 
-            let markets =
-                (DashboardQueries.create scopeFactory).ActiveMarkets()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-                |> Seq.map (fun x ->
-                    { Id = x.Id; Type = x.Type; Name = x.Type.ToString(); Enabled = true; HasCredentials = true }
-                )
-                |> Seq.toList
+                let marketsInfo =
+                    markets
+                    |> Seq.map (fun x ->
+                        { Id = x.Id; Type = x.Type; Name = x.Type.ToString(); Enabled = true; HasCredentials = true }
+                    )
+                    |> Seq.toList
 
-            match markets.IsEmpty with
-            | true -> Response.ofHtml emptyAccountsState ctx
-            | false ->
-                let html =
-                    _div [ _class_ "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"; _id_ "accounts-grid" ] [
-                        for market in markets do
-                            marketCard market
-                    ]
+                return
+                    match marketsInfo.IsEmpty with
+                    | true -> Response.ofHtml emptyAccountsState ctx
+                    | false ->
+                        let html =
+                            _div [
+                                _class_ "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                _id_ "accounts-grid"
+                            ] [
+                                for market in marketsInfo do
+                                    marketCard market
+                            ]
 
-                Response.ofHtml html ctx
-        with ex ->
-            let log = ctx.Plug<Serilog.ILogger>()
-            log.Error(ex, "Error getting active markets")
-            Response.ofJson [] ctx
+                        Response.ofHtml html ctx
+            with ex ->
+                let log = ctx.Plug<Serilog.ILogger>()
+                log.Error(ex, "Error getting active markets")
+                return Response.ofJson [] ctx
+        }
