@@ -41,18 +41,19 @@ module DashboardQueries =
             use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
             let balanceManager = scope.ServiceProvider.GetRequiredService<BalanceManager.T>()
 
-            return
+            let! markets =
                 select {
                     for m in marketsTable do
                         selectAll
                 }
                 |> db.SelectAsync<Market>
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
+
+            let sum =
+                markets
                 |> Seq.map (fun market ->
                     task {
                         let! result =
-                            BalanceManager.getTotalUsdtValue balanceManager market.Type CancellationToken.None
+                            (BalanceManager.getTotalUsdtValue balanceManager market.Type CancellationToken.None)
 
                         match result with
                         | Ok value -> return value
@@ -61,10 +62,11 @@ module DashboardQueries =
                             log.LogError("Error getting balance for {MarketType}: {Error}", market.Type, err)
                             return 0M
                     }
-                    |> Async.AwaitTask
-                    |> Async.RunSynchronously
                 )
-                |> Seq.sum
+                |> Array.ofSeq
+
+            let! results = Task.WhenAll sum
+            return results |> Array.sum
         }
 
     let private getActiveMarkets (scopeFactory: IServiceScopeFactory) : Task<Market list> =
