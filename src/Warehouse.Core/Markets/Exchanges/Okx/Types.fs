@@ -5,6 +5,7 @@ open System.Globalization
 open System.Text.Json
 open System.Text.Json.Serialization
 
+[<JsonConverter(typeof<JsonStringEnumConverter>)>]
 type OkxResponseCode =
     | Success = 0
     | InvalidTimestamp = 60004

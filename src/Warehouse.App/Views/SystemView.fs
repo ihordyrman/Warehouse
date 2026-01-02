@@ -2,11 +2,7 @@ module Warehouse.App.Views.SystemView
 
 open Falco.Markup
 open Falco.Htmx
-
-type private Status =
-    | Idle
-    | Online
-    | Error
+open Warehouse.App.Handlers.System
 
 let private statusConfig =
     function

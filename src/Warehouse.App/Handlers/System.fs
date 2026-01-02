@@ -8,7 +8,7 @@ open Microsoft.Extensions.DependencyInjection
 open Serilog
 open Warehouse.Core.Queries
 
-type private Status =
+type Status =
     | Idle
     | Online
     | Error

@@ -40,20 +40,17 @@ module DashboardQueries =
             use scope = scopeFactory.CreateScope()
             use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
             let balanceManager = scope.ServiceProvider.GetRequiredService<BalanceManager.T>()
-
-            let! markets =
-                select {
-                    for m in marketsTable do
-                        selectAll
-                }
-                |> db.SelectAsync<Market>
+            let! markets = db.QueryAsync<MarketEntity>("SELECT m.* FROM markets m")
 
             let sum =
                 markets
                 |> Seq.map (fun market ->
                     task {
                         let! result =
-                            (BalanceManager.getTotalUsdtValue balanceManager market.Type CancellationToken.None)
+                            (BalanceManager.getTotalUsdtValue
+                                balanceManager
+                                (enum<MarketType> market.Type)
+                                CancellationToken.None)
 
                         match result with
                         | Ok value -> return value

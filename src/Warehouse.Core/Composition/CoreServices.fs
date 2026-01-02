@@ -111,7 +111,8 @@ module CoreServices =
     let private credentialsStore (services: IServiceCollection) =
         services.AddScoped<CredentialsStore.T>(fun provider ->
             let serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
-            use scope = serviceScopeFactory.CreateScope()
+            // todo: needs to be fixed
+            let scope = serviceScopeFactory.CreateScope()
             CredentialsStore.create scope
         )
         |> ignore
@@ -133,12 +134,11 @@ module CoreServices =
 
     let private httpClientFactory (services: IServiceCollection) =
         services
-            .AddHttpClient(
-                "Okx",
-                fun (client: HttpClient) ->
-                    client.BaseAddress <- Uri("https://www.okx.com/")
-                    client.Timeout <- TimeSpan.FromSeconds(30.0)
-                    client.DefaultRequestHeaders.Add("User-Agent", "Warehouse/1.0")
+            .AddHttpClient("Okx")
+            .ConfigureHttpClient(fun (client: HttpClient) ->
+                client.BaseAddress <- Uri("https://www.okx.com/")
+                client.Timeout <- TimeSpan.FromSeconds(30.0)
+                client.DefaultRequestHeaders.Add("User-Agent", "Warehouse/1.0")
             )
             .ConfigurePrimaryHttpMessageHandler(
                 Func<HttpMessageHandler>(fun () ->
@@ -179,8 +179,8 @@ module CoreServices =
             candlestickStore
             credentialsStore
             heartbeat
-            httpClient
             httpClientFactory
+            httpClient
             marketConnectionService
             okxAdapter
             okxWorker
