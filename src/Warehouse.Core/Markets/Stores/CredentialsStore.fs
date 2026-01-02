@@ -48,7 +48,7 @@ module CredentialsStore =
                             match results |> Seq.tryHead with
                             | Some credentials ->
                                 logger.LogDebug("Retrieved credentials for {MarketType}", marketType)
-                                return Ok(EntityMapping.toMarketCredentials credentials None)
+                                return Ok(Mappers.toMarketCredentials credentials None)
                             | None -> return Result.Error(NotFound($"No credentials found for {marketType}"))
                         with ex ->
                             logger.LogError(ex, "Failed to get credentials for {MarketType}", marketType)

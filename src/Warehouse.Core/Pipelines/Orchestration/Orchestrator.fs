@@ -15,7 +15,7 @@ open Warehouse.Core.Pipelines.Trading
 
 module Orchestrator =
     open Entities
-    open EntityMapping
+    open Mappers
 
     [<Literal>]
     let private SyncIntervalSeconds = 30

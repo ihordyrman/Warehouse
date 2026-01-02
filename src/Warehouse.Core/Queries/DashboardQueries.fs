@@ -13,7 +13,7 @@ open Warehouse.Core.Markets.Services
 
 module DashboardQueries =
     open Entities
-    open EntityMapping
+    open Mappers
 
     let marketsTable = table'<Market> "markets"
     let pipelinesTable = table'<Pipeline> "pipeline_configurations"
