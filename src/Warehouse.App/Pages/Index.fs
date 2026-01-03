@@ -82,7 +82,7 @@ let get: HttpHandler =
                 _title [] [ Text.raw "Warehouse Trading System" ]
                 _link [ _href_ "./styles.css"; _rel_ "stylesheet" ]
                 _link [
-                    _href_ "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+                    _href_ "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
                     _rel_ "stylesheet"
                 ]
                 _script [ _src_ HtmxScript.cdnSrc ] []

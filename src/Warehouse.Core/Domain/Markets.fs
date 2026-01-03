@@ -5,6 +5,7 @@ open System
 type MarketType =
     | Okx = 0
     | Binance = 1
+    | IBKR = 2
 
 type ConnectionState =
     | Disconnected = 0

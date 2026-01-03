@@ -20,9 +20,9 @@ module Data =
                 let! enabledCount = (DashboardQueries.create scopeFactory).CountEnabledPipelines()
 
                 return
-                    match enabledCount with
-                    | x when x > 0 -> Online
-                    | _ -> Idle
+                    match enabledCount > 0 with
+                    | true -> Online
+                    | false -> Idle
             with ex ->
                 logger |> Option.iter _.LogError(ex, "Error getting system status")
                 return Error

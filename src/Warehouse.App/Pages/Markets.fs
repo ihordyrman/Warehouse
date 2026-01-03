@@ -35,155 +35,100 @@ module Data =
 
 module View =
     let emptyState =
-        _div
-            [ _class_ "bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center" ]
-            [
-                _div
-                    [ _class_ "inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4" ]
-                    [ _i [ _class_ "fas fa-exchange-alt text-3xl text-gray-400" ] [] ]
-                _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "No Accounts Yet" ]
-                _p [ _class_ "text-gray-500 mb-4" ] [ Text.raw "Connect your first exchange account to start trading" ]
-                _a
-                    [
-                        _href_ "/create-account"
-                        _class_
-                            "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                    ]
-                    [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Your First Account" ]
+        _div [ _class_ "bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center" ] [
+            _div [ _class_ "inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4" ] [
+                _i [ _class_ "fas fa-exchange-alt text-3xl text-gray-400" ] []
             ]
-
-    let private marketCard (market: MarketInfo) =
-        let typeClass =
-            match market.Type.ToString() with
-            | "Okx" -> "bg-blue-100 text-blue-800"
-            | _ -> "bg-gray-100 text-gray-800"
-
-        let statusClass = if market.Enabled then "bg-green-100 text-green-800" else "bg-gray-100 text-gray-600"
-
-        _div
-            [
+            _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "No Accounts Yet" ]
+            _p [ _class_ "text-gray-500 mb-4" ] [ Text.raw "Connect your first exchange account to start trading" ]
+            _a [
+                _href_ "/create-account"
                 _class_
-                    "bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 overflow-hidden"
-                _id_ $"account-{market.Id}"
+                    "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Your First Account" ]
+        ]
+
+    let private marketPill (market: MarketInfo) =
+        let (gradientFrom, gradientTo, iconBg) =
+            match market.Type with
+            | MarketType.Okx -> ("from-blue-500", "to-blue-600", "bg-blue-400")
+            | MarketType.Binance -> ("from-yellow-500", "to-orange-500", "bg-yellow-400")
+            | MarketType.IBKR -> ("from-orange-500", "to-red-500", "bg-orange-400")
+            | _ -> ("from-gray-500", "to-gray-600", "bg-gray-400")
+
+        let statusDotClass = if market.Enabled then "bg-green-400 animate-pulse" else "bg-gray-400"
+
+        _div [
+            _class_
+                $"group relative bg-gradient-to-r {gradientFrom} {gradientTo} rounded-2xl px-5 py-3 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+            _id_ $"account-{market.Id}"
+        ] [
+            _div [ _class_ "flex items-center gap-4" ] [
+                _div [
+                    _class_
+                        $"w-10 h-10 {iconBg} bg-opacity-30 rounded-xl flex items-center justify-center backdrop-blur-sm"
+                ] [ _i [ _class_ "fas fa-exchange-alt text-white text-lg" ] [] ]
+
+                // name and status
+                _div [ _class_ "flex items-center gap-3" ] [
+                    _span [ _class_ "text-white font-bold text-lg" ] [ Text.raw market.Name ]
+                    _div [ _class_ "flex items-center gap-1.5" ] [
+                        _div [ _class_ $"w-2 h-2 rounded-full {statusDotClass}" ] []
+                        _span [ _class_ "text-white text-opacity-80 text-sm font-medium" ] [
+                            Text.raw (if market.Enabled then "Active" else "Inactive")
+                        ]
+                    ]
+                ]
+
+                _span [ _class_ "text-white text-opacity-40" ] [ Text.raw "•" ]
+
+                // balance
+                _div [
+                    Hx.get $"/balance/{int market.Type}"
+                    Hx.trigger "load, every 60s"
+                    Hx.swapInnerHtml
+                    _class_ "text-white font-bold text-lg"
+                ] [ _i [ _class_ "fas fa-spinner fa-spin text-white text-opacity-60 text-sm" ] [] ]
+
+                // Credential indicator
+                if market.HasCredentials then
+                    _div [ _class_ "ml-2"; _title_ "API Configured" ] [
+                        _i [ _class_ "fas fa-key text-white text-opacity-60 text-sm" ] []
+                    ]
+                else
+                    _div [ _class_ "ml-2"; _title_ "No API Credentials" ] [
+                        _i [ _class_ "fas fa-exclamation-circle text-yellow-300 text-sm" ] []
+                    ]
+
+                // actions
+                _div [
+                    _class_
+                        "ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                ] [
+                    _a [
+                        _href_ $"/accounts/{market.Id}"
+                        _class_
+                            "w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all"
+                        _title_ "Details"
+                    ] [ _i [ _class_ "fas fa-info text-white text-sm" ] [] ]
+                    _a [
+                        _href_ $"/accounts/{market.Id}/edit"
+                        _class_
+                            "w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all"
+                        _title_ "Edit"
+                    ] [ _i [ _class_ "fas fa-cog text-white text-sm" ] [] ]
+                ]
             ]
-            [
-                // Header
-                _div
-                    [ _class_ "p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white" ]
-                    [
-                        _div
-                            [ _class_ "flex justify-between items-start mb-3" ]
-                            [
-                                _div
-                                    [ _class_ "flex-1" ]
-                                    [
-                                        _h3 [ _class_ "text-lg font-bold text-gray-900 mb-1" ] [ Text.raw market.Name ]
-                                        _span
-                                            [
-                                                _class_
-                                                    $"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {typeClass}"
-                                            ]
-                                            [
-                                                _i [ _class_ "fas fa-exchange-alt mr-1" ] []
-                                                Text.raw (market.Type.ToString())
-                                            ]
-                                    ]
-                                _span
-                                    [
-                                        _class_
-                                            $"inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {statusClass}"
-                                    ]
-                                    [
-                                        if market.Enabled then
-                                            _i [ _class_ "fas fa-check-circle mr-1" ] []
-                                            Text.raw "Active"
-                                        else
-                                            _i [ _class_ "fas fa-pause-circle mr-1" ] []
-                                            Text.raw "Inactive"
-                                    ]
-                            ]
-                    ]
-
-                // Body
-                _div
-                    [ _class_ "p-4 space-y-3" ]
-                    [
-                        // Credentials status
-                        _div
-                            [ _class_ "flex items-center" ]
-                            [
-                                if market.HasCredentials then
-                                    _div
-                                        [ _class_ "flex items-center text-sm text-green-600" ]
-                                        [
-                                            _i [ _class_ "fas fa-check-circle mr-2" ] []
-                                            _span [ _class_ "font-medium" ] [ Text.raw "API Credentials Configured" ]
-                                        ]
-                                else
-                                    _div
-                                        [ _class_ "flex items-center text-sm text-amber-600" ]
-                                        [
-                                            _i [ _class_ "fas fa-exclamation-triangle mr-2" ] []
-                                            _span [ _class_ "font-medium" ] [ Text.raw "No API Credentials" ]
-                                        ]
-                            ]
-
-                        // Balance section
-                        _div
-                            [ _class_ "pt-4 border-t border-gray-100" ]
-                            [
-                                _div
-                                    [ _class_ "flex items-center justify-between mb-3" ]
-                                    [
-                                        _span [ _class_ "text-sm font-semibold text-gray-700" ] [ Text.raw "Balance" ]
-                                        _i [ _class_ "fas fa-sync-alt text-gray-400 text-xs" ] []
-                                    ]
-                                _div
-                                    [
-                                        Hx.get $"/balance/{int market.Type}"
-                                        Hx.trigger "load, every 60s"
-                                        Hx.swapInnerHtml
-                                        _class_ "space-y-2"
-                                    ]
-                                    [
-                                        _div
-                                            [ _class_ "flex justify-center py-2" ]
-                                            [ _i [ _class_ "fas fa-spinner fa-spin text-gray-400" ] [] ]
-                                    ]
-                            ]
-                    ]
-
-                // Footer
-                _div
-                    [ _class_ "px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3" ]
-                    [
-                        _a
-                            [
-                                _href_ $"/accounts/{market.Id}"
-                                _class_
-                                    "inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                            ]
-                            [ _i [ _class_ "fas fa-info-circle mr-1.5" ] []; Text.raw "Details" ]
-                        _a
-                            [
-                                _href_ $"/accounts/{market.Id}/edit"
-                                _class_
-                                    "inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-700 transition-colors"
-                            ]
-                            [ _i [ _class_ "fas fa-edit mr-1.5" ] []; Text.raw "Edit" ]
-                    ]
-            ]
+        ]
 
     let grid (markets: MarketInfo list) =
         match markets with
         | [] -> emptyState
         | items ->
-            _div
-                [ _class_ "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"; _id_ "accounts-grid" ]
-                [
-                    for market in items do
-                        marketCard market
-                ]
+            _div [ _class_ "flex flex-wrap gap-4"; _id_ "accounts-grid" ] [
+                for market in items do
+                    marketPill market
+            ]
 
     let count (n: int) = Text.raw (string n)
 
