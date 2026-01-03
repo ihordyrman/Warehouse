@@ -8,14 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Handlers\System.fs" />
-        <Compile Include="Handlers\Markets.fs" />
-        <Compile Include="Handlers\Pipelines.fs" />
-        <Compile Include="Handlers\Balances.fs" />
-        <Compile Include="Handlers\CreatePipeline.fs" />
-        <Compile Include="Views\SystemView.fs" />
-        <Compile Include="Views\Index.fs" />
-        <Compile Include="Views\CreatePipeline.fs" />
+        <Compile Include="Pages\Markets.fs" />
+        <Compile Include="Pages\Balance.fs" />
+        <Compile Include="Pages\SystemStatus.fs" />
+        <Compile Include="Pages\Pipeline.fs" />
+        <Compile Include="Pages\CreatePipeline.fs" />
+        <Compile Include="Pages\Index.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

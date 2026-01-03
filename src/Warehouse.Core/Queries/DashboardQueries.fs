@@ -1,5 +1,6 @@
 namespace Warehouse.Core.Queries
 
+open System
 open System.Data
 open System.Threading
 open System.Threading.Tasks
@@ -26,6 +27,13 @@ module DashboardQueries =
             GetAllTags: unit -> Task<string list>
             TotalBalanceUsdt: unit -> Task<decimal>
             ActiveMarkets: unit -> Task<Market list>
+            GetPipelines:
+                string option
+                    -> string option
+                    -> string option
+                    -> PipelineStatus option
+                    -> string
+                    -> Task<Pipeline list>
         }
 
     let private queryInt (scopeFactory: IServiceScopeFactory) (sql: string) =
@@ -106,6 +114,71 @@ module DashboardQueries =
             return tags |> Seq.toList
         }
 
+    let private getPipelines
+        (scopeFactory: IServiceScopeFactory)
+        (searchTerm: string option)
+        (filterTag: string option)
+        (filterAccount: string option)
+        (filterStatus: PipelineStatus option)
+        (sortBy: string)
+        : Task<Pipeline list>
+        =
+        task {
+            use scope = scopeFactory.CreateScope()
+            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+            let baseSql = "SELECT * FROM pipeline_configurations WHERE 1=1"
+            let conditions = ResizeArray<string>()
+            let parameters = DynamicParameters()
+
+            match searchTerm with
+            | Some term when not (String.IsNullOrEmpty term) ->
+                conditions.Add("AND symbol ILIKE @SearchTerm")
+                parameters.Add("SearchTerm", $"%%{term}%%")
+            | _ -> ()
+
+            match filterAccount with
+            | Some account when not (String.IsNullOrEmpty account) ->
+                conditions.Add("AND market_type = @MarketType")
+                parameters.Add("MarketType", account)
+            | _ -> ()
+
+            match filterStatus with
+            | Some status ->
+                let isEnabled = status = PipelineStatus.Running
+                conditions.Add("AND enabled = @Enabled")
+                parameters.Add("Enabled", isEnabled)
+            | _ -> ()
+
+            let orderClause =
+                match sortBy with
+                | "symbol-desc" -> "ORDER BY symbol DESC"
+                | "account" -> "ORDER BY market_type ASC"
+                | "account-desc" -> "ORDER BY market_type DESC"
+                | "status" -> "ORDER BY enabled ASC"
+                | "status-desc" -> "ORDER BY enabled DESC"
+                | "updated" -> "ORDER BY updated_at ASC"
+                | "updated-desc" -> "ORDER BY updated_at DESC"
+                | _ -> "ORDER BY symbol ASC"
+
+            let whereClause = String.Join(" ", conditions)
+            let finalSql = $"{baseSql} {whereClause} {orderClause}"
+
+            let! results = db.QueryAsync<PipelineConfigurationEntity>(finalSql, parameters)
+            let pipelines = results |> Seq.toList
+
+            let filteredPipelines =
+                match filterTag with
+                | Some tag when not (String.IsNullOrEmpty tag) ->
+                    // todo: fix later
+                    pipelines |> List.filter (fun p -> p.Tags.Contains tag)
+                | _ -> pipelines
+
+            return filteredPipelines |> List.map toPipeline
+
+        }
+
+
     let create (scopeFactory: IServiceScopeFactory) : T =
         {
             CountMarkets = fun () -> queryInt scopeFactory "SELECT COUNT(1) FROM markets"
@@ -115,4 +188,5 @@ module DashboardQueries =
             GetAllTags = fun () -> getTags scopeFactory
             TotalBalanceUsdt = fun () -> getTotalBalanceUsdt scopeFactory
             ActiveMarkets = fun () -> getActiveMarkets scopeFactory
+            GetPipelines = getPipelines scopeFactory
         }

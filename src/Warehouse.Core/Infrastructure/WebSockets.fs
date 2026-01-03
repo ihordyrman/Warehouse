@@ -45,7 +45,7 @@ module MessageProcessing =
         | WebSocketMessageType.Binary -> Some(Binary data)
         | _ -> None
 
-module internal WebSocketClient =
+module WebSocketClient =
 
     type State = { Socket: ClientWebSocket; ListenCts: CancellationTokenSource option; IsDisposed: bool }
 

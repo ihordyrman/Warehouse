@@ -5,7 +5,7 @@ open Microsoft.AspNetCore.HttpLogging
 open Microsoft.Extensions.DependencyInjection
 open Serilog
 open System
-open Warehouse.App
+open Warehouse.App.Pages
 open Warehouse.Core
 
 let webapp = WebApplication.CreateBuilder()
@@ -37,17 +37,24 @@ app.UseDefaultFiles().UseStaticFiles() |> ignore
 app
     .UseFalco(
         [
-            get "/" Views.Index.get
-            get "/balance/total" Handlers.Balances.total
-            get "/markets/count" Handlers.Markets.count
-            get "/markets/grid" Handlers.Markets.grid
-            get "/pipelines/count" Handlers.Pipelines.count
-            get "/pipelines/grid" Handlers.Pipelines.grid
-            get "/pipelines/modal" Views.CreatePipeline.getModal
-            get "/pipelines/modal/close" Views.CreatePipeline.getCloseModal
-            post "/pipelines/create" Handlers.CreatePipeline.create
-            get "/system-status" Handlers.System.status
-            mapGet "/balance/{marketType:int}" _.GetInt("marketType") Handlers.Balances.market
+            get "/" Index.get
+
+            get "/balance/total" Balance.Handler.total
+            mapGet "/balance/{marketType:int}" _.GetInt("marketType") Balance.Handler.market
+
+            get "/markets/count" Markets.Handler.count
+            get "/markets/grid" Markets.Handler.grid
+
+            get "/pipelines/count" Pipeline.Handler.count
+            get "/pipelines/grid" Pipeline.Handler.grid
+            get "/pipelines/table" Pipeline.Handler.table
+
+            get "/pipelines/modal" CreatePipeline.Handler.modal
+            get "/pipelines/modal/close" CreatePipeline.Handler.closeModal
+            post "/pipelines/create" CreatePipeline.Handler.create
+
+            get "/system-status" SystemStatus.Handler.status
+
         ]
     )
     .Run(Response.ofPlainText "Not found")
