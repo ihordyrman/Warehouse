@@ -262,9 +262,20 @@ module View =
                 Text.raw (pipeline.UpdatedAt.ToString("MMM dd, HH:mm"))
             ]
             _td [ _class_ "px-6 py-4 whitespace-nowrap text-right text-sm" ] [
-                _a [ _href_ $"/pipelines/{pipeline.Id}"; _class_ "text-blue-600 hover:text-blue-800 mr-3" ] [
-                    Text.raw "Edit"
-                ]
+                _button [
+                    _class_ "text-gray-600 hover:text-gray-800 mr-3"
+                    Hx.get $"/pipelines/{pipeline.Id}/details/modal"
+                    Hx.targetCss "#modal-container"
+                    Hx.swapInnerHtml
+                ] [ Text.raw "View" ]
+
+                _button [
+                    _class_ "text-blue-600 hover:text-blue-800 mr-3"
+                    Hx.get $"/pipelines/{pipeline.Id}/edit/modal"
+                    Hx.targetCss "#modal-container"
+                    Hx.swapInnerHtml
+                ] [ Text.raw "Edit" ]
+
                 _button [
                     _class_ "text-red-600 hover:text-red-800"
                     Hx.delete $"/pipelines/{pipeline.Id}"
@@ -376,4 +387,18 @@ module Handler =
                     let logger = ctx.Plug<ILoggerFactory>().CreateLogger("Pipelines")
                     logger.LogError(ex, "Error getting filtered pipelines")
                     return! Response.ofHtml View.emptyState ctx
+            }
+
+    let delete (pipelineId: int) : HttpHandler =
+        fun ctx ->
+            task {
+                try
+                    use scope = ctx.Plug<IServiceScopeFactory>().CreateScope()
+                    let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+                    let! _ = repo.Delete pipelineId CancellationToken.None
+                    return! Response.ofEmpty ctx
+                with ex ->
+                    let logger = ctx.Plug<ILoggerFactory>().CreateLogger("Pipelines")
+                    logger.LogError(ex, "Error deleting pipeline {PipelineId}", pipelineId)
+                    return! Response.ofEmpty ctx
             }
