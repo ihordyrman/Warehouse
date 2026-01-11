@@ -9,7 +9,7 @@ open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 open FSharp.Control
 open Warehouse.Core.Markets.Exchanges.Okx
-open Warehouse.Core.Markets.Stores
+open Warehouse.Core.Repositories
 open Warehouse.Core.Shared
 
 type SyncConfig =
@@ -21,7 +21,7 @@ type SyncConfig =
         Interval: TimeSpan
     }
 
-type SyncDependencies = { OkxHttp: Http.T; CandlestickStore: CandlestickStore.T; Logger: ILogger }
+type SyncDependencies = { OkxHttp: Http.T; CandlestickRepository: CandlestickRepository.T; Logger: ILogger }
 
 module CandlestickSync =
     open Errors
@@ -66,20 +66,32 @@ module CandlestickSync =
     let syncSymbol (deps: SyncDependencies) (config: SyncConfig) (instrument: Instrument) =
         task {
             let symbol = toPairSymbol instrument
-            let! latestCandle = deps.CandlestickStore.GetLatest symbol MarketType.Okx config.Timeframe
 
-            let startFrom =
-                match latestCandle with
-                | Some c -> c.Timestamp.AddMinutes -2.0
-                | None -> config.SyncStartDate
+            let! latestCandle =
+                deps.CandlestickRepository.GetLatest symbol MarketType.Okx config.Timeframe CancellationToken.None
 
-            let! result = fetchBatch deps.OkxHttp deps.Logger symbol config startFrom
+            match latestCandle with
+            | Error err ->
+                deps.Logger.LogError(
+                    "Failed to get latest candlestick for {Symbol}: {Error}",
+                    symbol,
+                    serviceMessage err
+                )
 
-            return
-                match result with
-                | Ok candles when candles.Length > 0 -> Some(candles |> Array.toList)
-                | Ok _ -> None
-                | Error _ -> None
+                return None
+            | Ok latestCandle ->
+                let startFrom =
+                    match latestCandle with
+                    | Some c -> c.Timestamp.AddMinutes -2.0
+                    | None -> config.SyncStartDate
+
+                let! result = fetchBatch deps.OkxHttp deps.Logger symbol config startFrom
+
+                return
+                    match result with
+                    | Ok candles when candles.Length > 0 -> Some(candles |> Array.toList)
+                    | Ok _ -> None
+                    | Error _ -> None
         }
 
     let runSyncCycle (deps: SyncDependencies) (config: SyncConfig) =
@@ -88,8 +100,8 @@ module CandlestickSync =
 
             let allCandles = results |> Array.choose id |> List.concat
 
-            if not allCandles.IsEmpty then
-                let! saved = deps.CandlestickStore.Save allCandles
+            if allCandles.Length > 0 then
+                let! saved = deps.CandlestickRepository.Save allCandles CancellationToken.None
                 let latestTs = allCandles |> List.map _.Timestamp |> List.max
                 deps.Logger.LogInformation("Saved {Count} candlesticks. Latest: {Timestamp}", saved, latestTs)
 
@@ -100,7 +112,7 @@ module SyncDependencies =
     let create (provider: IServiceProvider) : SyncDependencies =
         {
             OkxHttp = provider.GetRequiredService<Http.T>()
-            CandlestickStore = provider.GetRequiredService<CandlestickStore.T>()
+            CandlestickRepository = provider.GetRequiredService<CandlestickRepository.T>()
             Logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("OkxSynchronizationWorker")
         }
 

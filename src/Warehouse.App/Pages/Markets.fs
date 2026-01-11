@@ -32,7 +32,6 @@ module Data =
                 )
         }
 
-
 module View =
     let emptyState =
         _div [ _class_ "bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center" ] [

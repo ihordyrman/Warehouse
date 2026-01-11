@@ -1,6 +1,7 @@
 namespace Warehouse.App.Pages.Pipeline
 
 open System
+open System.Threading
 open System.Threading.Tasks
 open Falco
 open Falco.Htmx
@@ -10,6 +11,9 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 open Warehouse.Core.Queries
+open Warehouse.Core.Repositories
+open Warehouse.Core.Repositories.PipelineRepository
+open Warehouse.Core.Shared
 
 type PipelineListItem =
     {
@@ -43,23 +47,65 @@ type PipelineFilters =
 
 module Data =
     let getTags (scopeFactory: IServiceScopeFactory) : Task<string list> =
-        (DashboardQueries.create scopeFactory).GetAllTags()
+        task {
+            use scope = scopeFactory.CreateScope()
+            let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let! tags = repository.GetAllTags CancellationToken.None
+
+            match tags with
+            | Ok tags -> return tags
+            | Error err ->
+                let logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Pipelines")
+                logger.LogError("Error getting pipeline tags: {Error}", Errors.serviceMessage err)
+                return []
+        }
 
     let getMarketTypes (scopeFactory: IServiceScopeFactory) : Task<string list> =
         task {
             let! markets = (DashboardQueries.create scopeFactory).ActiveMarkets()
-            return markets |> List.map (fun m -> m.Type.ToString())
+            return markets |> List.map _.Type.ToString()
         }
 
     let getCount (scopeFactory: IServiceScopeFactory) : Task<int> =
-        (DashboardQueries.create scopeFactory).CountPipelines()
+        task {
+            use scope = scopeFactory.CreateScope()
+            let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let! count = repository.Count CancellationToken.None
+
+            match count with
+            | Ok count -> return count
+            | Error err ->
+                let logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Pipelines")
+                logger.LogError("Error getting pipelines count: {Error}", Errors.serviceMessage err)
+                return 0
+        }
+
 
     let getGridData (scopeFactory: IServiceScopeFactory) : Task<PipelinesGridData> =
         task {
             let! tags = getTags scopeFactory
             let! marketTypes = getMarketTypes scopeFactory
-            // TODO: add actual pipeline fetching when query is implemented
-            return { Tags = tags; MarketTypes = marketTypes; Pipelines = [] }
+            use scope = scopeFactory.CreateScope()
+            let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let! pipelines = repository.GetAll CancellationToken.None
+
+            match pipelines with
+            | Error _ -> return PipelinesGridData.Empty
+            | Ok pipelines ->
+                let pipelineItems =
+                    pipelines
+                    |> List.map (fun p ->
+                        {
+                            Id = p.Id
+                            Symbol = p.Symbol
+                            MarketType = p.MarketType
+                            Enabled = p.Enabled
+                            Tags = p.Tags
+                            UpdatedAt = p.UpdatedAt
+                        }
+                    )
+
+                return { Tags = tags; MarketTypes = marketTypes; Pipelines = pipelineItems }
         }
 
     let getFilteredPipelines
@@ -68,32 +114,41 @@ module Data =
         : Task<PipelineListItem list>
         =
         task {
+            use scope = scopeFactory.CreateScope()
+            let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+
             let status =
                 match filters.Status with
                 | Some "enabled" -> Some PipelineStatus.Running
                 | Some "disabled" -> Some PipelineStatus.Paused
                 | _ -> None
 
-            let! pipelines =
-                (DashboardQueries.create scopeFactory).GetPipelines
-                    filters.SearchTerm
-                    filters.Tag
-                    filters.MarketType
-                    status
-                    filters.SortBy
+            let searchFilters: SearchFilters =
+                {
+                    SearchTerm = filters.SearchTerm
+                    Tag = filters.Tag
+                    MarketType = filters.MarketType
+                    Status = status
+                    SortBy = filters.SortBy
+                }
 
-            return
-                pipelines
-                |> List.map (fun p ->
-                    {
-                        Id = p.Id
-                        Symbol = p.Symbol
-                        MarketType = p.MarketType
-                        Enabled = p.Enabled
-                        Tags = p.Tags
-                        UpdatedAt = p.UpdatedAt
-                    }
-                )
+            let! pipelines = repository.Search searchFilters CancellationToken.None
+
+            match pipelines with
+            | Error _ -> return []
+            | Ok pipelines ->
+                return
+                    pipelines
+                    |> List.map (fun p ->
+                        {
+                            Id = p.Id
+                            Symbol = p.Symbol
+                            MarketType = p.MarketType
+                            Enabled = p.Enabled
+                            Tags = p.Tags
+                            UpdatedAt = p.UpdatedAt
+                        }
+                    )
         }
 
 module View =
@@ -241,11 +296,12 @@ module View =
 
     let tableBody (pipelines: PipelineListItem list) =
         match pipelines with
-        | _ -> emptyState
-    // | items -> Elem.fragment [
-    //                 for pipeline in items do
-    //                     pipelineRow pipeline
-    //             ]
+        | [] -> emptyState
+        | _ ->
+            Elem.create "" [] [
+                for pipeline in pipelines do
+                    pipelineRow pipeline
+            ]
 
     let private pipelinesTable =
         _div [ _class_ "card overflow-hidden" ] [

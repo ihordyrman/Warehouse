@@ -1,12 +1,13 @@
 namespace Warehouse.App.Pages.SystemStatus
 
+open System.Threading
 open Falco
 open Microsoft.Extensions.DependencyInjection
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
-open Warehouse.Core.Queries
 open Falco.Markup
 open Falco.Htmx
+open Warehouse.Core.Repositories
 
 type Status =
     | Idle
@@ -17,12 +18,20 @@ module Data =
     let getStatus (scopeFactory: IServiceScopeFactory) (logger: ILogger option) : Task<Status> =
         task {
             try
-                let! enabledCount = (DashboardQueries.create scopeFactory).CountEnabledPipelines()
+                use scope = scopeFactory.CreateScope()
+                let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
 
-                return
-                    match enabledCount > 0 with
-                    | true -> Online
-                    | false -> Idle
+                let! enabledCount = repository.CountEnabled CancellationToken.None
+
+                match enabledCount with
+                | Result.Error err ->
+                    logger |> Option.iter _.LogError("Error counting enabled pipelines: {Error}", err)
+                    return Error
+                | Ok enabledCount ->
+                    return
+                        match enabledCount > 0 with
+                        | true -> Online
+                        | false -> Idle
             with ex ->
                 logger |> Option.iter _.LogError(ex, "Error getting system status")
                 return Error

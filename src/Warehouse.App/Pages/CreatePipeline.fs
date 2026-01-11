@@ -1,6 +1,7 @@
 namespace Warehouse.App.Pages.CreatePipeline
 
 open System
+open System.Threading
 open System.Threading.Tasks
 open Falco
 open Falco.Htmx
@@ -8,6 +9,8 @@ open Falco.Markup
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
+open Warehouse.Core.Repositories
+open Warehouse.Core.Shared
 
 type CreatePipelineInput =
     {
@@ -82,9 +85,35 @@ module Data =
 
     let createPipeline (scopeFactory: IServiceScopeFactory) (input: CreatePipelineInput) : Task<CreateResult> =
         task {
-            // TODO: add actual pipeline creation logic here
-            // For now, just return success
-            return Success input.Symbol
+            try
+                use scope = scopeFactory.CreateScope()
+                let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+
+                let pipeline: Pipeline =
+                    {
+                        Id = 0
+                        Name = input.Symbol
+                        Symbol = input.Symbol
+                        MarketType = input.MarketType
+                        Enabled = input.Enabled
+                        ExecutionInterval = input.ExecutionInterval
+                        LastExecutedAt = Nullable()
+                        Status = PipelineStatus.Idle
+                        Steps = []
+                        Tags = input.Tags
+                        CreatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow
+                    }
+
+                let! result = repo.Create pipeline CancellationToken.None
+
+                match result with
+                | Ok created -> return Success created.Symbol
+                | Error err ->
+                    let message = Errors.serviceMessage err
+                    return ServerError message
+            with ex ->
+                return ServerError $"Failed to create pipeline: {ex.Message}"
         }
 
 module View =

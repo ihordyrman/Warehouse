@@ -12,6 +12,8 @@ open Warehouse.Core.Markets.Abstractions
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Trading
 open Warehouse.Core.Markets.Stores
+open Warehouse.Core.Repositories
+open Warehouse.Core.Shared
 
 module Executor =
 
@@ -95,40 +97,51 @@ module Executor =
                             do! Task.Delay(pipeline.ExecutionInterval, ct)
 
                         | Ok steps ->
-                            let candlestickStore = scope.ServiceProvider.GetRequiredService<CandlestickStore.T>()
-                            let! latestCandle = candlestickStore.GetLatest pipeline.Symbol pipeline.MarketType "1m"
+                            let repository = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
+                            let! latestCandle = repository.GetLatest pipeline.Symbol pipeline.MarketType "1m" ct
 
                             match latestCandle with
-                            | Option.None ->
-                                logger.LogWarning(
-                                    "No candlestick data for {Symbol}, skipping execution",
-                                    pipeline.Symbol
+                            | Error error ->
+                                logger.LogError(
+                                    "Failed to retrieve latest candlestick for {Symbol}: {Error}",
+                                    pipeline.Symbol,
+                                    Errors.serviceMessage error
                                 )
 
                                 do! Task.Delay(pipeline.ExecutionInterval, ct)
+                            | Ok latestCandle ->
+                                match latestCandle with
+                                | Option.None ->
+                                    logger.LogWarning(
+                                        "No candlestick data for {Symbol}, skipping execution",
+                                        pipeline.Symbol
+                                    )
 
-                            | Some candle ->
-                                let liveDataStore = scope.ServiceProvider.GetRequiredService<LiveDataStore.T>()
-                                let marketData = liveDataStore.Get pipeline.Symbol pipeline.MarketType
-                                let context = createContext pipeline candle.Close marketData
+                                    do! Task.Delay(pipeline.ExecutionInterval, ct)
 
-                                logger.LogDebug(
-                                    "Executing pipeline {PipelineId} with {StepCount} steps",
-                                    pipelineId,
-                                    steps.Length
-                                )
+                                | Some candle ->
+                                    let liveDataStore = scope.ServiceProvider.GetRequiredService<LiveDataStore.T>()
+                                    let marketData = liveDataStore.Get pipeline.Symbol pipeline.MarketType
+                                    let context = createContext pipeline candle.Close marketData
 
-                                let! result = Runner.run steps context ct
+                                    logger.LogDebug(
+                                        "Executing pipeline {PipelineId} with {StepCount} steps",
+                                        pipelineId,
+                                        steps.Length
+                                    )
 
-                                match result with
-                                | Steps.Continue(_, msg) ->
-                                    logger.LogDebug("Pipeline {PipelineId} completed: {Message}", pipelineId, msg)
-                                | Steps.Stop msg ->
-                                    logger.LogDebug("Pipeline {PipelineId} stopped: {Message}", pipelineId, msg)
-                                | Steps.Fail err ->
-                                    logger.LogError("Pipeline {PipelineId} failed: {Error}", pipelineId, err)
+                                    let! result = Runner.run steps context ct
 
-                                do! Task.Delay(pipeline.ExecutionInterval, ct)
+                                    match result with
+                                    | Steps.Continue(_, msg) ->
+                                        logger.LogDebug("Pipeline {PipelineId} completed: {Message}", pipelineId, msg)
+                                    | Steps.Stop msg ->
+                                        logger.LogDebug("Pipeline {PipelineId} stopped: {Message}", pipelineId, msg)
+                                    | Steps.Fail err ->
+                                        logger.LogError("Pipeline {PipelineId} failed: {Error}", pipelineId, err)
+
+                                    do! Task.Delay(pipeline.ExecutionInterval, ct)
+
             with
             | :? OperationCanceledException -> ()
             | ex -> logger.LogError(ex, "Unexpected error in pipeline {PipelineId} executor", pipelineId)

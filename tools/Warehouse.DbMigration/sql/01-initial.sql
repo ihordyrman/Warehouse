@@ -39,13 +39,18 @@ create table pipeline_configurations
 
 create table positions
 (
-    id          serial primary key,
-    pipeline_id int references pipeline_configurations (id) on delete cascade,
-    symbol      varchar(20) not null,
-    status      int         not null,
-    entry_price decimal(28, 10),
-    quantity    decimal(28, 10),
-    exit_price  decimal(28, 10)
+    id            serial primary key,
+    pipeline_id   int references pipeline_configurations (id) on delete cascade,
+    symbol        varchar(20) not null,
+    status        int         not null,
+    entry_price   decimal(28, 10),
+    quantity      decimal(28, 10),
+    buy_order_id  varchar(100),
+    sell_order_id varchar(100),
+    exit_price    decimal(28, 10),
+    closed_at     timestamp,
+    created_at    timestamp   not null,
+    updated_at    timestamp   not null
 );
 
 create index ix_positions_pipeline_status on positions (pipeline_id, status);
@@ -62,7 +67,8 @@ create table candlesticks
     low          decimal(28, 10) not null,
     close        decimal(28, 10) not null,
     volume       decimal(28, 10) not null,
-    volume_quote decimal(28, 10) not null
+    volume_quote decimal(28, 10) not null,
+    is_completed boolean         not null default false
 );
 
 create index ix_candlesticks_symbol_market_timeframe_timestamp
@@ -74,9 +80,13 @@ create table pipeline_steps
 (
     id                  serial primary key,
     pipeline_details_id int references pipeline_configurations (id) on delete cascade,
+    step_type_key       varchar(100) not null,
     name                varchar(200) not null,
     "order"             int          not null,
-    parameters          jsonb        not null default '{}'
+    is_enabled          boolean      not null default true,
+    parameters          jsonb        not null default '{}',
+    created_at          timestamp    not null,
+    updated_at          timestamp    not null
 );
 
 create unique index ix_pipeline_steps_pipeline_order

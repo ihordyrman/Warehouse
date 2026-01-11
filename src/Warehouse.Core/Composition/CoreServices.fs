@@ -19,6 +19,7 @@ open Warehouse.Core.Markets.Stores
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Orchestration
 open Warehouse.Core.Pipelines.Trading
+open Warehouse.Core.Repositories
 open Warehouse.Core.Workers
 
 module CoreServices =
@@ -37,6 +38,27 @@ module CoreServices =
             let db = provider.GetRequiredService<IDbConnection>()
             let okxExecutor = provider.GetRequiredService<OrderExecutor.T>()
             OrdersManager.create db [ okxExecutor ] logger
+        )
+        |> ignore
+
+    let private pipelineRepository (services: IServiceCollection) =
+        services.AddScoped<PipelineRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            PipelineRepository.create scopeFactory
+        )
+        |> ignore
+
+    let private pipelineStepRepository (services: IServiceCollection) =
+        services.AddScoped<PipelineStepRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            PipelineStepRepository.create scopeFactory
+        )
+        |> ignore
+
+    let private candlestickRepository (services: IServiceCollection) =
+        services.AddScoped<CandlestickRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            CandlestickRepository.create scopeFactory
         )
         |> ignore
 
@@ -101,19 +123,10 @@ module CoreServices =
         )
         |> ignore
 
-    let private candlestickStore (services: IServiceCollection) =
-        services.AddScoped<CandlestickStore.T>(fun provider ->
-            let db = provider.GetRequiredService<IDbConnection>()
-            CandlestickStore.create db
-        )
-        |> ignore
-
     let private credentialsStore (services: IServiceCollection) =
         services.AddScoped<CredentialsStore.T>(fun provider ->
-            let serviceScopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
-            // todo: needs to be fixed
-            let scope = serviceScopeFactory.CreateScope()
-            CredentialsStore.create scope
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            CredentialsStore.create scopeFactory
         )
         |> ignore
 
@@ -123,7 +136,6 @@ module CoreServices =
     let private database (services: IServiceCollection) (configuration: IConfiguration) =
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName))
         |> ignore
-
 
         services.AddScoped<IDbConnection>(fun sp ->
             let settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value
@@ -174,9 +186,11 @@ module CoreServices =
         database services configuration
 
         [
+            pipelineRepository
+            pipelineStepRepository
+            candlestickRepository
             liveDataStore
             balanceManager
-            candlestickStore
             credentialsStore
             heartbeat
             httpClientFactory

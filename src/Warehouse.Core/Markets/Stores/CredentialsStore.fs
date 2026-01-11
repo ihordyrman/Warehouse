@@ -23,10 +23,11 @@ module CredentialsStore =
     type T =
         { GetCredentials: MarketType -> CancellationToken -> Task<Result<MarketCredentials, ServiceError>> }
 
-    let create (scope: IServiceScope) : T =
+    let create (scopeFactory: IServiceScopeFactory) : T =
         {
             GetCredentials =
                 fun marketType _ ->
+                    use scope = scopeFactory.CreateScope()
                     let loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
                     let logger = loggerFactory.CreateLogger("CredentialsStore")
 

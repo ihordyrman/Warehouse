@@ -1,0 +1,329 @@
+namespace Warehouse.Core.Repositories
+
+open System
+open System.Data
+open System.Threading
+open System.Threading.Tasks
+open Dapper
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
+open Warehouse.Core.Domain
+open Warehouse.Core.Infrastructure
+open Warehouse.Core.Infrastructure.Entities
+open Warehouse.Core.Shared
+
+module CandlestickRepository =
+    open Errors
+    open Mappers
+
+    type T =
+        {
+            GetById: int64 -> CancellationToken -> Task<Result<Candlestick, ServiceError>>
+            GetLatest:
+                string -> MarketType -> string -> CancellationToken -> Task<Result<Candlestick option, ServiceError>>
+            Query:
+                string
+                    -> MarketType
+                    -> string
+                    -> DateTime option
+                    -> DateTime option
+                    -> int option
+                    -> CancellationToken
+                    -> Task<Result<Candlestick list, ServiceError>>
+            Save: Candlestick list -> CancellationToken -> Task<Result<int, ServiceError>>
+            SaveOne: Candlestick -> CancellationToken -> Task<Result<Candlestick, ServiceError>>
+            Delete: int64 -> CancellationToken -> Task<Result<unit, ServiceError>>
+            DeleteBySymbol: string -> MarketType -> CancellationToken -> Task<Result<int, ServiceError>>
+            DeleteOlderThan: DateTime -> CancellationToken -> Task<Result<int, ServiceError>>
+            Count: string -> MarketType -> string -> CancellationToken -> Task<Result<int, ServiceError>>
+        }
+
+    let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int64) (_: CancellationToken) =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! results =
+                    db.QueryAsync<CandlestickEntity>("SELECT * FROM candlesticks WHERE id = @Id LIMIT 1", {| Id = id |})
+
+                match results |> Seq.tryHead with
+                | Some entity ->
+                    logger.LogDebug("Retrieved candlestick {Id}", id)
+                    return Ok(toCandlestick entity)
+                | None ->
+                    logger.LogWarning("Candlestick {Id} not found", id)
+                    return Result.Error(NotFound $"Candlestick with id {id}")
+            with ex ->
+                logger.LogError(ex, "Failed to get candlestick {Id}", id)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private getLatest
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (symbol: string)
+        (marketType: MarketType)
+        (timeframe: string)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! results =
+                    db.QueryAsync<CandlestickEntity>(
+                        """SELECT * FROM candlesticks
+                           WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe
+                           ORDER BY timestamp DESC
+                           LIMIT 1""",
+                        {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |}
+                    )
+
+                match results |> Seq.tryHead with
+                | Some entity ->
+                    logger.LogDebug("Retrieved latest candlestick for {Symbol}/{Timeframe}", symbol, timeframe)
+                    return Ok(Some(toCandlestick entity))
+                | None ->
+                    logger.LogDebug("No candlesticks found for {Symbol}/{Timeframe}", symbol, timeframe)
+                    return Ok None
+            with ex ->
+                logger.LogError(ex, "Failed to get latest candlestick for {Symbol}/{Timeframe}", symbol, timeframe)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private query
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (symbol: string)
+        (marketType: MarketType)
+        (timeframe: string)
+        (fromDate: DateTime option)
+        (toDate: DateTime option)
+        (limit: int option)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let baseSql =
+                    "SELECT * FROM candlesticks WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe"
+
+                let conditions = ResizeArray<string>()
+                let parameters = DynamicParameters()
+                parameters.Add("Symbol", symbol)
+                parameters.Add("MarketType", int marketType)
+                parameters.Add("Timeframe", timeframe)
+
+                match fromDate with
+                | Some from ->
+                    conditions.Add("AND timestamp >= @FromDate")
+                    parameters.Add("FromDate", from)
+                | None -> ()
+
+                match toDate with
+                | Some to' ->
+                    conditions.Add("AND timestamp <= @ToDate")
+                    parameters.Add("ToDate", to')
+                | None -> ()
+
+                let limitClause =
+                    match limit with
+                    | Some l -> $"LIMIT {l}"
+                    | None -> "LIMIT 1000"
+
+                let whereClause = String.Join(" ", conditions)
+                let finalSql = $"{baseSql} {whereClause} ORDER BY timestamp DESC {limitClause}"
+
+                let! results = db.QueryAsync<CandlestickEntity>(finalSql, parameters)
+
+                let candlesticks = results |> Seq.map toCandlestick |> Seq.toList
+
+                logger.LogDebug(
+                    "Retrieved {Count} candlesticks for {Symbol}/{Timeframe}",
+                    candlesticks.Length,
+                    symbol,
+                    timeframe
+                )
+
+                return Ok candlesticks
+            with ex ->
+                logger.LogError(ex, "Failed to query candlesticks for {Symbol}/{Timeframe}", symbol, timeframe)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private save
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (candlesticks: Candlestick list)
+        (_: CancellationToken)
+        =
+        task {
+            if candlesticks.IsEmpty then
+                return Ok 0
+            else
+                try
+                    use scope = scopeFactory.CreateScope()
+                    use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                    let entities = candlesticks |> List.map fromCandlestick
+
+                    let! result =
+                        db.ExecuteAsync(
+                            """INSERT INTO candlesticks
+                               (symbol, market_type, timeframe, timestamp, open, high, low, close, volume, volume_quote, is_completed)
+                               VALUES (@Symbol, @MarketType, @Timeframe, @Timestamp, @Open, @High, @Low, @Close, @Volume, @VolumeQuote, @IsCompleted)
+                               ON CONFLICT (symbol, market_type, timeframe, timestamp)
+                               DO UPDATE SET open = @Open, high = @High, low = @Low, close = @Close,
+                                             volume = @Volume, volume_quote = @VolumeQuote, is_completed = @IsCompleted""",
+                            entities
+                        )
+
+                    logger.LogInformation("Saved {Count} candlesticks", result)
+                    return Ok result
+                with ex ->
+                    logger.LogError(ex, "Failed to save {Count} candlesticks", candlesticks.Length)
+                    return Result.Error(Unexpected ex)
+        }
+
+    let private saveOne
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (candlestick: Candlestick)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let entity = fromCandlestick candlestick
+
+                let! result =
+                    db.QuerySingleAsync<int64>(
+                        """INSERT INTO candlesticks
+                           (symbol, market_type, timeframe, timestamp, open, high, low, close, volume, volume_quote, is_completed)
+                           VALUES (@Symbol, @MarketType, @Timeframe, @Timestamp, @Open, @High, @Low, @Close, @Volume, @VolumeQuote, @IsCompleted)
+                           ON CONFLICT (symbol, market_type, timeframe, timestamp)
+                           DO UPDATE SET open = @Open, high = @High, low = @Low, close = @Close,
+                                         volume = @Volume, volume_quote = @VolumeQuote, is_completed = @IsCompleted
+                           RETURNING id""",
+                        entity
+                    )
+
+                logger.LogDebug("Saved candlestick {Id} for {Symbol}", result, candlestick.Symbol)
+                return Ok { candlestick with Id = result }
+            with ex ->
+                logger.LogError(ex, "Failed to save candlestick for {Symbol}", candlestick.Symbol)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private delete (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int64) (_: CancellationToken) =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! rowsAffected = db.ExecuteAsync("DELETE FROM candlesticks WHERE id = @Id", {| Id = id |})
+
+                if rowsAffected > 0 then
+                    logger.LogInformation("Deleted candlestick {Id}", id)
+                    return Ok()
+                else
+                    logger.LogWarning("Candlestick {Id} not found for deletion", id)
+                    return Result.Error(NotFound $"Candlestick with id {id}")
+            with ex ->
+                logger.LogError(ex, "Failed to delete candlestick {Id}", id)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private deleteBySymbol
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (symbol: string)
+        (marketType: MarketType)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! rowsAffected =
+                    db.ExecuteAsync(
+                        "DELETE FROM candlesticks WHERE symbol = @Symbol AND market_type = @MarketType",
+                        {| Symbol = symbol; MarketType = int marketType |}
+                    )
+
+                logger.LogInformation("Deleted {Count} candlesticks for {Symbol}", rowsAffected, symbol)
+                return Ok rowsAffected
+            with ex ->
+                logger.LogError(ex, "Failed to delete candlesticks for {Symbol}", symbol)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private deleteOlderThan
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (before: DateTime)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! rowsAffected =
+                    db.ExecuteAsync("DELETE FROM candlesticks WHERE timestamp < @Before", {| Before = before |})
+
+                logger.LogInformation("Deleted {Count} candlesticks older than {Before}", rowsAffected, before)
+                return Ok rowsAffected
+            with ex ->
+                logger.LogError(ex, "Failed to delete candlesticks older than {Before}", before)
+                return Result.Error(Unexpected ex)
+        }
+
+    let private count
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (symbol: string)
+        (marketType: MarketType)
+        (timeframe: string)
+        (_: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! result =
+                    db.QuerySingleAsync<int>(
+                        "SELECT COUNT(*) FROM candlesticks WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe",
+                        {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |}
+                    )
+
+                logger.LogDebug("Count for {Symbol}/{Timeframe}: {Count}", symbol, timeframe, result)
+                return Ok result
+            with ex ->
+                logger.LogError(ex, "Failed to count candlesticks for {Symbol}/{Timeframe}", symbol, timeframe)
+                return Result.Error(Unexpected ex)
+        }
+
+    let create (scopeFactory: IServiceScopeFactory) : T =
+        let loggerFactory = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILoggerFactory>()
+        let logger = loggerFactory.CreateLogger("CandlestickRepository")
+
+        {
+            GetById = getById scopeFactory logger
+            GetLatest = getLatest scopeFactory logger
+            Query = query scopeFactory logger
+            Save = save scopeFactory logger
+            SaveOne = saveOne scopeFactory logger
+            Delete = delete scopeFactory logger
+            DeleteBySymbol = deleteBySymbol scopeFactory logger
+            DeleteOlderThan = deleteOlderThan scopeFactory logger
+            Count = count scopeFactory logger
+        }

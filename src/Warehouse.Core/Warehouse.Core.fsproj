@@ -19,12 +19,15 @@
         <Compile Include="Shared\Errors.fs" />
         <Compile Include="Shared\Mappers.fs" />
 
+        <Compile Include="Repositories\PipelineRepository.fs" />
+        <Compile Include="Repositories\PipelineStepRepository.fs" />
+        <Compile Include="Repositories\CandlestickRepository.fs" />
+
         <Compile Include="Markets\Abstractions\Types.fs" />
         <Compile Include="Markets\Abstractions\BalanceProvider.fs" />
         <Compile Include="Markets\Abstractions\OrderExecutor.fs" />
 
         <Compile Include="Markets\Stores\CredentialsStore.fs" />
-        <Compile Include="Markets\Stores\CandlestickStore.fs" />
         <Compile Include="Markets\Stores\LiveDataStore.fs" />
 
         <Compile Include="Markets\Exchanges\Okx\Constants.fs" />
