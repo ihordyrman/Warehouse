@@ -39,12 +39,24 @@ app
         [
             get "/" Index.get
 
+            // Balance routes
             get "/balance/total" Balance.Handler.total
             mapGet "/balance/{marketType:int}" _.GetInt("marketType") Balance.Handler.market
 
+            // Markets routes
             get "/markets/count" Markets.Handler.count
             get "/markets/grid" Markets.Handler.grid
 
+            // Account routes
+            get "/accounts/modal" CreateAccount.Handler.modal
+            get "/accounts/modal/close" CreateAccount.Handler.closeModal
+            post "/accounts/create" CreateAccount.Handler.create
+            mapGet "/accounts/{id:int}/details/modal" _.GetInt("id") AccountDetails.Handler.modal
+            mapGet "/accounts/{id:int}/edit/modal" _.GetInt("id") AccountEdit.Handler.modal
+            mapPost "/accounts/{id:int}/edit" _.GetInt("id") AccountEdit.Handler.update
+            mapDelete "/accounts/{id:int}" _.GetInt("id") AccountEdit.Handler.delete
+
+            // Pipeline routes
             get "/pipelines/count" Pipeline.Handler.count
             get "/pipelines/grid" Pipeline.Handler.grid
             get "/pipelines/table" Pipeline.Handler.table

@@ -22,6 +22,7 @@
         <Compile Include="Repositories\PipelineRepository.fs" />
         <Compile Include="Repositories\PipelineStepRepository.fs" />
         <Compile Include="Repositories\CandlestickRepository.fs" />
+        <Compile Include="Repositories\MarketRepository.fs" />
 
         <Compile Include="Markets\Abstractions\Types.fs" />
         <Compile Include="Markets\Abstractions\BalanceProvider.fs" />

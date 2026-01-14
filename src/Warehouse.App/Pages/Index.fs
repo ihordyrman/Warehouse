@@ -58,6 +58,14 @@ let private marketsSection =
                 _h2 [ _class_ "text-2xl font-bold text-gray-900" ] [ Text.raw "Market Accounts" ]
                 _p [ _class_ "text-gray-500 text-sm mt-1" ] [ Text.raw "Manage your exchange connections" ]
             ]
+            _button [
+                _type_ "button"
+                _class_
+                    "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                Hx.get "/accounts/modal"
+                Hx.targetCss "#modal-container"
+                Hx.swapInnerHtml
+            ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Account" ]
         ]
         _div [ _id_ "accounts-container"; Hx.get "/markets/grid"; Hx.trigger Load; Hx.swapInnerHtml ] [
             _div [ _class_ "flex justify-center py-8" ] [

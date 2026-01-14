@@ -33,6 +33,16 @@ module Data =
         }
 
 module View =
+    let private addAccountButton =
+        _button [
+            _type_ "button"
+            _class_
+                "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+            Hx.get "/accounts/modal"
+            Hx.targetCss "#modal-container"
+            Hx.swapInnerHtml
+        ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Account" ]
+
     let emptyState =
         _div [ _class_ "bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center" ] [
             _div [ _class_ "inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4" ] [
@@ -40,10 +50,13 @@ module View =
             ]
             _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "No Accounts Yet" ]
             _p [ _class_ "text-gray-500 mb-4" ] [ Text.raw "Connect your first exchange account to start trading" ]
-            _a [
-                _href_ "/create-account"
+            _button [
+                _type_ "button"
                 _class_
                     "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                Hx.get "/accounts/modal"
+                Hx.targetCss "#modal-container"
+                Hx.swapInnerHtml
             ] [ _i [ _class_ "fas fa-plus mr-2" ] []; Text.raw "Add Your First Account" ]
         ]
 
@@ -104,17 +117,23 @@ module View =
                     _class_
                         "ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                 ] [
-                    _a [
-                        _href_ $"/accounts/{market.Id}"
+                    _button [
+                        _type_ "button"
                         _class_
                             "w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all"
                         _title_ "Details"
+                        Hx.get $"/accounts/{market.Id}/details/modal"
+                        Hx.targetCss "#modal-container"
+                        Hx.swapInnerHtml
                     ] [ _i [ _class_ "fas fa-info text-white text-sm" ] [] ]
-                    _a [
-                        _href_ $"/accounts/{market.Id}/edit"
+                    _button [
+                        _type_ "button"
                         _class_
                             "w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all"
                         _title_ "Edit"
+                        Hx.get $"/accounts/{market.Id}/edit/modal"
+                        Hx.targetCss "#modal-container"
+                        Hx.swapInnerHtml
                     ] [ _i [ _class_ "fas fa-cog text-white text-sm" ] [] ]
                 ]
             ]

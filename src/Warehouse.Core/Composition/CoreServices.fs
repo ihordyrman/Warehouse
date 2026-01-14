@@ -11,6 +11,7 @@ open System
 open System.Data
 open System.Net
 open System.Net.Http
+open Warehouse.Core.Domain
 open Warehouse.Core.Infrastructure
 open Warehouse.Core.Markets.Abstractions
 open Warehouse.Core.Markets.Exchanges.Okx
@@ -59,6 +60,13 @@ module CoreServices =
         services.AddScoped<CandlestickRepository.T>(fun provider ->
             let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
             CandlestickRepository.create scopeFactory
+        )
+        |> ignore
+
+    let private marketRepository (services: IServiceCollection) =
+        services.AddScoped<MarketRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            MarketRepository.create scopeFactory
         )
         |> ignore
 
@@ -189,6 +197,7 @@ module CoreServices =
             pipelineRepository
             pipelineStepRepository
             candlestickRepository
+            marketRepository
             liveDataStore
             balanceManager
             credentialsStore
