@@ -1,0 +1,498 @@
+namespace Warehouse.App.Pages.AccountEdit
+
+open System
+open System.Threading
+open System.Threading.Tasks
+open Falco
+open Falco.Htmx
+open Falco.Markup
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
+open Warehouse.Core.Domain
+open Warehouse.Core.Repositories
+open Warehouse.Core.Shared
+
+type EditAccountViewModel =
+    { Id: int; MarketType: MarketType; ApiKeyMasked: string; HasPassphrase: bool; IsSandbox: bool }
+
+type EditFormData =
+    {
+        ApiKey: string option
+        SecretKey: string option
+        Passphrase: string option
+        IsSandbox: bool
+    }
+
+    static member Empty = { ApiKey = None; SecretKey = None; Passphrase = None; IsSandbox = true }
+
+type EditResult =
+    | Success
+    | ValidationError of message: string
+    | NotFoundError
+    | ServerError of message: string
+
+module Data =
+    let private maskApiKey (apiKey: string) =
+        if String.IsNullOrEmpty apiKey then ""
+        elif apiKey.Length > 8 then apiKey.Substring(0, 4) + "****" + apiKey.Substring(apiKey.Length - 4)
+        else "****"
+
+    let getEditViewModel (scopeFactory: IServiceScopeFactory) (marketId: int) : Task<EditAccountViewModel option> =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                let repository = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
+                let! result = repository.GetById marketId CancellationToken.None
+
+                match result with
+                | Result.Error _ -> return None
+                | Result.Ok marketWithCreds ->
+                    let credentials = marketWithCreds.Credentials
+
+                    return
+                        Some
+                            {
+                                Id = marketWithCreds.Market.Id
+                                MarketType = marketWithCreds.Market.Type
+                                ApiKeyMasked =
+                                    credentials |> Option.map (_.ApiKey >> maskApiKey) |> Option.defaultValue ""
+                                HasPassphrase =
+                                    credentials
+                                    |> Option.map (fun c -> not (String.IsNullOrEmpty c.Passphrase))
+                                    |> Option.defaultValue false
+                                IsSandbox = credentials |> Option.map _.IsSandbox |> Option.defaultValue true
+                            }
+            with _ ->
+                return None
+        }
+
+    let parseFormData (form: FormData) : EditFormData =
+        {
+            ApiKey = form.TryGetString "apiKey"
+            SecretKey = form.TryGetString "secretKey"
+            Passphrase = form.TryGetString "passphrase"
+            IsSandbox = form.TryGetString "isSandbox" |> Option.map (fun _ -> true) |> Option.defaultValue false
+        }
+
+    let updateAccount (scopeFactory: IServiceScopeFactory) (marketId: int) (formData: EditFormData) : Task<EditResult> =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                let repository = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
+
+                let! existingMarket = repository.GetById marketId CancellationToken.None
+
+                match existingMarket with
+                | Result.Error(Errors.NotFound _) -> return NotFoundError
+                | Result.Error err -> return ServerError(Errors.serviceMessage err)
+                | Result.Ok marketWithCreds ->
+                    match marketWithCreds.Credentials with
+                    | Some _ ->
+                        let updateRequest: MarketRepository.UpdateCredentialsRequest =
+                            {
+                                ApiKey = formData.ApiKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                SecretKey = formData.SecretKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                Passphrase = formData.Passphrase
+                                IsSandbox = Some formData.IsSandbox
+                            }
+
+                        let! updateResult = repository.UpdateCredentials marketId updateRequest CancellationToken.None
+
+                        match updateResult with
+                        | Result.Ok() -> return Success
+                        | Result.Error err -> return ServerError(Errors.serviceMessage err)
+
+                    | None ->
+                        match formData.ApiKey, formData.SecretKey with
+                        | Some apiKey, Some secretKey when
+                            not (String.IsNullOrWhiteSpace apiKey) && not (String.IsNullOrWhiteSpace secretKey)
+                            ->
+
+                            let updateRequest: MarketRepository.UpdateCredentialsRequest =
+                                {
+                                    ApiKey = Some apiKey
+                                    SecretKey = Some secretKey
+                                    Passphrase = formData.Passphrase
+                                    IsSandbox = Some formData.IsSandbox
+                                }
+
+                            let! updateResult =
+                                repository.UpdateCredentials marketId updateRequest CancellationToken.None
+
+                            match updateResult with
+                            | Result.Ok() -> return Success
+                            | Result.Error err -> return ServerError(Errors.serviceMessage err)
+
+                        | _ -> return ValidationError "API Key and Secret Key are required for new credentials"
+            with ex ->
+                return ServerError $"Failed to update account: {ex.Message}"
+        }
+
+    let deleteAccount (scopeFactory: IServiceScopeFactory) (marketId: int) : Task<bool> =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                let repository = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
+                let! result = repository.Delete marketId CancellationToken.None
+
+                match result with
+                | Result.Ok() -> return true
+                | Result.Error _ -> return false
+            with _ ->
+                return false
+        }
+
+module View =
+    let private closeModalButton =
+        _button [
+            _type_ "button"
+            _class_ "text-white hover:text-gray-200 transition-colors"
+            Hx.get "/accounts/modal/close"
+            Hx.targetCss "#modal-container"
+            Hx.swapInnerHtml
+        ] [ _i [ _class_ "fas fa-times text-xl" ] [] ]
+
+    let private modalBackdrop =
+        _div [
+            _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+            Hx.get "/accounts/modal/close"
+            Hx.targetCss "#modal-container"
+            Hx.swapInnerHtml
+        ] []
+
+    let private apiKeyField (maskedValue: string) =
+        _div [] [
+            _label [ _for_ "apiKey"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [ Text.raw "API Key" ]
+            _input [
+                _id_ "apiKey"
+                _name_ "apiKey"
+                _type_ "password"
+                Attr.create "placeholder" (if String.IsNullOrEmpty maskedValue then "Enter API key" else maskedValue)
+                _class_
+                    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ]
+            _p [ _class_ "text-sm text-gray-500 mt-1" ] [ Text.raw "Leave blank to keep current value" ]
+        ]
+
+    let private secretKeyField =
+        _div [] [
+            _label [ _for_ "secretKey"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [
+                Text.raw "Secret Key"
+            ]
+            _input [
+                _id_ "secretKey"
+                _name_ "secretKey"
+                _type_ "password"
+                Attr.create "placeholder" "Enter new secret key (or leave blank)"
+                _class_
+                    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ]
+            _p [ _class_ "text-sm text-gray-500 mt-1" ] [ Text.raw "Leave blank to keep current value" ]
+        ]
+
+    let private passphraseField (hasPassphrase: bool) =
+        _div [] [
+            _label [ _for_ "passphrase"; _class_ "block text-sm font-medium text-gray-700 mb-2" ] [
+                Text.raw "Passphrase"
+            ]
+            _input [
+                _id_ "passphrase"
+                _name_ "passphrase"
+                _type_ "password"
+                Attr.create
+                    "placeholder"
+                    (if hasPassphrase then "Enter new passphrase (or leave blank)" else "Enter passphrase")
+                _class_
+                    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ]
+            _p [ _class_ "text-sm text-gray-500 mt-1" ] [ Text.raw "Required for OKX accounts" ]
+        ]
+
+    let private sandboxField (isSandbox: bool) =
+        _div [ _class_ "flex items-center" ] [
+            _input [
+                _id_ "isSandbox"
+                _name_ "isSandbox"
+                _type_ "checkbox"
+                _class_ "h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                if isSandbox then
+                    Attr.create "checked" "checked"
+            ]
+            _label [ _for_ "isSandbox"; _class_ "ml-2 block text-sm text-gray-700" ] [ Text.raw "Sandbox/Demo mode" ]
+        ]
+
+    let private dangerZone (marketId: int) =
+        _div [ _class_ "mt-6 pt-4 border-t border-red-200" ] [
+            _h4 [ _class_ "text-sm font-semibold text-red-700 mb-3" ] [
+                _i [ _class_ "fas fa-exclamation-triangle mr-2" ] []
+                Text.raw "Danger Zone"
+            ]
+            _p [ _class_ "text-sm text-gray-600 mb-3" ] [
+                Text.raw "Removing this account will disconnect it from all pipelines."
+            ]
+            _button [
+                _type_ "button"
+                _class_ "px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                Hx.delete $"/accounts/{marketId}"
+                Hx.confirm "Are you sure you want to delete this account? This action cannot be undone."
+                Hx.targetCss "#modal-container"
+                Hx.swapInnerHtml
+            ] [ _i [ _class_ "fas fa-trash mr-2" ] []; Text.raw "Delete Account" ]
+        ]
+
+    let modal (vm: EditAccountViewModel) =
+        _div [
+            _id_ "account-edit-modal"
+            _class_ "fixed inset-0 z-50 overflow-y-auto"
+            Attr.create "aria-labelledby" "modal-title"
+            Attr.create "role" "dialog"
+            Attr.create "aria-modal" "true"
+        ] [
+            modalBackdrop
+
+            _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+                _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                    _div [
+                        _class_
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all w-full max-w-lg"
+                    ] [
+                        // header
+                        _div [ _class_ "bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4" ] [
+                            _div [ _class_ "flex items-center justify-between" ] [
+                                _div [] [
+                                    _h3 [ _id_ "modal-title"; _class_ "text-lg font-semibold text-white" ] [
+                                        _i [ _class_ "fas fa-edit mr-2" ] []
+                                        Text.raw "Edit Account"
+                                    ]
+                                    _p [ _class_ "text-blue-100 text-sm mt-1" ] [
+                                        Text.raw $"{vm.MarketType} • ID: {vm.Id}"
+                                    ]
+                                ]
+                                closeModalButton
+                            ]
+                        ]
+
+                        // form
+                        _form [
+                            _method_ "post"
+                            Hx.post $"/accounts/{vm.Id}/edit"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                        ] [
+                            _div [ _class_ "px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto" ] [
+                                _div [] [
+                                    _label [ _class_ "block text-sm font-medium text-gray-700 mb-2" ] [
+                                        Text.raw "Exchange"
+                                    ]
+                                    _div [
+                                        _class_
+                                            "w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700"
+                                    ] [
+                                        _i [ _class_ "fas fa-exchange-alt mr-2" ] []
+                                        Text.raw (vm.MarketType.ToString())
+                                    ]
+                                ]
+
+                                apiKeyField vm.ApiKeyMasked
+                                secretKeyField
+                                passphraseField vm.HasPassphrase
+                                sandboxField vm.IsSandbox
+
+                                dangerZone vm.Id
+                            ]
+
+                            // footer
+                            _div [ _class_ "bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t" ] [
+                                _button [
+                                    _type_ "button"
+                                    _class_
+                                        "px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                                    Hx.get "/accounts/modal/close"
+                                    Hx.targetCss "#modal-container"
+                                    Hx.swapInnerHtml
+                                ] [ _i [ _class_ "fas fa-times mr-2" ] []; Text.raw "Cancel" ]
+                                _button [
+                                    _type_ "submit"
+                                    _class_
+                                        "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all"
+                                ] [ _i [ _class_ "fas fa-save mr-2" ] []; Text.raw "Save Changes" ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+    let successResponse (marketId: int) =
+        _div [ _id_ "account-edit-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+            _div [ _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" ] []
+            _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+                _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                    _div [
+                        _class_
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                    ] [
+                        _div [
+                            _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4"
+                        ] [ _i [ _class_ "fas fa-check text-3xl text-green-600" ] [] ]
+                        _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Account Updated!" ]
+                        _p [ _class_ "text-gray-600 mb-4" ] [ Text.raw "Your changes have been saved successfully." ]
+                        _button [
+                            _type_ "button"
+                            _class_
+                                "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            Hx.get "/accounts/modal/close"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                            Attr.create "hx-on::after-request" "htmx.trigger('#accounts-container', 'load')"
+                        ] [ Text.raw "Close" ]
+                    ]
+                ]
+            ]
+        ]
+
+    let deletedResponse =
+        _div [ _id_ "account-edit-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+            _div [ _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" ] []
+            _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+                _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                    _div [
+                        _class_
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                    ] [
+                        _div [
+                            _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4"
+                        ] [ _i [ _class_ "fas fa-check text-3xl text-green-600" ] [] ]
+                        _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Account Deleted" ]
+                        _p [ _class_ "text-gray-600 mb-4" ] [ Text.raw "The account has been removed successfully." ]
+                        _button [
+                            _type_ "button"
+                            _class_
+                                "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            Hx.get "/accounts/modal/close"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                            Attr.create "hx-on::after-request" "htmx.trigger('#accounts-container', 'load')"
+                        ] [ Text.raw "Close" ]
+                    ]
+                ]
+            ]
+        ]
+
+    let errorResponse (message: string) (marketId: int) =
+        _div [ _id_ "account-edit-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+            _div [ _class_ "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" ] []
+            _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+                _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                    _div [
+                        _class_
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                    ] [
+                        _div [
+                            _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4"
+                        ] [ _i [ _class_ "fas fa-exclamation-triangle text-3xl text-red-600" ] [] ]
+                        _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Error" ]
+                        _p [ _class_ "text-gray-600 mb-4" ] [ Text.raw message ]
+                        _div [ _class_ "flex justify-center space-x-3" ] [
+                            _button [
+                                _type_ "button"
+                                _class_
+                                    "px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                                Hx.get "/accounts/modal/close"
+                                Hx.targetCss "#modal-container"
+                                Hx.swapInnerHtml
+                            ] [ Text.raw "Close" ]
+                            _button [
+                                _type_ "button"
+                                _class_
+                                    "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                                Hx.get $"/accounts/{marketId}/edit/modal"
+                                Hx.targetCss "#modal-container"
+                                Hx.swapInnerHtml
+                            ] [ Text.raw "Try Again" ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+    let notFound =
+        _div [ _id_ "account-edit-modal"; _class_ "fixed inset-0 z-50 overflow-y-auto" ] [
+            modalBackdrop
+            _div [ _class_ "fixed inset-0 z-10 overflow-y-auto" ] [
+                _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
+                    _div [
+                        _class_
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl w-full max-w-md p-6 text-center"
+                    ] [
+                        _div [
+                            _class_ "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4"
+                        ] [ _i [ _class_ "fas fa-exclamation-triangle text-3xl text-red-600" ] [] ]
+                        _h3 [ _class_ "text-lg font-semibold text-gray-900 mb-2" ] [ Text.raw "Account Not Found" ]
+                        _p [ _class_ "text-gray-600 mb-4" ] [ Text.raw "The requested account could not be found." ]
+                        _button [
+                            _type_ "button"
+                            _class_
+                                "px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                            Hx.get "/accounts/modal/close"
+                            Hx.targetCss "#modal-container"
+                            Hx.swapInnerHtml
+                        ] [ Text.raw "Close" ]
+                    ]
+                ]
+            ]
+        ]
+
+module Handler =
+    let modal (marketId: int) : HttpHandler =
+        fun ctx ->
+            task {
+                try
+                    let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                    let! vm = Data.getEditViewModel scopeFactory marketId
+
+                    match vm with
+                    | Some v -> return! Response.ofHtml (View.modal v) ctx
+                    | None -> return! Response.ofHtml View.notFound ctx
+                with ex ->
+                    let logger = ctx.Plug<ILoggerFactory>().CreateLogger("AccountEdit")
+                    logger.LogError(ex, "Error getting account edit view for {MarketId}", marketId)
+                    return! Response.ofHtml View.notFound ctx
+            }
+
+    let update (marketId: int) : HttpHandler =
+        fun ctx ->
+            task {
+                try
+                    let! form = Request.getForm ctx
+                    let formData = Data.parseFormData form
+                    let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                    let! result = Data.updateAccount scopeFactory marketId formData
+
+                    match result with
+                    | Success -> return! Response.ofHtml (View.successResponse marketId) ctx
+                    | ValidationError msg -> return! Response.ofHtml (View.errorResponse msg marketId) ctx
+                    | NotFoundError -> return! Response.ofHtml View.notFound ctx
+                    | ServerError msg -> return! Response.ofHtml (View.errorResponse msg marketId) ctx
+                with ex ->
+                    let logger = ctx.Plug<ILoggerFactory>().CreateLogger("AccountEdit")
+                    logger.LogError(ex, "Error updating account {MarketId}", marketId)
+                    return! Response.ofHtml (View.errorResponse "An unexpected error occurred" marketId) ctx
+            }
+
+    let delete (marketId: int) : HttpHandler =
+        fun ctx ->
+            task {
+                try
+                    let scopeFactory = ctx.Plug<IServiceScopeFactory>()
+                    let! deleted = Data.deleteAccount scopeFactory marketId
+
+                    if deleted then
+                        return! Response.ofHtml View.deletedResponse ctx
+                    else
+                        return! Response.ofHtml View.notFound ctx
+                with ex ->
+                    let logger = ctx.Plug<ILoggerFactory>().CreateLogger("AccountEdit")
+                    logger.LogError(ex, "Error deleting account {MarketId}", marketId)
+                    return! Response.ofHtml (View.errorResponse "Failed to delete account" marketId) ctx
+            }
