@@ -188,6 +188,7 @@ module View =
                 Hx.get "/pipelines/table"
                 Hx.targetCss "#pipelines-table-body"
                 Hx.trigger "change, keyup delay:300ms from:input"
+                Hx.swapOuterHtml
             ] [
                 _div [ _class_ "flex flex-wrap gap-4" ] [
                     _div [ _class_ "flex-1 min-w-[200px]" ] [
@@ -306,13 +307,16 @@ module View =
         ]
 
     let tableBody (pipelines: PipelineListItem list) =
-        match pipelines with
-        | [] -> emptyState
-        | _ ->
-            Elem.create "" [] [
-                for pipeline in pipelines do
-                    pipelineRow pipeline
-            ]
+        let rows =
+            match pipelines with
+            | [] -> [ emptyState ]
+            | _ ->
+                [
+                    for pipeline in pipelines do
+                        pipelineRow pipeline
+                ]
+
+        _tbody [ _id_ "pipelines-table-body"; _class_ "bg-white divide-y divide-gray-200" ] rows
 
     let private pipelinesTable =
         _div [ _class_ "card overflow-hidden" ] [
@@ -324,7 +328,7 @@ module View =
                         _class_ "bg-white divide-y divide-gray-200"
                         Hx.get "/pipelines/table"
                         Hx.trigger "load"
-                        Hx.swapInnerHtml
+                        Hx.swapOuterHtml
                     ] [ loadingState ]
                 ]
             ]
