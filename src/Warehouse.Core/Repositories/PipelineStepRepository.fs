@@ -97,7 +97,7 @@ module PipelineStepRepository =
                     db.QuerySingleAsync<int>(
                         """INSERT INTO pipeline_steps
                            (pipeline_details_id, step_type_key, name, "order", is_enabled, parameters, created_at, updated_at)
-                           VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters, @CreatedAt, @UpdatedAt)
+                           VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, @CreatedAt, @UpdatedAt)
                            RETURNING id""",
                         entity
                     )
@@ -127,7 +127,7 @@ module PipelineStepRepository =
                     db.ExecuteAsync(
                         """UPDATE pipeline_steps
                            SET step_type_key = @StepTypeKey, name = @Name, "order" = @Order,
-                               is_enabled = @IsEnabled, parameters = @Parameters, updated_at = @UpdatedAt
+                               is_enabled = @IsEnabled, parameters = @Parameters::jsonb, updated_at = @UpdatedAt
                            WHERE id = @Id""",
                         entity
                     )

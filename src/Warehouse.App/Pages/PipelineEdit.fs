@@ -1058,7 +1058,7 @@ module View =
                 _div [ _class_ "flex min-h-full items-center justify-center p-4" ] [
                     _div [
                         _class_
-                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all w-full max-w-5xl"
+                            "relative transform overflow-hidden rounded-xl bg-white shadow-2xl transition-all w-full max-w-7xl"
                     ] [
                         // header
                         _div [ _class_ "bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4" ] [
@@ -1079,7 +1079,7 @@ module View =
                         // content
                         _div [ _class_ "flex max-h-[70vh]" ] [
                             // left column
-                            _div [ _class_ "w-1/3 p-6 border-r overflow-y-auto" ] [
+                            _div [ _class_ "w-1/4 p-6 border-r overflow-y-auto" ] [
                                 _h4 [ _class_ "text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4" ] [
                                     _i [ _class_ "fas fa-cog mr-2" ] []
                                     Text.raw "Settings"
@@ -1088,7 +1088,7 @@ module View =
                             ]
 
                             // middle column
-                            _div [ _class_ "w-1/3 p-6 border-r overflow-y-auto" ] [
+                            _div [ _class_ "w-1/2 p-6 border-r overflow-y-auto" ] [
                                 _div [ _class_ "flex items-center justify-between mb-4" ] [
                                     _h4 [ _class_ "text-sm font-semibold text-gray-700 uppercase tracking-wide" ] [
                                         _i [ _class_ "fas fa-layer-group mr-2" ] []
@@ -1107,7 +1107,7 @@ module View =
                             ]
 
                             // right column
-                            _div [ _id_ "step-editor-container"; _class_ "w-1/3 overflow-y-auto" ] []
+                            _div [ _id_ "step-editor-container"; _class_ "w-1/4 overflow-y-auto" ] []
                         ]
 
                         // footer
