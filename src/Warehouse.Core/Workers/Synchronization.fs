@@ -21,8 +21,6 @@ type SyncConfig =
         Interval: TimeSpan
     }
 
-type SyncDependencies = { OkxHttp: Http.T; CandlestickRepository: CandlestickRepository.T; Logger: ILogger }
-
 module CandlestickSync =
     open Errors
 
@@ -63,21 +61,21 @@ module CandlestickSync =
                     Error err
         }
 
-    let syncSymbol (deps: SyncDependencies) (config: SyncConfig) (instrument: Instrument) =
-        task {
+    let syncSymbol
+        (repo: CandlestickRepository.T)
+        (http: Http.T)
+        (logger: ILogger)
+        (config: SyncConfig)
+        (instrument: Instrument)
+        (ct: CancellationToken)
+        =
+        async {
             let symbol = toPairSymbol instrument
-
-            let! latestCandle =
-                deps.CandlestickRepository.GetLatest symbol MarketType.Okx config.Timeframe CancellationToken.None
+            let! latestCandle = repo.GetLatest symbol MarketType.Okx config.Timeframe ct |> Async.AwaitTask
 
             match latestCandle with
             | Error err ->
-                deps.Logger.LogError(
-                    "Failed to get latest candlestick for {Symbol}: {Error}",
-                    symbol,
-                    serviceMessage err
-                )
-
+                logger.LogError("Failed to get latest candlestick for {Symbol}: {Error}", symbol, serviceMessage err)
                 return None
             | Ok latestCandle ->
                 let startFrom =
@@ -85,7 +83,7 @@ module CandlestickSync =
                     | Some c -> c.Timestamp.AddMinutes -2.0
                     | None -> config.SyncStartDate
 
-                let! result = fetchBatch deps.OkxHttp deps.Logger symbol config startFrom
+                let! result = fetchBatch http logger symbol config startFrom |> Async.AwaitTask
 
                 return
                     match result with
@@ -94,26 +92,33 @@ module CandlestickSync =
                     | Error _ -> None
         }
 
-    let runSyncCycle (deps: SyncDependencies) (config: SyncConfig) =
-        task {
-            let! results = config.Symbols |> Array.map (syncSymbol deps config) |> Task.WhenAll
+    let runSyncCycle (scopeFactory: IServiceScopeFactory) (config: SyncConfig) (ct: CancellationToken) =
+        async {
+            let scope = scopeFactory.CreateScope()
+            let repo = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
+            let http = scope.ServiceProvider.GetRequiredService<Http.T>()
+
+            let logger =
+                scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("OkxCandlestickSync")
+
+            let! results =
+                config.Symbols
+                |> Array.map (syncSymbol repo http logger config)
+                |> Array.map (fun x -> x ct)
+                |> Async.Sequential
 
             let allCandles = results |> Array.choose id |> List.concat
 
             if allCandles.Length > 0 then
-                let! saved = deps.CandlestickRepository.Save allCandles CancellationToken.None
-                let latestTs = allCandles |> List.map _.Timestamp |> List.max
-                deps.Logger.LogInformation("Saved {Count} candlesticks. Latest: {Timestamp}", saved, latestTs)
+                let! saved = repo.Save allCandles ct |> Async.AwaitTask
+
+                match saved with
+                | Error err -> logger.LogError("Failed to save candlesticks: {Error}", serviceMessage err)
+                | Ok saved ->
+                    let latestTs = allCandles |> List.map _.Timestamp |> List.max
+                    logger.LogInformation("Saved {Count} candlesticks. Latest: {Timestamp}", saved, latestTs)
 
             return allCandles.Length
-        }
-
-module SyncDependencies =
-    let create (provider: IServiceProvider) : SyncDependencies =
-        {
-            OkxHttp = provider.GetRequiredService<Http.T>()
-            CandlestickRepository = provider.GetRequiredService<CandlestickRepository.T>()
-            Logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("OkxSynchronizationWorker")
         }
 
 type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogger<OkxSynchronizationWorker>) =
@@ -146,11 +151,8 @@ type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogge
                 let! tick = timer.WaitForNextTickAsync(ct)
 
                 if tick then
-                    use scope = scopeFactory.CreateScope()
-                    let deps = SyncDependencies.create scope.ServiceProvider
-
                     try
-                        let! _ = CandlestickSync.runSyncCycle deps config
+                        let! _ = CandlestickSync.runSyncCycle scopeFactory config ct
                         ()
                     with ex ->
                         logger.LogError(ex, "Error during sync cycle")

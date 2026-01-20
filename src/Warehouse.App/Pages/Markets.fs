@@ -1,5 +1,6 @@
 namespace Warehouse.App.Pages.Markets
 
+open System.Threading
 open System.Threading.Tasks
 open Falco
 open Microsoft.Extensions.DependencyInjection
@@ -8,12 +9,22 @@ open Falco.Markup
 open Falco.Htmx
 open Warehouse.Core.Domain
 open Warehouse.Core.Queries
+open Warehouse.Core.Repositories
 
 type MarketInfo = { Id: int; Type: MarketType; Name: string; Enabled: bool; HasCredentials: bool }
 
 module Data =
     let getCount (scopeFactory: IServiceScopeFactory) : Task<int> =
-        (DashboardQueries.create scopeFactory).CountMarkets()
+        task {
+            use scope = scopeFactory.CreateScope()
+            let repository = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
+            let! count = repository.Count CancellationToken.None
+
+            match count with
+            | Ok count -> return count
+            | Result.Error _ -> return 0
+        }
+
 
     let getActiveMarkets (scopeFactory: IServiceScopeFactory) : Task<MarketInfo list> =
         task {
@@ -21,13 +32,13 @@ module Data =
 
             return
                 markets
-                |> List.map (fun m ->
+                |> List.map (fun x ->
                     {
-                        Id = m.Id
-                        Type = m.Type
-                        Name = m.Type.ToString()
+                        Id = x.Id
+                        Type = x.Type
+                        Name = x.Type.ToString()
                         Enabled = true
-                        HasCredentials = not (isNull (box m.Credentials))
+                        HasCredentials = not (isNull (box x.Credentials))
                     }
                 )
         }
@@ -102,7 +113,7 @@ module View =
                     _class_ "text-white font-bold text-lg"
                 ] [ _i [ _class_ "fas fa-spinner fa-spin text-white text-opacity-60 text-sm" ] [] ]
 
-                // Credential indicator
+                // credential indicator
                 if market.HasCredentials then
                     _div [ _class_ "ml-2"; _title_ "API Configured" ] [
                         _i [ _class_ "fas fa-key text-white text-opacity-60 text-sm" ] []

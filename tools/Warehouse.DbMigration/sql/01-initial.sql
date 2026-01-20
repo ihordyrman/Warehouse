@@ -71,7 +71,7 @@ create table candlesticks
     is_completed boolean         not null default false
 );
 
-create index ix_candlesticks_symbol_market_timeframe_timestamp
+create unique index ix_candlesticks_symbol_market_timeframe_timestamp
     on candlesticks (symbol, market_type, timeframe, timestamp);
 
 create index ix_candlesticks_timestamp on candlesticks (timestamp);

@@ -135,6 +135,7 @@ module Http =
     let create (httpClient: HttpClient) (credentialsStore: CredentialsStore.T) (logger: ILogger) : T =
 
         let jsonOpts = JsonSerializerOptions()
+        jsonOpts.Converters.Add(OkxCandlestickConverter())
 
         let credentials =
             match

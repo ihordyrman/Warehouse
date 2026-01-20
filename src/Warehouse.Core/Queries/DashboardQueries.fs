@@ -16,7 +16,6 @@ module DashboardQueries =
 
     type T =
         {
-            CountMarkets: unit -> Task<int>
             TotalBalanceUsdt: unit -> Task<decimal>
             ActiveMarkets: unit -> Task<Market list>
         }
@@ -82,7 +81,6 @@ module DashboardQueries =
 
     let create (scopeFactory: IServiceScopeFactory) : T =
         {
-            CountMarkets = fun () -> queryInt scopeFactory "SELECT COUNT(1) FROM markets"
             TotalBalanceUsdt = fun () -> getTotalBalanceUsdt scopeFactory
             ActiveMarkets = fun () -> getActiveMarkets scopeFactory
         }

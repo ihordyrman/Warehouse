@@ -1,10 +1,8 @@
 namespace Warehouse.Core.Pipelines.Orchestration
 
 open System
-open System.Data
 open System.Threading
 open System.Threading.Tasks
-open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
@@ -17,8 +15,6 @@ open Warehouse.Core.Shared
 
 module Executor =
 
-    let private pipelinesTable = table'<Pipeline> "pipeline_configurations"
-
     type private ExecutorState =
         { mutable Cts: CancellationTokenSource option; mutable Task: Task option; mutable IsRunning: bool }
 
@@ -30,17 +26,13 @@ module Executor =
             IsRunning: unit -> bool
         }
 
-    let private loadPipeline (db: IDbConnection) (pipelineId: int) =
+    let private loadPipeline (repo: PipelineRepository.T) (pipelineId: int) (ct: CancellationToken) =
         task {
-            let! results =
-                select {
-                    for p in pipelinesTable do
-                        where (p.Id = pipelineId)
-                        take 1
-                }
-                |> db.SelectAsync<Pipeline>
+            let! pipeline = repo.GetById pipelineId ct
 
-            return results |> Seq.tryHead
+            match pipeline with
+            | Error _ -> return Option.None
+            | Ok pipeline -> return Some pipeline
         }
 
     let private createContext (pipeline: Pipeline) (currentPrice: decimal) (marketData: MarketData option) =
@@ -60,9 +52,9 @@ module Executor =
             try
                 while not ct.IsCancellationRequested do
                     use scope = services.CreateScope()
-                    use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+                    let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
 
-                    match! loadPipeline db pipelineId with
+                    match! loadPipeline repo pipelineId ct with
                     | Option.None ->
                         logger.LogWarning("Pipeline {PipelineId} not found, stopping executor", pipelineId)
                         return ()
