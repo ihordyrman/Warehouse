@@ -6,6 +6,7 @@ open System.Threading.Tasks
 open Falco
 open Falco.Htmx
 open Falco.Markup
+open Falco.Markup.Elem
 open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
@@ -62,8 +63,20 @@ module Data =
 
     let getMarketTypes (scopeFactory: IServiceScopeFactory) : Task<string list> =
         task {
-            let! markets = (DashboardQueries.create scopeFactory).ActiveMarkets()
-            return markets |> List.map _.Type.ToString()
+            let repo = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<MarketRepository.T>()
+            let! markets = repo.GetAll CancellationToken.None
+
+            match markets with
+            | Error err ->
+                let logger =
+                    scopeFactory
+                        .CreateScope()
+                        .ServiceProvider.GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("Pipelines")
+
+                logger.LogError("Error getting markets: {Error}", Errors.serviceMessage err)
+                return []
+            | Ok markets -> return markets |> List.map _.Type.ToString()
         }
 
     let getCount (scopeFactory: IServiceScopeFactory) : Task<int> =
@@ -79,7 +92,6 @@ module Data =
                 logger.LogError("Error getting pipelines count: {Error}", Errors.serviceMessage err)
                 return 0
         }
-
 
     let getGridData (scopeFactory: IServiceScopeFactory) : Task<PipelinesGridData> =
         task {

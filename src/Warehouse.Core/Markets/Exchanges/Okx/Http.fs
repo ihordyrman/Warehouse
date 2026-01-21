@@ -10,6 +10,7 @@ open System.Web
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Stores
+open Warehouse.Core.Markets.Stores.CredentialsStore
 open Warehouse.Core.Shared
 
 module Http =
@@ -58,17 +59,17 @@ module Http =
 
     let private addAuthHeaders
         (client: HttpClient)
-        (credentials: MarketCredentials)
+        (credentials: Credentials)
         (timestamp: string)
         (method: string)
         (path: string)
         (body: string)
         =
-        let signature = Auth.generateSignature timestamp credentials.SecretKey method path body
+        let signature = Auth.generateSignature timestamp credentials.Secret method path body
         client.DefaultRequestHeaders.Add("OK-ACCESS-SIGN", signature)
         client.DefaultRequestHeaders.Add("OK-ACCESS-TIMESTAMP", timestamp)
-        client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", credentials.ApiKey)
-        client.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", credentials.Passphrase)
+        client.DefaultRequestHeaders.Add("OK-ACCESS-KEY", credentials.Key)
+        client.DefaultRequestHeaders.Add("OK-ACCESS-PASSPHRASE", credentials.Passphrase |> Option.defaultValue "")
         client.DefaultRequestHeaders.Add("x-simulated-trading", if credentials.IsSandbox then "1" else "0")
 
     let private clearAuthHeaders (client: HttpClient) =
@@ -84,7 +85,7 @@ module Http =
     let private execute<'T>
         (client: HttpClient)
         (jsonOpts: JsonSerializerOptions)
-        (credentials: MarketCredentials)
+        (credentials: Credentials)
         (req: Request)
         : Task<Result<'T, ServiceError>>
         =
@@ -119,7 +120,7 @@ module Http =
     let private exec<'T>
         (httpClient: HttpClient)
         (jsonOpts: JsonSerializerOptions)
-        (credentials: MarketCredentials)
+        (credentials: Credentials)
         (logger: ILogger)
         (req: Request)
         : Task<Result<'T, ServiceError>>

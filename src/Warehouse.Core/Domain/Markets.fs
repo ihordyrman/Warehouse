@@ -17,18 +17,8 @@ type Market =
     {
         Id: int
         Type: MarketType
-        Credentials: MarketCredentials
-        CreatedAt: DateTime
-        UpdatedAt: DateTime
-    }
-
-and MarketCredentials =
-    {
-        Id: int
-        MarketId: int
-        Market: Market
         ApiKey: string
-        Passphrase: string
+        Passphrase: string option
         SecretKey: string
         IsSandbox: bool
         CreatedAt: DateTime

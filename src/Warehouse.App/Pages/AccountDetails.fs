@@ -24,12 +24,12 @@ module Data =
     open System.Threading
     open Warehouse.Core.Repositories
 
-    let private maskApiKey (apiKey: string option) =
+    let private maskApiKey (apiKey: string) =
         match apiKey with
-        | None -> "Not configured"
-        | Some key when String.IsNullOrEmpty key -> "Not configured"
-        | Some key when key.Length > 8 -> key.Substring(0, 4) + "****" + key.Substring(key.Length - 4)
-        | Some _ -> "****"
+        | "" -> "Not configured"
+        | key when String.IsNullOrEmpty key -> "Not configured"
+        | key when key.Length > 8 -> key.Substring(0, 4) + "****" + key.Substring(key.Length - 4)
+        | _ -> "****"
 
     let getAccountDetails (scopeFactory: IServiceScopeFactory) (marketId: int) : Task<AccountDetailsInfo option> =
         task {
@@ -40,20 +40,19 @@ module Data =
             match result with
             | Error _ -> return None
             | Ok data ->
-                let apiKey = data.Credentials |> Option.map _.ApiKey
-                let isSandbox = data.Credentials |> Option.map _.IsSandbox |> Option.defaultValue true
+                let apiKey = data.ApiKey
+                let isSandbox = data.IsSandbox
 
                 return
                     Some
                         {
-                            Id = data.Market.Id
-                            MarketType = data.Market.Type
-                            HasCredentials =
-                                apiKey |> Option.map (String.IsNullOrEmpty >> not) |> Option.defaultValue false
+                            Id = data.Id
+                            MarketType = data.Type
+                            HasCredentials = true // is this needed? we always have apiKey
                             IsSandbox = isSandbox
                             ApiKeyMasked = maskApiKey apiKey
-                            CreatedAt = data.Market.CreatedAt
-                            UpdatedAt = data.Market.UpdatedAt
+                            CreatedAt = data.CreatedAt
+                            UpdatedAt = data.UpdatedAt
                         }
         }
 

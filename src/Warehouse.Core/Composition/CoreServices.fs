@@ -66,7 +66,8 @@ module CoreServices =
     let private marketRepository (services: IServiceCollection) =
         services.AddScoped<MarketRepository.T>(fun provider ->
             let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
-            MarketRepository.create scopeFactory
+            let loggerFactory = provider.GetRequiredService<ILoggerFactory>()
+            MarketRepository.create scopeFactory loggerFactory
         )
         |> ignore
 

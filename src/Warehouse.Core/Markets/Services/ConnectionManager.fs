@@ -29,7 +29,7 @@ module MarketConnectionService =
         task {
             let! results =
                 db.QueryAsync<PipelineSubscription>(
-                    "SELECT symbol, market_type as markettype FROM pipeline_configurations WHERE enabled = true"
+                    "SELECT symbol, market_type as markettype FROM pipelines WHERE enabled = true"
                 )
 
             return

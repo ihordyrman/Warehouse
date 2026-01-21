@@ -4,24 +4,18 @@ open System.Data
 open System.Threading
 open System.Threading.Tasks
 open Dapper
-open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
 open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared
 
 module CredentialsStore =
     open Errors
 
-    type private MarketEntity = { Id: int; Type: int }
+    type Credentials = { Key: string; Secret: string; Passphrase: string option; IsSandbox: bool }
 
-    let private credentialsTable = table'<MarketCredentialsEntity> "market_credentials"
-    let private marketsTable = table'<MarketEntity> "markets"
-
-    type T =
-        { GetCredentials: MarketType -> CancellationToken -> Task<Result<MarketCredentials, ServiceError>> }
+    type T = { GetCredentials: MarketType -> CancellationToken -> Task<Result<Credentials, ServiceError>> }
 
     let create (scopeFactory: IServiceScopeFactory) : T =
         {
@@ -35,22 +29,34 @@ module CredentialsStore =
                         try
                             use scope = scope.ServiceProvider.CreateScope()
                             use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-                            let marketTypeInt = int marketType
+                            let marketTypeInt = marketType |> int
 
                             let! results =
-                                db.QueryAsync<MarketCredentialsEntity>(
-                                    "SELECT mc.* FROM markets m
-                                 INNER JOIN market_credentials mc ON m.id = mc.market_id
-                                 WHERE m.type = @MarketType
-                                 LIMIT 1",
-                                    {| MarketType = marketTypeInt |}
+                                db.QueryFirstOrDefaultAsync<MarketEntity option>(
+                                    "SELECT m.* FROM markets m
+                                     WHERE m.type = @Type",
+                                    {| Type = marketTypeInt |}
                                 )
 
-                            match results |> Seq.tryHead with
+                            match results with
+                            | None ->
+                                return Result.Error(NotFound($"No credentials found for market type {marketType}"))
                             | Some credentials ->
-                                logger.LogDebug("Retrieved credentials for {MarketType}", marketType)
-                                return Ok(Mappers.toMarketCredentials credentials None)
-                            | None -> return Result.Error(NotFound($"No credentials found for {marketType}"))
+                                logger.LogDebug("Retrieved credentials for {MarketType}", credentials.Type)
+
+                                return
+                                    Result.Ok(
+                                        {
+                                            Key = credentials.ApiKey
+                                            Secret = credentials.SecretKey
+                                            Passphrase =
+                                                if credentials.Passphrase = "" then
+                                                    None
+                                                else
+                                                    Some credentials.Passphrase
+                                            IsSandbox = credentials.IsSandbox
+                                        }
+                                    )
                         with ex ->
                             logger.LogError(ex, "Failed to get credentials for {MarketType}", marketType)
                             return Result.Error(NotFound($"Failed to get credentials: {ex.Message}"))

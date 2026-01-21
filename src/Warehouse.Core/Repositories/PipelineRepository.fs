@@ -49,8 +49,8 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! pipelineResults =
-                    db.QueryAsync<PipelineConfigurationEntity>(
-                        "SELECT * FROM pipeline_configurations WHERE id = @Id LIMIT 1",
+                    db.QueryAsync<PipelineEntity>(
+                        "SELECT * FROM pipelines WHERE id = @Id LIMIT 1",
                         {| Id = id |}
                     )
 
@@ -81,7 +81,7 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! pipelineResults =
-                    db.QueryAsync<PipelineConfigurationEntity>("SELECT * FROM pipeline_configurations ORDER BY id")
+                    db.QueryAsync<PipelineEntity>("SELECT * FROM pipelines ORDER BY id")
 
                 let! stepResults =
                     db.QueryAsync<PipelineStepEntity>(
@@ -121,8 +121,8 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! pipelineResults =
-                    db.QueryAsync<PipelineConfigurationEntity>(
-                        "SELECT * FROM pipeline_configurations WHERE enabled = true ORDER BY id"
+                    db.QueryAsync<PipelineEntity>(
+                        "SELECT * FROM pipelines WHERE enabled = true ORDER BY id"
                     )
 
                 let pipelineIds = pipelineResults |> Seq.map _.Id |> Seq.toArray
@@ -178,7 +178,7 @@ module PipelineRepository =
 
                 let! result =
                     db.QuerySingleAsync<int>(
-                        """INSERT INTO pipeline_configurations
+                        """INSERT INTO pipelines
                            (name, symbol, market_type, enabled, execution_interval, last_executed_at, status, tags, created_at, updated_at)
                            VALUES (@Name, @Symbol, @MarketType, @Enabled, @ExecutionInterval, @LastExecutedAt, @Status, @Tags::jsonb, @CreatedAt, @UpdatedAt)
                            RETURNING id""",
@@ -208,7 +208,7 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        """UPDATE pipeline_configurations
+                        """UPDATE pipelines
                            SET name = @Name, symbol = @Symbol, market_type = @MarketType,
                                enabled = @Enabled, execution_interval = @ExecutionInterval,
                                last_executed_at = @LastExecutedAt, status = @Status, tags = @Tags::jsonb,
@@ -235,7 +235,7 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! _ = db.ExecuteAsync("DELETE FROM pipeline_steps WHERE pipeline_details_id = @Id", {| Id = id |})
-                let! rowsAffected = db.ExecuteAsync("DELETE FROM pipeline_configurations WHERE id = @Id", {| Id = id |})
+                let! rowsAffected = db.ExecuteAsync("DELETE FROM pipelines WHERE id = @Id", {| Id = id |})
 
                 if rowsAffected > 0 then
                     logger.LogInformation("Deleted pipeline {Id}", id)
@@ -264,7 +264,7 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipeline_configurations SET enabled = @Enabled, updated_at = @UpdatedAt WHERE id = @Id",
+                        "UPDATE pipelines SET enabled = @Enabled, updated_at = @UpdatedAt WHERE id = @Id",
                         {| Enabled = enabled; UpdatedAt = now; Id = pipelineId |}
                     )
 
@@ -295,7 +295,7 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipeline_configurations SET last_executed_at = @LastExecutedAt, updated_at = @UpdatedAt WHERE id = @Id",
+                        "UPDATE pipelines SET last_executed_at = @LastExecutedAt, updated_at = @UpdatedAt WHERE id = @Id",
                         {| LastExecutedAt = lastExecutedAt; UpdatedAt = now; Id = pipelineId |}
                     )
 
@@ -326,7 +326,7 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipeline_configurations SET status = @Status, updated_at = @UpdatedAt WHERE id = @Id",
+                        "UPDATE pipelines SET status = @Status, updated_at = @UpdatedAt WHERE id = @Id",
                         {| Status = int status; UpdatedAt = now; Id = pipelineId |}
                     )
 
@@ -347,7 +347,7 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! result = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipeline_configurations")
+                let! result = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipelines")
 
                 logger.LogDebug("Pipeline count: {Count}", result)
                 return Ok result
@@ -363,7 +363,7 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! result =
-                    db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipeline_configurations WHERE enabled = true")
+                    db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipelines WHERE enabled = true")
 
                 logger.LogDebug("Enabled pipeline count: {Count}", result)
                 return Ok result
@@ -379,7 +379,7 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<string>("SELECT tags FROM pipeline_configurations GROUP BY tags ORDER BY tags ASC")
+                    db.QueryAsync<string>("SELECT tags FROM pipelines GROUP BY tags ORDER BY tags ASC")
 
                 let tags = results |> Seq.toList
                 logger.LogDebug("Retrieved {Count} unique tag groups", tags.Length)
@@ -400,7 +400,7 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let baseSql = "SELECT * FROM pipeline_configurations WHERE 1=1"
+                let baseSql = "SELECT * FROM pipelines WHERE 1=1"
                 let conditions = ResizeArray<string>()
                 let parameters = DynamicParameters()
 
@@ -437,7 +437,7 @@ module PipelineRepository =
                 let whereClause = String.Join(" ", conditions)
                 let finalSql = $"{baseSql} {whereClause} {orderClause}"
 
-                let! results = db.QueryAsync<PipelineConfigurationEntity>(finalSql, parameters)
+                let! results = db.QueryAsync<PipelineEntity>(finalSql, parameters)
                 let pipelines = results |> Seq.toList
 
                 let filteredPipelines =

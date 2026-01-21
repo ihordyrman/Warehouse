@@ -46,21 +46,18 @@ module Data =
 
                 match result with
                 | Result.Error _ -> return None
-                | Result.Ok marketWithCreds ->
-                    let credentials = marketWithCreds.Credentials
-
+                | Result.Ok market ->
                     return
                         Some
                             {
-                                Id = marketWithCreds.Market.Id
-                                MarketType = marketWithCreds.Market.Type
-                                ApiKeyMasked =
-                                    credentials |> Option.map (_.ApiKey >> maskApiKey) |> Option.defaultValue ""
+                                Id = market.Id
+                                MarketType = market.Type
+                                ApiKeyMasked = maskApiKey market.ApiKey
                                 HasPassphrase =
-                                    credentials
-                                    |> Option.map (fun c -> not (String.IsNullOrEmpty c.Passphrase))
+                                    market.Passphrase
+                                    |> Option.map (fun c -> not (String.IsNullOrEmpty c))
                                     |> Option.defaultValue false
-                                IsSandbox = credentials |> Option.map _.IsSandbox |> Option.defaultValue true
+                                IsSandbox = market.IsSandbox
                             }
             with _ ->
                 return None
@@ -85,45 +82,20 @@ module Data =
                 match existingMarket with
                 | Result.Error(Errors.NotFound _) -> return NotFoundError
                 | Result.Error err -> return ServerError(Errors.serviceMessage err)
-                | Result.Ok marketWithCreds ->
-                    match marketWithCreds.Credentials with
-                    | Some _ ->
-                        let updateRequest: MarketRepository.UpdateCredentialsRequest =
-                            {
-                                ApiKey = formData.ApiKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                SecretKey = formData.SecretKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                Passphrase = formData.Passphrase
-                                IsSandbox = Some formData.IsSandbox
-                            }
+                | Result.Ok _ ->
+                    let updateRequest: MarketRepository.UpdateMarketRequest =
+                        {
+                            ApiKey = formData.ApiKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                            SecretKey = formData.SecretKey |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                            Passphrase = formData.Passphrase
+                            IsSandbox = Some formData.IsSandbox
+                        }
 
-                        let! updateResult = repository.UpdateCredentials marketId updateRequest CancellationToken.None
+                    let! updateResult = repository.Update marketId updateRequest CancellationToken.None
 
-                        match updateResult with
-                        | Result.Ok() -> return Success
-                        | Result.Error err -> return ServerError(Errors.serviceMessage err)
-
-                    | None ->
-                        match formData.ApiKey, formData.SecretKey with
-                        | Some apiKey, Some secretKey when
-                            not (String.IsNullOrWhiteSpace apiKey) && not (String.IsNullOrWhiteSpace secretKey)
-                            ->
-
-                            let updateRequest: MarketRepository.UpdateCredentialsRequest =
-                                {
-                                    ApiKey = Some apiKey
-                                    SecretKey = Some secretKey
-                                    Passphrase = formData.Passphrase
-                                    IsSandbox = Some formData.IsSandbox
-                                }
-
-                            let! updateResult =
-                                repository.UpdateCredentials marketId updateRequest CancellationToken.None
-
-                            match updateResult with
-                            | Result.Ok() -> return Success
-                            | Result.Error err -> return ServerError(Errors.serviceMessage err)
-
-                        | _ -> return ValidationError "API Key and Secret Key are required for new credentials"
+                    match updateResult with
+                    | Result.Ok _ -> return Success
+                    | Result.Error err -> return ServerError(Errors.serviceMessage err)
             with ex ->
                 return ServerError $"Failed to update account: {ex.Message}"
         }

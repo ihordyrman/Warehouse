@@ -4,12 +4,10 @@ open System
 
 module Entities =
 
-    type MarketEntity = { Id: int; Type: int; CreatedAt: DateTime; UpdatedAt: DateTime }
-
-    type MarketCredentialsEntity =
+    type MarketEntity =
         {
             Id: int
-            MarketId: int
+            Type: int
             ApiKey: string
             SecretKey: string
             Passphrase: string
@@ -18,7 +16,7 @@ module Entities =
             UpdatedAt: DateTime
         }
 
-    type PipelineConfigurationEntity =
+    type PipelineEntity =
         {
             Id: int
             Name: string

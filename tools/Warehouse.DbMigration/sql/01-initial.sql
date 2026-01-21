@@ -1,17 +1,7 @@
 create table markets
 (
     id         serial primary key,
-    type       int       not null,
-    created_at timestamp not null,
-    updated_at timestamp not null
-);
-
-create unique index ix_markets_type on markets (type);
-
-create table market_credentials
-(
-    id         serial primary key,
-    market_id  int          not null references markets (id),
+    type       int          not null,
     api_key    varchar(500) not null,
     secret_key varchar(500) not null,
     passphrase varchar(500),
@@ -20,9 +10,9 @@ create table market_credentials
     updated_at timestamp    not null
 );
 
-create unique index ix_market_credentials_market_id on market_credentials (market_id);
+create unique index ix_markets_type on markets (type);
 
-create table pipeline_configurations
+create table pipelines
 (
     id                 serial primary key,
     name               varchar(200) not null,
@@ -40,7 +30,7 @@ create table pipeline_configurations
 create table positions
 (
     id            serial primary key,
-    pipeline_id   int references pipeline_configurations (id) on delete cascade,
+    pipeline_id   int references pipelines (id) on delete cascade,
     symbol        varchar(20) not null,
     status        int         not null,
     entry_price   decimal(28, 10),
@@ -79,7 +69,7 @@ create index ix_candlesticks_timestamp on candlesticks (timestamp);
 create table pipeline_steps
 (
     id                  serial primary key,
-    pipeline_details_id int references pipeline_configurations (id) on delete cascade,
+    pipeline_details_id int references pipelines (id) on delete cascade,
     step_type_key       varchar(100) not null,
     name                varchar(200) not null,
     "order"             int          not null,
@@ -95,7 +85,7 @@ create unique index ix_pipeline_steps_pipeline_order
 create table orders
 (
     id                serial primary key,
-    pipeline_id       int references pipeline_configurations (id),
+    pipeline_id       int references pipelines (id),
     market_type       int             not null,
     exchange_order_id varchar(100)    not null,
     symbol            varchar(20)     not null,

@@ -9,9 +9,9 @@ open Microsoft.Extensions.Configuration
 module Seeding =
     let ensureCredentialsPopulated (configuration: IConfiguration) (connection: IDbConnection) : Task<unit> =
         task {
-            let! credentialCount = connection.QuerySingleAsync<int>("SELECT count(*) FROM market_credentials")
+            let! marketCount = connection.QuerySingleAsync<int>("SELECT count(*) FROM markets")
 
-            if credentialCount > 0 then
+            if marketCount > 0 then
                 return ()
             else
                 let section = "OkxAuthConfiguration"
@@ -25,7 +25,7 @@ module Seeding =
                 | _, _, null -> failwith "Missing OKX configuration"
                 | _ -> ()
 
-                let! marketId =
+                let! _ =
                     task {
                         let! existingMarketId =
                             connection.QuerySingleOrDefaultAsync<Nullable<int>>(
@@ -38,26 +38,17 @@ module Seeding =
                         | _ ->
                             return!
                                 connection.QuerySingleAsync<int>(
-                                    "INSERT INTO markets (type, created_at, updated_at)
-                                     VALUES (@Type, now(), now()) RETURNING id",
-                                    {| Type = 0 |}
+                                    "INSERT INTO markets (type, api_key, passphrase, secret_key, is_sandbox, created_at, updated_at)
+                                     VALUES (@Type, @ApiKey, @Passphrase, @SecretKey, @IsSandbox, now(), now()) RETURNING id",
+                                    {|
+                                        Type = 0
+                                        ApiKey = apiKey
+                                        Passphrase = passPhrase
+                                        SecretKey = secretKey
+                                        IsSandbox = true
+                                    |}
                                 )
                     }
-
-                let! _ =
-                    connection.ExecuteAsync(
-                        """
-                        INSERT INTO market_credentials (api_key, passphrase, secret_key, market_id, is_sandbox, created_at, updated_at)
-                        VALUES (@ApiKey, @Passphrase, @SecretKey, @MarketId, @IsSandbox, now(), now())
-                        """,
-                        {|
-                            ApiKey = apiKey
-                            Passphrase = passPhrase
-                            SecretKey = secretKey
-                            MarketId = marketId
-                            IsSandbox = true
-                        |}
-                    )
 
                 return ()
         }

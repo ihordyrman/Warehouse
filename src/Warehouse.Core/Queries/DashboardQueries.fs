@@ -7,18 +7,11 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
 open Warehouse.Core.Markets.Services
+open Warehouse.Core.Repositories
 
 module DashboardQueries =
-    open Entities
-    open Mappers
-
-    type T =
-        {
-            TotalBalanceUsdt: unit -> Task<decimal>
-            ActiveMarkets: unit -> Task<Market list>
-        }
+    type T = { TotalBalanceUsdt: unit -> Task<decimal> }
 
     let private queryInt (scopeFactory: IServiceScopeFactory) (sql: string) =
         task {
@@ -30,57 +23,36 @@ module DashboardQueries =
     let private getTotalBalanceUsdt (scopeFactory: IServiceScopeFactory) =
         task {
             use scope = scopeFactory.CreateScope()
-            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+            let repo = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
             let balanceManager = scope.ServiceProvider.GetRequiredService<BalanceManager.T>()
-            let! markets = db.QueryAsync<MarketEntity>("SELECT m.* FROM markets m")
+            let! markets = repo.GetAll CancellationToken.None
 
-            let sum =
-                markets
-                |> Seq.map (fun market ->
-                    task {
-                        let! result =
-                            (BalanceManager.getTotalUsdtValue
-                                balanceManager
-                                (enum<MarketType> market.Type)
-                                CancellationToken.None)
+            match markets with
+            | Result.Error err ->
+                let log = scope.ServiceProvider.GetService<ILogger>()
+                log.LogError("Error getting markets: {Error}", err)
+                return 0M
+            | Result.Ok markets ->
+                let sum =
+                    markets
+                    |> Seq.map (fun market ->
+                        task {
+                            let! result =
+                                (BalanceManager.getTotalUsdtValue balanceManager market.Type CancellationToken.None)
 
-                        match result with
-                        | Ok value -> return value
-                        | Result.Error err ->
-                            let log = scope.ServiceProvider.GetService<ILogger>()
-                            log.LogError("Error getting balance for {MarketType}: {Error}", market.Type, err)
-                            return 0M
-                    }
-                )
-                |> Array.ofSeq
+                            match result with
+                            | Ok value -> return value
+                            | Result.Error err ->
+                                let log = scope.ServiceProvider.GetService<ILogger>()
+                                log.LogError("Error getting balance for {MarketType}: {Error}", market.Type, err)
+                                return 0M
+                        }
+                    )
+                    |> Array.ofSeq
 
-            let! results = Task.WhenAll sum
-            return results |> Array.sum
-        }
-
-    let private getActiveMarkets (scopeFactory: IServiceScopeFactory) : Task<Market list> =
-        task {
-            use scope = scopeFactory.CreateScope()
-            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
-            let! results =
-                db.QueryAsync<MarketEntity, MarketCredentialsEntity, MarketEntity * MarketCredentialsEntity>(
-                    "SELECT m.*, mc.* FROM markets m
-                     INNER JOIN market_credentials mc ON m.id = mc.market_id",
-                    (fun market creds -> (market, creds)),
-                    splitOn = "id"
-                )
-
-            return
-                results
-                |> Seq.map (fun (marketEntity, credsEntity) ->
-                    toMarket marketEntity (Some(toMarketCredentials credsEntity None))
-                )
-                |> Seq.toList
+                let! results = Task.WhenAll sum
+                return results |> Array.sum
         }
 
     let create (scopeFactory: IServiceScopeFactory) : T =
-        {
-            TotalBalanceUsdt = fun () -> getTotalBalanceUsdt scopeFactory
-            ActiveMarkets = fun () -> getActiveMarkets scopeFactory
-        }
+        { TotalBalanceUsdt = fun () -> getTotalBalanceUsdt scopeFactory }

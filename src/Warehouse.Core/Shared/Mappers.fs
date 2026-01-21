@@ -33,23 +33,13 @@ module internal Mappers =
             with _ ->
                 Dictionary<string, string>()
 
-    let toMarket (entity: MarketEntity) (credentials: MarketCredentials option) : Market =
+    let toMarket (entity: MarketEntity) : Market =
         {
             Id = entity.Id
             Type = enum<MarketType> entity.Type
-            Credentials = credentials |> Option.defaultValue Unchecked.defaultof<MarketCredentials>
-            CreatedAt = entity.CreatedAt
-            UpdatedAt = entity.UpdatedAt
-        }
-
-    let toMarketCredentials (entity: MarketCredentialsEntity) (market: Market option) : MarketCredentials =
-        {
-            Id = entity.Id
-            MarketId = entity.MarketId
-            Market = market |> Option.defaultValue Unchecked.defaultof<Market>
             ApiKey = entity.ApiKey
             SecretKey = entity.SecretKey
-            Passphrase = entity.Passphrase
+            Passphrase = if String.IsNullOrWhiteSpace(entity.Passphrase) then None else Some entity.Passphrase
             IsSandbox = entity.IsSandbox
             CreatedAt = entity.CreatedAt
             UpdatedAt = entity.UpdatedAt
@@ -69,7 +59,7 @@ module internal Mappers =
             UpdatedAt = entity.UpdatedAt
         }
 
-    let toPipeline (entity: PipelineConfigurationEntity) : Pipeline =
+    let toPipeline (entity: PipelineEntity) : Pipeline =
         {
             Id = entity.Id
             Name = entity.Name
@@ -142,7 +132,7 @@ module internal Mappers =
 
     /// Domain -> Entities mappers
 
-    let fromPipeline (pipeline: Pipeline) : PipelineConfigurationEntity =
+    let fromPipeline (pipeline: Pipeline) : PipelineEntity =
         {
             Id = pipeline.Id
             Name = pipeline.Name
@@ -212,20 +202,12 @@ module internal Mappers =
         {
             Id = market.Id
             Type = int market.Type
+            ApiKey = market.ApiKey
+            Passphrase = market.Passphrase |> Option.defaultValue String.Empty
+            SecretKey = market.SecretKey
+            IsSandbox = market.IsSandbox
             CreatedAt = market.CreatedAt
             UpdatedAt = market.UpdatedAt
-        }
-
-    let fromMarketCredentials (credentials: MarketCredentials) : MarketCredentialsEntity =
-        {
-            Id = credentials.Id
-            MarketId = credentials.MarketId
-            ApiKey = credentials.ApiKey
-            SecretKey = credentials.SecretKey
-            Passphrase = credentials.Passphrase
-            IsSandbox = credentials.IsSandbox
-            CreatedAt = credentials.CreatedAt
-            UpdatedAt = credentials.UpdatedAt
         }
 
     let fromCandlestick (candlestick: Candlestick) : CandlestickEntity =

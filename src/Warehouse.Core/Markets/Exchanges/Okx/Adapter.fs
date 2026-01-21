@@ -29,7 +29,7 @@ module OkxAdapter =
             }
 
     type private Message =
-        | Connect of credentials: MarketCredentials option * AsyncReplyChannel<Result<unit, string>>
+        | Connect of market: Market option * AsyncReplyChannel<Result<unit, string>>
         | Disconnect of AsyncReplyChannel<unit>
         | Subscribe of channel: string * symbol: string * AsyncReplyChannel<Result<unit, string>>
         | Unsubscribe of channel: string * symbol: string * AsyncReplyChannel<Result<unit, string>>
@@ -42,7 +42,7 @@ module OkxAdapter =
 
     type T =
         {
-            Connect: MarketCredentials option -> CancellationToken -> Task<Result<unit, string>>
+            Connect: Market option -> CancellationToken -> Task<Result<unit, string>>
             Disconnect: CancellationToken -> Task<unit>
             Subscribe: string -> string -> CancellationToken -> Task<Result<unit, string>>
             Unsubscribe: string -> string -> CancellationToken -> Task<Result<unit, string>>
@@ -55,8 +55,8 @@ module OkxAdapter =
     let private reconnectDelay = TimeSpan.FromSeconds 5.0
     let private maxReconnectAttempts = 10
 
-    let private getWsUri (credentials: MarketCredentials option) =
-        match credentials with
+    let private getWsUri (market: Market option) =
+        match market with
         | Some credentials when credentials.IsSandbox -> Uri SocketEndpoints.DEMO_PUBLIC_WS_URL
         | _ -> Uri(SocketEndpoints.PUBLIC_WS_URL)
 

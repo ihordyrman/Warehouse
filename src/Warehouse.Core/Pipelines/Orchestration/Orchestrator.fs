@@ -22,7 +22,7 @@ module Orchestrator =
 
     let private loadAllPipelines (db: IDbConnection) =
         task {
-            let! pipelines = db.QueryAsync<PipelineConfigurationEntity>("SELECT * FROM pipeline_configurations")
+            let! pipelines = db.QueryAsync<PipelineEntity>("SELECT * FROM pipelines")
             return Seq.map toPipeline pipelines |> Seq.toList
         }
 
@@ -137,8 +137,8 @@ module Orchestrator =
                     use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                     let! result =
-                        db.QuerySingleOrDefaultAsync<PipelineConfigurationEntity>(
-                            "SELECT * FROM pipeline_configurations WHERE id = @Id",
+                        db.QuerySingleOrDefaultAsync<PipelineEntity>(
+                            "SELECT * FROM pipelines WHERE id = @Id",
                             {| Id = pipelineId |}
                         )
 

@@ -20,7 +20,7 @@ DefaultTypeMap.MatchNamesWithUnderscores <- true
 let db = new NpgsqlConnection(connectionString) :> System.Data.IDbConnection
 
 let pipelines =
-    db.QueryAsync<Pipeline>("SELECT id, name, symbol FROM pipeline_configurations")
+    db.QueryAsync<Pipeline>("SELECT id, name, symbol FROM pipelines")
     |> Async.AwaitTask
     |> Async.RunSynchronously
     |> Seq.toList

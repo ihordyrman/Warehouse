@@ -28,19 +28,24 @@ module Data =
 
     let getActiveMarkets (scopeFactory: IServiceScopeFactory) : Task<MarketInfo list> =
         task {
-            let! markets = (DashboardQueries.create scopeFactory).ActiveMarkets()
+            use scope = scopeFactory.CreateScope()
+            let repo = scope.ServiceProvider.GetRequiredService<MarketRepository.T>()
+            let! markets = repo.GetAll CancellationToken.None
 
-            return
-                markets
-                |> List.map (fun x ->
-                    {
-                        Id = x.Id
-                        Type = x.Type
-                        Name = x.Type.ToString()
-                        Enabled = true
-                        HasCredentials = not (isNull (box x.Credentials))
-                    }
-                )
+            match markets with
+            | Result.Error _ -> return []
+            | Result.Ok markets ->
+                return
+                    markets
+                    |> List.map (fun x ->
+                        {
+                            Id = x.Id
+                            Type = x.Type
+                            Name = x.Type.ToString()
+                            Enabled = true
+                            HasCredentials = true // tf is this
+                        }
+                    )
         }
 
 module View =

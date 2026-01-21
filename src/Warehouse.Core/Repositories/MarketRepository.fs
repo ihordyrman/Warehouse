@@ -17,12 +17,10 @@ module MarketRepository =
     open Errors
     open Mappers
 
-    type MarketWithCredentials = { Market: Market; Credentials: MarketCredentials option }
-
     type CreateMarketRequest =
         { Type: MarketType; ApiKey: string; SecretKey: string; Passphrase: string option; IsSandbox: bool }
 
-    type UpdateCredentialsRequest =
+    type UpdateMarketRequest =
         {
             ApiKey: string option
             SecretKey: string option
@@ -32,11 +30,11 @@ module MarketRepository =
 
     type T =
         {
-            GetById: int -> CancellationToken -> Task<Result<MarketWithCredentials, ServiceError>>
-            GetByType: MarketType -> CancellationToken -> Task<Result<MarketWithCredentials option, ServiceError>>
-            GetAll: CancellationToken -> Task<Result<MarketWithCredentials list, ServiceError>>
+            GetById: int -> CancellationToken -> Task<Result<Market, ServiceError>>
+            GetByType: MarketType -> CancellationToken -> Task<Result<Market option, ServiceError>>
+            GetAll: CancellationToken -> Task<Result<Market list, ServiceError>>
             Create: CreateMarketRequest -> CancellationToken -> Task<Result<Market, ServiceError>>
-            UpdateCredentials: int -> UpdateCredentialsRequest -> CancellationToken -> Task<Result<unit, ServiceError>>
+            Update: int -> UpdateMarketRequest -> CancellationToken -> Task<Result<Market, ServiceError>>
             Delete: int -> CancellationToken -> Task<Result<unit, ServiceError>>
             Count: CancellationToken -> Task<Result<int, ServiceError>>
             Exists: MarketType -> CancellationToken -> Task<Result<bool, ServiceError>>
@@ -48,25 +46,20 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! marketResults =
-                    db.QueryAsync<MarketEntity>("SELECT * FROM markets WHERE id = @Id LIMIT 1", {| Id = id |})
+                let! results =
+                    db.QueryAsync<MarketEntity>(
+                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                         FROM markets WHERE id = @Id LIMIT 1",
+                        {| Id = id |}
+                    )
 
-                match marketResults |> Seq.tryHead with
+                match results |> Seq.tryHead with
                 | None ->
                     logger.LogWarning("Market {Id} not found", id)
                     return Result.Error(NotFound $"Market with id {id}")
-                | Some marketEntity ->
-                    let! credResults =
-                        db.QueryAsync<MarketCredentialsEntity>(
-                            "SELECT * FROM market_credentials WHERE market_id = @MarketId LIMIT 1",
-                            {| MarketId = id |}
-                        )
-
-                    let credentials = credResults |> Seq.tryHead |> Option.map (fun c -> toMarketCredentials c None)
-
-                    let market = toMarket marketEntity credentials
+                | Some entity ->
                     logger.LogDebug("Retrieved market {Id}", id)
-                    return Ok { Market = market; Credentials = credentials }
+                    return Ok(toMarket entity)
             with ex ->
                 logger.LogError(ex, "Failed to get market {Id}", id)
                 return Result.Error(Unexpected ex)
@@ -83,28 +76,20 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! marketResults =
+                let! results =
                     db.QueryAsync<MarketEntity>(
-                        "SELECT * FROM markets WHERE type = @Type LIMIT 1",
+                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                         FROM markets WHERE type = @Type LIMIT 1",
                         {| Type = int marketType |}
                     )
 
-                match marketResults |> Seq.tryHead with
+                match results |> Seq.tryHead with
                 | None ->
                     logger.LogDebug("Market type {MarketType} not found", marketType)
                     return Ok None
-                | Some marketEntity ->
-                    let! credResults =
-                        db.QueryAsync<MarketCredentialsEntity>(
-                            "SELECT * FROM market_credentials WHERE market_id = @MarketId LIMIT 1",
-                            {| MarketId = marketEntity.Id |}
-                        )
-
-                    let credentials = credResults |> Seq.tryHead |> Option.map (fun c -> toMarketCredentials c None)
-
-                    let market = toMarket marketEntity credentials
+                | Some entity ->
                     logger.LogDebug("Retrieved market type {MarketType}", marketType)
-                    return Ok(Some { Market = market; Credentials = credentials })
+                    return Ok(Some(toMarket entity))
             with ex ->
                 logger.LogError(ex, "Failed to get market type {MarketType}", marketType)
                 return Result.Error(Unexpected ex)
@@ -117,24 +102,12 @@ module MarketRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<MarketEntity, MarketCredentialsEntity, MarketEntity * MarketCredentialsEntity>(
-                        "SELECT m.*, mc.*
-                         FROM markets m
-                         LEFT JOIN market_credentials mc ON m.id = mc.market_id
-                         ORDER BY m.id",
-                        (fun market creds -> (market, creds)),
-                        splitOn = "id"
+                    db.QueryAsync<MarketEntity>(
+                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                         FROM markets ORDER BY id"
                     )
 
-                let markets =
-                    results
-                    |> Seq.map (fun (marketEntity, credsEntity) ->
-                        let credentials = credsEntity |> fun c -> toMarketCredentials c None |> Some
-                        let market = toMarket marketEntity credentials
-                        { Market = market; Credentials = credentials }
-                    )
-                    |> Seq.toList
-
+                let markets = results |> Seq.map toMarket |> Seq.toList
                 logger.LogDebug("Retrieved {Count} markets", markets.Length)
                 return Ok markets
             with ex ->
@@ -167,18 +140,11 @@ module MarketRepository =
 
                     let! marketId =
                         db.QuerySingleAsync<int>(
-                            "INSERT INTO markets (type, created_at, updated_at)
-                             VALUES (@Type, @CreatedAt, @UpdatedAt)
+                            "INSERT INTO markets (type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at)
+                             VALUES (@Type, @ApiKey, @SecretKey, @Passphrase, @IsSandbox, @CreatedAt, @UpdatedAt)
                              RETURNING id",
-                            {| Type = int request.Type; CreatedAt = now; UpdatedAt = now |}
-                        )
-
-                    let! _ =
-                        db.ExecuteAsync(
-                            "INSERT INTO market_credentials (market_id, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at)
-                             VALUES (@MarketId, @ApiKey, @SecretKey, @Passphrase, @IsSandbox, @CreatedAt, @UpdatedAt)",
                             {|
-                                MarketId = marketId
+                                Type = int request.Type
                                 ApiKey = request.ApiKey
                                 SecretKey = request.SecretKey
                                 Passphrase = request.Passphrase |> Option.defaultValue ""
@@ -194,7 +160,10 @@ module MarketRepository =
                         {
                             Id = marketId
                             Type = request.Type
-                            Credentials = Unchecked.defaultof<MarketCredentials>
+                            ApiKey = request.ApiKey
+                            SecretKey = request.SecretKey
+                            Passphrase = request.Passphrase
+                            IsSandbox = request.IsSandbox
                             CreatedAt = now
                             UpdatedAt = now
                         }
@@ -205,102 +174,91 @@ module MarketRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private updateCredentials
+    let private updateMarket
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (marketId: int)
-        (request: UpdateCredentialsRequest)
-        (_: CancellationToken)
+        (request: UpdateMarketRequest)
+        (ct: CancellationToken)
         =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! marketExists =
-                    db.QuerySingleAsync<int>("SELECT COUNT(1) FROM markets WHERE id = @Id", {| Id = marketId |})
+                let! existingResults =
+                    db.QueryAsync<MarketEntity>(
+                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                         FROM markets WHERE id = @Id LIMIT 1",
+                        {| Id = marketId |}
+                    )
 
-                if marketExists = 0 then
-                    logger.LogWarning("Market {Id} not found for credentials update", marketId)
+                match existingResults |> Seq.tryHead with
+                | None ->
+                    logger.LogWarning("Market {Id} not found for update", marketId)
                     return Result.Error(NotFound $"Market with id {marketId}")
-                else
+                | Some existing ->
                     let now = DateTime.UtcNow
-                    let updates = ResizeArray<string>()
-                    let parameters = DynamicParameters()
-                    parameters.Add("MarketId", marketId)
-                    parameters.Add("Now", now)
-
-                    match request.ApiKey with
-                    | Some apiKey when not (String.IsNullOrWhiteSpace apiKey) ->
-                        updates.Add("api_key = @ApiKey")
-                        parameters.Add("ApiKey", apiKey.Trim())
-                    | _ -> ()
-
-                    match request.SecretKey with
-                    | Some secretKey when not (String.IsNullOrWhiteSpace secretKey) ->
-                        updates.Add("secret_key = @SecretKey")
-                        parameters.Add("SecretKey", secretKey.Trim())
-                    | _ -> ()
-
-                    match request.Passphrase with
-                    | Some passphrase ->
-                        updates.Add("passphrase = @Passphrase")
-                        parameters.Add("Passphrase", passphrase.Trim())
-                    | _ -> ()
-
-                    match request.IsSandbox with
-                    | Some isSandbox ->
-                        updates.Add("is_sandbox = @IsSandbox")
-                        parameters.Add("IsSandbox", isSandbox)
-                    | _ -> ()
-
-                    if updates.Count > 0 then
-                        updates.Add("updated_at = @Now")
-                        let setClause = String.Join(", ", updates)
-                        let updateSql = $"UPDATE market_credentials SET {setClause} WHERE market_id = @MarketId"
-                        let! _ = db.ExecuteAsync(updateSql, parameters)
-                        ()
+                    let newApiKey = request.ApiKey |> Option.defaultValue existing.ApiKey
+                    let newSecretKey = request.SecretKey |> Option.defaultValue existing.SecretKey
+                    let newPassphrase = request.Passphrase |> Option.defaultValue existing.Passphrase
+                    let newIsSandbox = request.IsSandbox |> Option.defaultValue existing.IsSandbox
 
                     let! _ =
                         db.ExecuteAsync(
-                            "UPDATE markets SET updated_at = @Now WHERE id = @Id",
-                            {| Now = now; Id = marketId |}
+                            "UPDATE markets
+                             SET api_key = @ApiKey,
+                                 secret_key = @SecretKey,
+                                 passphrase = @Passphrase,
+                                 is_sandbox = @IsSandbox,
+                                 updated_at = @UpdatedAt
+                             WHERE id = @Id",
+                            {|
+                                Id = marketId
+                                ApiKey = newApiKey
+                                SecretKey = newSecretKey
+                                Passphrase = newPassphrase
+                                IsSandbox = newIsSandbox
+                                UpdatedAt = now
+                            |}
                         )
 
-                    logger.LogInformation("Updated credentials for market {Id}", marketId)
-                    return Ok()
+                    logger.LogInformation("Updated market {Id}", marketId)
+
+                    let updatedMarket: Market =
+                        {
+                            Id = marketId
+                            Type = enum<MarketType> existing.Type
+                            ApiKey = newApiKey
+                            SecretKey = newSecretKey
+                            Passphrase = if String.IsNullOrWhiteSpace(newPassphrase) then None else Some newPassphrase
+                            IsSandbox = newIsSandbox
+                            CreatedAt = existing.CreatedAt
+                            UpdatedAt = now
+                        }
+
+                    return Ok updatedMarket
             with ex ->
-                logger.LogError(ex, "Failed to update credentials for market {Id}", marketId)
+                logger.LogError(ex, "Failed to update market {Id}", marketId)
                 return Result.Error(Unexpected ex)
         }
 
-    let private deleteMarket
-        (scopeFactory: IServiceScopeFactory)
-        (logger: ILogger)
-        (marketId: int)
-        (_: CancellationToken)
-        =
+    let private deleteMarket (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (_: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! _ =
-                    db.ExecuteAsync(
-                        "DELETE FROM market_credentials WHERE market_id = @MarketId",
-                        {| MarketId = marketId |}
-                    )
+                let! affected = db.ExecuteAsync("DELETE FROM markets WHERE id = @Id", {| Id = id |})
 
-                let! rowsAffected = db.ExecuteAsync("DELETE FROM markets WHERE id = @Id", {| Id = marketId |})
-
-                if rowsAffected > 0 then
-                    logger.LogInformation("Deleted market {Id}", marketId)
-                    return Ok()
+                if affected = 0 then
+                    logger.LogWarning("Market {Id} not found for deletion", id)
+                    return Result.Error(NotFound $"Market with id {id}")
                 else
-                    logger.LogWarning("Market {Id} not found for deletion", marketId)
-                    return Result.Error(NotFound $"Market with id {marketId}")
+                    logger.LogInformation("Deleted market {Id}", id)
+                    return Ok()
             with ex ->
-                logger.LogError(ex, "Failed to delete market {Id}", marketId)
+                logger.LogError(ex, "Failed to delete market {Id}", id)
                 return Result.Error(Unexpected ex)
         }
 
@@ -309,11 +267,8 @@ module MarketRepository =
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
-                let! result = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM markets")
-
-                logger.LogDebug("Market count: {Count}", result)
-                return Ok result
+                let! count = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM markets")
+                return Ok count
             with ex ->
                 logger.LogError(ex, "Failed to count markets")
                 return Result.Error(Unexpected ex)
@@ -330,21 +285,19 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! result =
+                let! count =
                     db.QuerySingleAsync<int>(
                         "SELECT COUNT(1) FROM markets WHERE type = @Type",
                         {| Type = int marketType |}
                     )
 
-                logger.LogDebug("Market type {MarketType} exists: {Exists}", marketType, result > 0)
-                return Ok(result > 0)
+                return Ok(count > 0)
             with ex ->
-                logger.LogError(ex, "Failed to check if market type {MarketType} exists", marketType)
+                logger.LogError(ex, "Failed to check if market {MarketType} exists", marketType)
                 return Result.Error(Unexpected ex)
         }
 
-    let create (scopeFactory: IServiceScopeFactory) : T =
-        let loggerFactory = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILoggerFactory>()
+    let create (scopeFactory: IServiceScopeFactory) (loggerFactory: ILoggerFactory) : T =
         let logger = loggerFactory.CreateLogger("MarketRepository")
 
         {
@@ -352,7 +305,7 @@ module MarketRepository =
             GetByType = getByType scopeFactory logger
             GetAll = getAll scopeFactory logger
             Create = createMarket scopeFactory logger
-            UpdateCredentials = updateCredentials scopeFactory logger
+            Update = updateMarket scopeFactory logger
             Delete = deleteMarket scopeFactory logger
             Count = count scopeFactory logger
             Exists = exists scopeFactory logger
