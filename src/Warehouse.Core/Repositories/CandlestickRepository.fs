@@ -38,14 +38,25 @@ module CandlestickRepository =
             Count: string -> MarketType -> string -> CancellationToken -> Task<Result<int, ServiceError>>
         }
 
-    let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int64) (_: CancellationToken) =
+    let private getById
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (id: int64)
+        (cancellation: CancellationToken)
+        =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<CandlestickEntity>("SELECT * FROM candlesticks WHERE id = @Id LIMIT 1", {| Id = id |})
+                    db.QueryAsync<CandlestickEntity>(
+                        CommandDefinition(
+                            "SELECT * FROM candlesticks WHERE id = @Id LIMIT 1",
+                            {| Id = id |},
+                            cancellationToken = cancellation
+                        )
+                    )
 
                 match results |> Seq.tryHead with
                 | Some entity ->
@@ -65,7 +76,7 @@ module CandlestickRepository =
         (symbol: string)
         (marketType: MarketType)
         (timeframe: string)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -74,11 +85,14 @@ module CandlestickRepository =
 
                 let! results =
                     db.QueryAsync<CandlestickEntity>(
-                        """SELECT * FROM candlesticks
+                        CommandDefinition(
+                            """SELECT * FROM candlesticks
                            WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe
                            ORDER BY timestamp DESC
                            LIMIT 1""",
-                        {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |}
+                            {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 match results |> Seq.tryHead with
@@ -221,13 +235,25 @@ module CandlestickRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private delete (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int64) (_: CancellationToken) =
+    let private delete
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (id: int64)
+        (cancellation: CancellationToken)
+        =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! rowsAffected = db.ExecuteAsync("DELETE FROM candlesticks WHERE id = @Id", {| Id = id |})
+                let! rowsAffected =
+                    db.ExecuteAsync(
+                        CommandDefinition(
+                            "DELETE FROM candlesticks WHERE id = @Id",
+                            {| Id = id |},
+                            cancellationToken = cancellation
+                        )
+                    )
 
                 if rowsAffected > 0 then
                     logger.LogInformation("Deleted candlestick {Id}", id)
@@ -292,7 +318,7 @@ module CandlestickRepository =
         (symbol: string)
         (marketType: MarketType)
         (timeframe: string)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -301,8 +327,11 @@ module CandlestickRepository =
 
                 let! result =
                     db.QuerySingleAsync<int>(
-                        "SELECT COUNT(*) FROM candlesticks WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe",
-                        {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |}
+                        CommandDefinition(
+                            "SELECT COUNT(*) FROM candlesticks WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe",
+                            {| Symbol = symbol; MarketType = int marketType; Timeframe = timeframe |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 logger.LogDebug("Count for {Symbol}/{Timeframe}: {Count}", symbol, timeframe, result)

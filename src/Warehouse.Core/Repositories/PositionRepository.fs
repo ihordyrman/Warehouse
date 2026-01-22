@@ -20,7 +20,7 @@ module PositionRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (pipelineId: int)
-        (token: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -35,7 +35,7 @@ module PositionRepository =
                               WHERE pipeline_id = @PipelineId AND status = @Status
                               LIMIT 1",
                             {| PipelineId = pipelineId; Status = int PositionStatus.Open |},
-                            cancellationToken = token
+                            cancellationToken = cancellation
                         )
                     )
 

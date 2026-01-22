@@ -42,7 +42,7 @@ module PipelineRepository =
             Search: SearchFilters -> CancellationToken -> Task<Result<Pipeline list, ServiceError>>
         }
 
-    let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (_: CancellationToken) =
+    let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (token: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
@@ -50,16 +50,22 @@ module PipelineRepository =
 
                 let! pipelineResults =
                     db.QueryAsync<PipelineEntity>(
-                        "SELECT * FROM pipelines WHERE id = @Id LIMIT 1",
-                        {| Id = id |}
+                        CommandDefinition(
+                            "SELECT * FROM pipelines WHERE id = @Id LIMIT 1",
+                            {| Id = id |},
+                            cancellationToken = token
+                        )
                     )
 
                 match pipelineResults |> Seq.tryHead with
                 | Some pipelineEntity ->
                     let! stepResults =
                         db.QueryAsync<PipelineStepEntity>(
-                            "SELECT * FROM pipeline_steps WHERE pipeline_details_id = @PipelineId ORDER BY \"order\"",
-                            {| PipelineId = id |}
+                            CommandDefinition(
+                                "SELECT * FROM pipeline_steps WHERE pipeline_details_id = @PipelineId ORDER BY \"order\"",
+                                {| PipelineId = id |},
+                                cancellationToken = token
+                            )
                         )
 
                     let pipeline = toPipeline pipelineEntity
@@ -74,18 +80,23 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private getAll (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private getAll (scopeFactory: IServiceScopeFactory) (logger: ILogger) (token: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! pipelineResults =
-                    db.QueryAsync<PipelineEntity>("SELECT * FROM pipelines ORDER BY id")
+                    db.QueryAsync<PipelineEntity>(
+                        CommandDefinition("SELECT * FROM pipelines ORDER BY id", cancellationToken = token)
+                    )
 
                 let! stepResults =
                     db.QueryAsync<PipelineStepEntity>(
-                        "SELECT * FROM pipeline_steps ORDER BY pipeline_details_id, \"order\""
+                        CommandDefinition(
+                            "SELECT * FROM pipeline_steps ORDER BY pipeline_details_id, \"order\"",
+                            cancellationToken = token
+                        )
                     )
 
                 let stepsGrouped = stepResults |> Seq.groupBy _.PipelineDetailsId |> Map.ofSeq
@@ -114,7 +125,7 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private getEnabled (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private getEnabled (scopeFactory: IServiceScopeFactory) (logger: ILogger) (token: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
@@ -122,7 +133,10 @@ module PipelineRepository =
 
                 let! pipelineResults =
                     db.QueryAsync<PipelineEntity>(
-                        "SELECT * FROM pipelines WHERE enabled = true ORDER BY id"
+                        CommandDefinition(
+                            "SELECT * FROM pipelines WHERE enabled = true ORDER BY id",
+                            cancellationToken = token
+                        )
                     )
 
                 let pipelineIds = pipelineResults |> Seq.map _.Id |> Seq.toArray
@@ -130,8 +144,11 @@ module PipelineRepository =
                 let! stepResults =
                     if pipelineIds.Length > 0 then
                         db.QueryAsync<PipelineStepEntity>(
-                            "SELECT * FROM pipeline_steps WHERE pipeline_details_id = ANY(@Ids) ORDER BY pipeline_details_id, \"order\"",
-                            {| Ids = pipelineIds |}
+                            CommandDefinition(
+                                "SELECT * FROM pipeline_steps WHERE pipeline_details_id = ANY(@Ids) ORDER BY pipeline_details_id, \"order\"",
+                                {| Ids = pipelineIds |},
+                                cancellationToken = token
+                            )
                         )
                     else
                         Task.FromResult(Seq.empty<PipelineStepEntity>)
@@ -166,7 +183,7 @@ module PipelineRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (pipeline: Pipeline)
-        (_: CancellationToken)
+        (token: CancellationToken)
         =
         task {
             try
@@ -178,11 +195,14 @@ module PipelineRepository =
 
                 let! result =
                     db.QuerySingleAsync<int>(
-                        """INSERT INTO pipelines
+                        CommandDefinition(
+                            """INSERT INTO pipelines
                            (name, symbol, market_type, enabled, execution_interval, last_executed_at, status, tags, created_at, updated_at)
                            VALUES (@Name, @Symbol, @MarketType, @Enabled, @ExecutionInterval, @LastExecutedAt, @Status, @Tags::jsonb, @CreatedAt, @UpdatedAt)
                            RETURNING id""",
-                        entity
+                            entity,
+                            cancellationToken = token
+                        )
                     )
 
                 logger.LogInformation("Created pipeline {Id} for symbol {Symbol}", result, pipeline.Symbol)
@@ -196,7 +216,7 @@ module PipelineRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (pipeline: Pipeline)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -208,13 +228,16 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        """UPDATE pipelines
+                        CommandDefinition(
+                            """UPDATE pipelines
                            SET name = @Name, symbol = @Symbol, market_type = @MarketType,
                                enabled = @Enabled, execution_interval = @ExecutionInterval,
                                last_executed_at = @LastExecutedAt, status = @Status, tags = @Tags::jsonb,
                                updated_at = @UpdatedAt
                            WHERE id = @Id""",
-                        entity
+                            entity,
+                            cancellationToken = cancellation
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -228,14 +251,34 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private deletePipeline (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (_: CancellationToken) =
+    let private deletePipeline
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (id: int)
+        (token: CancellationToken)
+        =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! _ = db.ExecuteAsync("DELETE FROM pipeline_steps WHERE pipeline_details_id = @Id", {| Id = id |})
-                let! rowsAffected = db.ExecuteAsync("DELETE FROM pipelines WHERE id = @Id", {| Id = id |})
+                let! _ =
+                    db.ExecuteAsync(
+                        CommandDefinition(
+                            "DELETE FROM pipeline_steps WHERE pipeline_details_id = @Id",
+                            {| Id = id |},
+                            cancellationToken = token
+                        )
+                    )
+
+                let! rowsAffected =
+                    db.ExecuteAsync(
+                        CommandDefinition(
+                            "DELETE FROM pipelines WHERE id = @Id",
+                            {| Id = id |},
+                            cancellationToken = token
+                        )
+                    )
 
                 if rowsAffected > 0 then
                     logger.LogInformation("Deleted pipeline {Id}", id)
@@ -253,7 +296,7 @@ module PipelineRepository =
         (logger: ILogger)
         (pipelineId: int)
         (enabled: bool)
-        (_: CancellationToken)
+        (token: CancellationToken)
         =
         task {
             try
@@ -264,8 +307,11 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipelines SET enabled = @Enabled, updated_at = @UpdatedAt WHERE id = @Id",
-                        {| Enabled = enabled; UpdatedAt = now; Id = pipelineId |}
+                        CommandDefinition(
+                            "UPDATE pipelines SET enabled = @Enabled, updated_at = @UpdatedAt WHERE id = @Id",
+                            {| Enabled = enabled; UpdatedAt = now; Id = pipelineId |},
+                            cancellationToken = token
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -284,7 +330,7 @@ module PipelineRepository =
         (logger: ILogger)
         (pipelineId: int)
         (lastExecutedAt: DateTime)
-        (_: CancellationToken)
+        (token: CancellationToken)
         =
         task {
             try
@@ -295,8 +341,11 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipelines SET last_executed_at = @LastExecutedAt, updated_at = @UpdatedAt WHERE id = @Id",
-                        {| LastExecutedAt = lastExecutedAt; UpdatedAt = now; Id = pipelineId |}
+                        CommandDefinition(
+                            "UPDATE pipelines SET last_executed_at = @LastExecutedAt, updated_at = @UpdatedAt WHERE id = @Id",
+                            {| LastExecutedAt = lastExecutedAt; UpdatedAt = now; Id = pipelineId |},
+                            cancellationToken = token
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -315,7 +364,7 @@ module PipelineRepository =
         (logger: ILogger)
         (pipelineId: int)
         (status: PipelineStatus)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -326,8 +375,11 @@ module PipelineRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipelines SET status = @Status, updated_at = @UpdatedAt WHERE id = @Id",
-                        {| Status = int status; UpdatedAt = now; Id = pipelineId |}
+                        CommandDefinition(
+                            "UPDATE pipelines SET status = @Status, updated_at = @UpdatedAt WHERE id = @Id",
+                            {| Status = int status; UpdatedAt = now; Id = pipelineId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -341,13 +393,16 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (token: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! result = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipelines")
+                let! result =
+                    db.QuerySingleAsync<int>(
+                        CommandDefinition("SELECT COUNT(1) FROM pipelines", cancellationToken = token)
+                    )
 
                 logger.LogDebug("Pipeline count: {Count}", result)
                 return Ok result
@@ -356,14 +411,19 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private countEnabled (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private countEnabled (scopeFactory: IServiceScopeFactory) (logger: ILogger) (cancellation: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! result =
-                    db.QuerySingleAsync<int>("SELECT COUNT(1) FROM pipelines WHERE enabled = true")
+                    db.QuerySingleAsync<int>(
+                        CommandDefinition(
+                            "SELECT COUNT(1) FROM pipelines WHERE enabled = true",
+                            cancellationToken = cancellation
+                        )
+                    )
 
                 logger.LogDebug("Enabled pipeline count: {Count}", result)
                 return Ok result
@@ -372,14 +432,19 @@ module PipelineRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private getAllTags (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private getAllTags (scopeFactory: IServiceScopeFactory) (logger: ILogger) (cancellation: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<string>("SELECT tags FROM pipelines GROUP BY tags ORDER BY tags ASC")
+                    db.QueryAsync<string>(
+                        CommandDefinition(
+                            "SELECT tags FROM pipelines GROUP BY tags ORDER BY tags ASC",
+                            cancellationToken = cancellation
+                        )
+                    )
 
                 let tags = results |> Seq.toList
                 logger.LogDebug("Retrieved {Count} unique tag groups", tags.Length)
@@ -393,7 +458,7 @@ module PipelineRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (filters: SearchFilters)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -437,7 +502,11 @@ module PipelineRepository =
                 let whereClause = String.Join(" ", conditions)
                 let finalSql = $"{baseSql} {whereClause} {orderClause}"
 
-                let! results = db.QueryAsync<PipelineEntity>(finalSql, parameters)
+                let! results =
+                    db.QueryAsync<PipelineEntity>(
+                        CommandDefinition(finalSql, parameters, cancellationToken = cancellation)
+                    )
+
                 let pipelines = results |> Seq.toList
 
                 let filteredPipelines =

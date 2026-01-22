@@ -83,7 +83,7 @@ module PipelineStepRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (step: PipelineStep)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -95,11 +95,14 @@ module PipelineStepRepository =
 
                 let! result =
                     db.QuerySingleAsync<int>(
-                        """INSERT INTO pipeline_steps
+                        CommandDefinition(
+                            """INSERT INTO pipeline_steps
                            (pipeline_details_id, step_type_key, name, "order", is_enabled, parameters, created_at, updated_at)
                            VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, @CreatedAt, @UpdatedAt)
                            RETURNING id""",
-                        entity
+                            entity,
+                            cancellationToken = cancellation
+                        )
                     )
 
                 logger.LogInformation("Created step {Id} for pipeline {PipelineId}", result, step.PipelineDetailsId)
@@ -113,7 +116,7 @@ module PipelineStepRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (step: PipelineStep)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -125,11 +128,14 @@ module PipelineStepRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        """UPDATE pipeline_steps
+                        CommandDefinition(
+                            """UPDATE pipeline_steps
                            SET step_type_key = @StepTypeKey, name = @Name, "order" = @Order,
                                is_enabled = @IsEnabled, parameters = @Parameters::jsonb, updated_at = @UpdatedAt
                            WHERE id = @Id""",
-                        entity
+                            entity,
+                            cancellationToken = cancellation
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -143,13 +149,25 @@ module PipelineStepRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private deleteStep (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (_: CancellationToken) =
+    let private deleteStep
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (id: int)
+        (cancellation: CancellationToken)
+        =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! rowsAffected = db.ExecuteAsync("DELETE FROM pipeline_steps WHERE id = @Id", {| Id = id |})
+                let! rowsAffected =
+                    db.ExecuteAsync(
+                        CommandDefinition(
+                            "DELETE FROM pipeline_steps WHERE id = @Id",
+                            {| Id = id |},
+                            cancellationToken = cancellation
+                        )
+                    )
 
                 if rowsAffected > 0 then
                     logger.LogInformation("Deleted step {Id}", id)
@@ -166,7 +184,7 @@ module PipelineStepRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (pipelineId: int)
-        (_: CancellationToken)
+        (token: CancellationToken)
         =
         task {
             try
@@ -175,8 +193,11 @@ module PipelineStepRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "DELETE FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
-                        {| PipelineId = pipelineId |}
+                        CommandDefinition(
+                            "DELETE FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
+                            {| PipelineId = pipelineId |},
+                            cancellationToken = token
+                        )
                     )
 
                 logger.LogInformation("Deleted {Count} steps for pipeline {PipelineId}", rowsAffected, pipelineId)
@@ -191,7 +212,7 @@ module PipelineStepRepository =
         (logger: ILogger)
         (stepId: int)
         (enabled: bool)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -202,8 +223,11 @@ module PipelineStepRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipeline_steps SET is_enabled = @IsEnabled, updated_at = @UpdatedAt WHERE id = @Id",
-                        {| IsEnabled = enabled; UpdatedAt = now; Id = stepId |}
+                        CommandDefinition(
+                            "UPDATE pipeline_steps SET is_enabled = @IsEnabled, updated_at = @UpdatedAt WHERE id = @Id",
+                            {| IsEnabled = enabled; UpdatedAt = now; Id = stepId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -222,7 +246,7 @@ module PipelineStepRepository =
         (logger: ILogger)
         (stepId: int)
         (order: int)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -233,8 +257,11 @@ module PipelineStepRepository =
 
                 let! rowsAffected =
                     db.ExecuteAsync(
-                        "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id",
-                        {| Order = order; UpdatedAt = now; Id = stepId |}
+                        CommandDefinition(
+                            "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id",
+                            {| Order = order; UpdatedAt = now; Id = stepId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 if rowsAffected > 0 then
@@ -253,7 +280,7 @@ module PipelineStepRepository =
         (logger: ILogger)
         (pipelineId: int)
         (stepIds: int list)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -265,16 +292,22 @@ module PipelineStepRepository =
                 // todo: optimize. for now it's simpler to implement like this
                 let! _ =
                     db.ExecuteAsync(
-                        // temp large offset
-                        "UPDATE pipeline_steps SET \"order\" = -\"order\" - 10000 WHERE pipeline_details_id = @PipelineId",
-                        {| PipelineId = pipelineId |}
+                        CommandDefinition(
+                            // temp large offset
+                            "UPDATE pipeline_steps SET \"order\" = -\"order\" - 10000 WHERE pipeline_details_id = @PipelineId",
+                            {| PipelineId = pipelineId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 for i, stepId in stepIds |> List.indexed do
                     let! _ =
                         db.ExecuteAsync(
-                            "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id AND pipeline_details_id = @PipelineId",
-                            {| Order = i; UpdatedAt = now; Id = stepId; PipelineId = pipelineId |}
+                            CommandDefinition(
+                                "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id AND pipeline_details_id = @PipelineId",
+                                {| Order = i; UpdatedAt = now; Id = stepId; PipelineId = pipelineId |},
+                                cancellationToken = cancellation
+                            )
                         )
 
                     ()
@@ -290,7 +323,7 @@ module PipelineStepRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (pipelineId: int)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -299,8 +332,11 @@ module PipelineStepRepository =
 
                 let! result =
                     db.QuerySingleOrDefaultAsync<Nullable<int>>(
-                        "SELECT MAX(\"order\") FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
-                        {| PipelineId = pipelineId |}
+                        CommandDefinition(
+                            "SELECT MAX(\"order\") FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
+                            {| PipelineId = pipelineId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 let maxOrder = if result.HasValue then result.Value else -1

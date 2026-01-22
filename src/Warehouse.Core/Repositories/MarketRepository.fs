@@ -10,11 +10,9 @@ open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 open Warehouse.Core.Infrastructure
 open Warehouse.Core.Infrastructure.Entities
-open Warehouse.Core.Shared
 open Warehouse.Core.Shared.Errors
 
 module MarketRepository =
-    open Errors
     open Mappers
 
     type CreateMarketRequest =
@@ -40,7 +38,12 @@ module MarketRepository =
             Exists: MarketType -> CancellationToken -> Task<Result<bool, ServiceError>>
         }
 
-    let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (_: CancellationToken) =
+    let private getById
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (id: int)
+        (cancellation: CancellationToken)
+        =
         task {
             try
                 use scope = scopeFactory.CreateScope()
@@ -48,9 +51,12 @@ module MarketRepository =
 
                 let! results =
                     db.QueryAsync<MarketEntity>(
-                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                        CommandDefinition(
+                            "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                          FROM markets WHERE id = @Id LIMIT 1",
-                        {| Id = id |}
+                            {| Id = id |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 match results |> Seq.tryHead with
@@ -69,7 +75,7 @@ module MarketRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (marketType: MarketType)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -78,9 +84,12 @@ module MarketRepository =
 
                 let! results =
                     db.QueryAsync<MarketEntity>(
-                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                        CommandDefinition(
+                            "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                          FROM markets WHERE type = @Type LIMIT 1",
-                        {| Type = int marketType |}
+                            {| Type = int marketType |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 match results |> Seq.tryHead with
@@ -95,7 +104,7 @@ module MarketRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private getAll (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private getAll (scopeFactory: IServiceScopeFactory) (logger: ILogger) (cancellation: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
@@ -103,8 +112,11 @@ module MarketRepository =
 
                 let! results =
                     db.QueryAsync<MarketEntity>(
-                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
-                         FROM markets ORDER BY id"
+                        CommandDefinition(
+                            "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                         FROM markets ORDER BY id",
+                            cancellationToken = cancellation
+                        )
                     )
 
                 let markets = results |> Seq.map toMarket |> Seq.toList
@@ -119,7 +131,7 @@ module MarketRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (request: CreateMarketRequest)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -140,18 +152,21 @@ module MarketRepository =
 
                     let! marketId =
                         db.QuerySingleAsync<int>(
-                            "INSERT INTO markets (type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at)
-                             VALUES (@Type, @ApiKey, @SecretKey, @Passphrase, @IsSandbox, @CreatedAt, @UpdatedAt)
-                             RETURNING id",
-                            {|
-                                Type = int request.Type
-                                ApiKey = request.ApiKey
-                                SecretKey = request.SecretKey
-                                Passphrase = request.Passphrase |> Option.defaultValue ""
-                                IsSandbox = request.IsSandbox
-                                CreatedAt = now
-                                UpdatedAt = now
-                            |}
+                            CommandDefinition(
+                                "INSERT INTO markets (type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at)
+                                 VALUES (@Type, @ApiKey, @SecretKey, @Passphrase, @IsSandbox, @CreatedAt, @UpdatedAt)
+                                 RETURNING id",
+                                {|
+                                    Type = int request.Type
+                                    ApiKey = request.ApiKey
+                                    SecretKey = request.SecretKey
+                                    Passphrase = request.Passphrase |> Option.defaultValue ""
+                                    IsSandbox = request.IsSandbox
+                                    CreatedAt = now
+                                    UpdatedAt = now
+                                |},
+                                cancellationToken = cancellation
+                            )
                         )
 
                     logger.LogInformation("Created market {Id} of type {MarketType}", marketId, request.Type)
@@ -179,7 +194,7 @@ module MarketRepository =
         (logger: ILogger)
         (marketId: int)
         (request: UpdateMarketRequest)
-        (ct: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -188,9 +203,12 @@ module MarketRepository =
 
                 let! existingResults =
                     db.QueryAsync<MarketEntity>(
-                        "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
-                         FROM markets WHERE id = @Id LIMIT 1",
-                        {| Id = marketId |}
+                        CommandDefinition(
+                            "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
+                             FROM markets WHERE id = @Id LIMIT 1",
+                            {| Id = marketId |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 match existingResults |> Seq.tryHead with
@@ -262,12 +280,17 @@ module MarketRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (_: CancellationToken) =
+    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (cancellation: CancellationToken) =
         task {
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-                let! count = db.QuerySingleAsync<int>("SELECT COUNT(1) FROM markets")
+
+                let! count =
+                    db.QuerySingleAsync<int>(
+                        CommandDefinition("SELECT COUNT(1) FROM markets", cancellationToken = cancellation)
+                    )
+
                 return Ok count
             with ex ->
                 logger.LogError(ex, "Failed to count markets")
@@ -278,7 +301,7 @@ module MarketRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (marketType: MarketType)
-        (_: CancellationToken)
+        (cancellation: CancellationToken)
         =
         task {
             try
@@ -287,8 +310,11 @@ module MarketRepository =
 
                 let! count =
                     db.QuerySingleAsync<int>(
-                        "SELECT COUNT(1) FROM markets WHERE type = @Type",
-                        {| Type = int marketType |}
+                        CommandDefinition(
+                            "SELECT COUNT(1) FROM markets WHERE type = @Type",
+                            {| Type = int marketType |},
+                            cancellationToken = cancellation
+                        )
                     )
 
                 return Ok(count > 0)
