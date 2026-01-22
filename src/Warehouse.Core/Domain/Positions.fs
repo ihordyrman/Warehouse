@@ -11,7 +11,6 @@ type Position =
     {
         Id: int
         PipelineId: int
-        Pipeline: Pipeline
         Symbol: string
         EntryPrice: decimal
         Quantity: decimal

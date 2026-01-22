@@ -8,6 +8,7 @@ open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Services
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Trading
+open Warehouse.Core.Repositories
 
 module TradingSteps =
     open Steps
@@ -20,28 +21,24 @@ module TradingSteps =
             fun ctx ct ->
                 task {
                     use scope = services.CreateScope()
-                    use conn = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+                    let repo = scope.ServiceProvider.GetRequiredService<PositionRepository.T>()
+                    let! position = repo.GetOpenPosition ctx.PipelineId ct
 
-                    let! positions =
-                        select {
-                            for p in positionsTable do
-                                where (p.PipelineId = ctx.PipelineId && p.Status = PositionStatus.Open)
-                                take 1
-                        }
-                        |> conn.SelectAsync<Position>
+                    match position with
+                    | Error err -> return Fail $"Error retrieving position: {err}"
+                    | Ok position ->
+                        match position with
+                        | Option.None -> return Continue({ ctx with Action = TradingAction.None }, "No open position")
+                        | Some pos ->
+                            let ctx' =
+                                { ctx with
+                                    BuyPrice = Some pos.EntryPrice
+                                    Quantity = Some pos.Quantity
+                                    ActiveOrderId = Some pos.BuyOrderId
+                                    Action = TradingAction.Hold
+                                }
 
-                    match positions |> Seq.tryHead with
-                    | Option.None -> return Continue({ ctx with Action = TradingAction.None }, "No open position")
-                    | Some pos ->
-                        let ctx' =
-                            { ctx with
-                                BuyPrice = Some pos.EntryPrice
-                                Quantity = Some pos.Quantity
-                                ActiveOrderId = Some pos.BuyOrderId
-                                Action = TradingAction.Hold
-                            }
-
-                        return Continue(ctx', $"Position found - Entry: {pos.EntryPrice:F8}")
+                            return Continue(ctx', $"Position found - Entry: {pos.EntryPrice:F8}")
                 }
 
         {

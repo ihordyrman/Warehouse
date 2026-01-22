@@ -75,11 +75,10 @@ module internal Mappers =
             UpdatedAt = entity.UpdatedAt
         }
 
-    let toPosition (entity: PositionEntity) (pipeline: Pipeline option) : Position =
+    let toPosition (entity: PositionEntity) : Position =
         {
             Id = entity.Id
             PipelineId = entity.PipelineId |> Option.ofNullable |> Option.defaultValue 0
-            Pipeline = pipeline |> Option.defaultValue Unchecked.defaultof<Pipeline>
             Symbol = entity.Symbol
             Status = enum<PositionStatus> entity.Status
             EntryPrice = entity.EntryPrice |> Option.ofNullable |> Option.defaultValue 0m

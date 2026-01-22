@@ -71,6 +71,14 @@ module CoreServices =
         )
         |> ignore
 
+    let private positionRepository (services: IServiceCollection) =
+        services.AddScoped<PositionRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            let loggerFactory = provider.GetRequiredService<ILoggerFactory>()
+            PositionRepository.create scopeFactory loggerFactory
+        )
+        |> ignore
+
     let private okxAdapter (services: IServiceCollection) =
         services.AddSingleton<OkxAdapter.T>(fun provider ->
             let loggerFactory = provider.GetRequiredService<ILoggerFactory>()
@@ -199,6 +207,7 @@ module CoreServices =
             pipelineStepRepository
             candlestickRepository
             marketRepository
+            positionRepository
             liveDataStore
             balanceManager
             credentialsStore
