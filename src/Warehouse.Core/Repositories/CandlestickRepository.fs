@@ -228,7 +228,6 @@ module CandlestickRepository =
                         entity
                     )
 
-                logger.LogDebug("Saved candlestick {Id} for {Symbol}", result, candlestick.Symbol)
                 return Ok { candlestick with Id = result }
             with ex ->
                 logger.LogError(ex, "Failed to save candlestick for {Symbol}", candlestick.Symbol)

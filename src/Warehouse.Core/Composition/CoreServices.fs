@@ -223,3 +223,22 @@ module CoreServices =
             webSocketClient
         ]
         |> List.iter (fun addService -> addService services)
+
+    let registerSlim (services: IServiceCollection) (configuration: IConfiguration) =
+        database services configuration
+
+        [
+            pipelineRepository
+            pipelineStepRepository
+            candlestickRepository
+            marketRepository
+            positionRepository
+            liveDataStore
+            credentialsStore
+            httpClientFactory
+            httpClient
+            okxAdapter
+            orderExecutor
+            orderManager
+        ]
+        |> List.iter (fun addService -> addService services)

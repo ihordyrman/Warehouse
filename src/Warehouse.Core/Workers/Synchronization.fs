@@ -2,158 +2,108 @@ namespace Warehouse.Core.Workers
 
 open System
 open System.Threading
-open System.Threading.Tasks
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open FSharp.Control
 open Warehouse.Core.Markets.Exchanges.Okx
 open Warehouse.Core.Repositories
-open Warehouse.Core.Shared
-
-type SyncConfig =
-    {
-        Timeframe: string
-        BatchSize: int
-        Symbols: Instrument[]
-        SyncStartDate: DateTime
-        Interval: TimeSpan
-    }
+open Warehouse.Core.Shared.Errors
 
 module CandlestickSync =
-    open Errors
 
     let toPairSymbol (instrument: Instrument) = { Left = instrument; Right = Instrument.USDT }.ToString()
 
-    let toCandlestick (symbol: string) (timeframe: string) (okxCandle: OkxCandlestick) : Candlestick =
+    let toCandlestick (symbol: string) (timeframe: string) (c: OkxCandlestick) : Candlestick =
         {
             Id = 0L
             Symbol = symbol
             MarketType = int MarketType.Okx
-            Timestamp = okxCandle.Timestamp
-            Open = okxCandle.Open
-            High = okxCandle.High
-            Low = okxCandle.Low
-            Close = okxCandle.Close
-            Volume = okxCandle.Volume
-            VolumeQuote = okxCandle.VolumeQuoteCurrency
-            IsCompleted = okxCandle.IsCompleted
+            Timestamp = c.Timestamp
+            Open = c.Open
+            High = c.High
+            Low = c.Low
+            Close = c.Close
+            Volume = c.Volume
+            VolumeQuote = c.VolumeQuoteCurrency
+            IsCompleted = c.IsCompleted
             Timeframe = timeframe
         }
 
-    let fetchBatch (http: Http.T) (logger: ILogger) (symbol: string) (config: SyncConfig) (fromDate: DateTime) =
-        task {
-            let before = DateTimeOffset(fromDate).ToUnixTimeMilliseconds().ToString()
-
-            let! result =
-                http.getCandlesticks
-                    symbol
-                    { Bar = Some config.Timeframe; Before = Some before; After = None; Limit = Some config.BatchSize }
-
-            return
-                match result with
-                | Ok candles ->
-                    logger.LogDebug("Fetched {Count} candlesticks for {Symbol}", candles.Length, symbol)
-                    candles |> Array.map (toCandlestick symbol config.Timeframe) |> Ok
-                | Error err ->
-                    logger.LogError("Failed to fetch candlesticks: {Error}", serviceMessage err)
-                    Error err
-        }
-
-    let syncSymbol
-        (repo: CandlestickRepository.T)
+    let sync
         (http: Http.T)
+        (repo: CandlestickRepository.T)
         (logger: ILogger)
-        (config: SyncConfig)
-        (instrument: Instrument)
-        (ct: CancellationToken)
+        (symbol: string)
+        (afterMs: string)
+        (limit: int)
+        ct
         =
-        async {
-            let symbol = toPairSymbol instrument
-            let! latestCandle = repo.GetLatest symbol MarketType.Okx config.Timeframe ct |> Async.AwaitTask
+        task {
+            let! result =
+                http.getCandlesticks symbol { Bar = Some "1m"; Before = None; After = Some afterMs; Limit = Some limit }
 
-            match latestCandle with
-            | Error err ->
-                logger.LogError("Failed to get latest candlestick for {Symbol}: {Error}", symbol, serviceMessage err)
-                return None
-            | Ok latestCandle ->
-                let startFrom =
-                    match latestCandle with
-                    | Some c -> c.Timestamp.AddMinutes -2.0
-                    | None -> config.SyncStartDate
-
-                let! result = fetchBatch http logger symbol config startFrom |> Async.AwaitTask
-
-                return
-                    match result with
-                    | Ok candles when candles.Length > 0 -> Some(candles |> Array.toList)
-                    | Ok _ -> None
-                    | Error _ -> None
+            match result with
+            | Ok candles when candles.Length > 0 ->
+                let mapped = candles |> Array.map (toCandlestick symbol "1m") |> Array.toList
+                let! _ = repo.Save mapped ct
+                ()
+            | Ok _ -> ()
+            | Error err -> logger.LogError("Sync failed for {Symbol}: {Error}", symbol, serviceMessage err)
         }
 
-    let runSyncCycle (scopeFactory: IServiceScopeFactory) (config: SyncConfig) (ct: CancellationToken) =
-        async {
-            let scope = scopeFactory.CreateScope()
-            let repo = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
-            let http = scope.ServiceProvider.GetRequiredService<Http.T>()
-
-            let logger =
-                scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("OkxCandlestickSync")
-
-            let! results =
-                config.Symbols
-                |> Array.map (syncSymbol repo http logger config)
-                |> Array.map (fun x -> x ct)
-                |> Async.Sequential
-
-            let allCandles = results |> Array.choose id |> List.concat
-
-            if allCandles.Length > 0 then
-                let! saved = repo.Save allCandles ct |> Async.AwaitTask
-
-                match saved with
-                | Error err -> logger.LogError("Failed to save candlesticks: {Error}", serviceMessage err)
-                | Ok saved ->
-                    let latestTs = allCandles |> List.map _.Timestamp |> List.max
-                    logger.LogInformation("Saved {Count} candlesticks. Latest: {Timestamp}", saved, latestTs)
-
-            return allCandles.Length
-        }
 
 type OkxSynchronizationWorker(scopeFactory: IServiceScopeFactory, logger: ILogger<OkxSynchronizationWorker>) =
     inherit BackgroundService()
 
-    let config =
-        {
-            Timeframe = CandlestickTimeframes.OneMinute
-            BatchSize = 100
-            Symbols =
-                [|
-                    Instrument.OKB
-                    Instrument.BTC
-                    Instrument.SOL
-                    Instrument.ETH
-                    Instrument.DOGE
-                    Instrument.XRP
-                    Instrument.BCH
-                    Instrument.LTC
-                |]
-            SyncStartDate = DateTime.Today
-            Interval = TimeSpan.FromMinutes 1.0
-        }
+    let symbols =
+        [|
+            Instrument.BTC
+            Instrument.ETH
+            Instrument.SOL
+            Instrument.OKB
+            Instrument.DOGE
+            Instrument.XRP
+            Instrument.BCH
+            Instrument.LTC
+        |]
 
-    override _.ExecuteAsync(ct: CancellationToken) =
+    override _.ExecuteAsync(ct) =
         task {
-            use timer = new PeriodicTimer(config.Interval)
+            use scope = scopeFactory.CreateScope()
+            let http = scope.ServiceProvider.GetRequiredService<Http.T>()
+            let repo = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
+
+            [|
+                for i in 0..23 do
+                    DateTimeOffset.UtcNow.AddHours(-i).ToUnixTimeMilliseconds().ToString()
+            |]
+            |> Array.rev
+            |> Array.iter (fun after ->
+                for instrument in symbols do
+                    CandlestickSync.sync http repo logger (CandlestickSync.toPairSymbol instrument) after 60 ct
+                    |> Async.AwaitTask
+                    |> Async.RunSynchronously
+            )
+
+            logger.LogInformation("Initial sync complete")
+            use timer = new PeriodicTimer(TimeSpan.FromMinutes 1.0)
 
             while not ct.IsCancellationRequested do
-                let! tick = timer.WaitForNextTickAsync(ct)
+                let! _ = timer.WaitForNextTickAsync(ct)
 
-                if tick then
-                    try
-                        let! _ = CandlestickSync.runSyncCycle scopeFactory config ct
-                        ()
-                    with ex ->
-                        logger.LogError(ex, "Error during sync cycle")
+                do
+                    symbols
+                    |> Array.iter (fun instrument ->
+                        CandlestickSync.sync
+                            http
+                            repo
+                            logger
+                            (CandlestickSync.toPairSymbol instrument)
+                            (DateTimeOffset.UtcNow.AddMinutes(-1.0).ToUnixTimeMilliseconds().ToString())
+                            10
+                            ct
+                        |> Async.AwaitTask
+                        |> Async.RunSynchronously
+                    )
         }
