@@ -5,7 +5,7 @@ open System
 [<CLIMutable>]
 type Candlestick =
     {
-        Id: int64
+        Id: int
         Symbol: string
         MarketType: int
         Timestamp: DateTime
@@ -18,6 +18,7 @@ type Candlestick =
         IsCompleted: bool
         Timeframe: string
     }
+
 
 type Instrument =
     | USDT = 0

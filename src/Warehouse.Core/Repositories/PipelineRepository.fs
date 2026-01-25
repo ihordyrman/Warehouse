@@ -8,13 +8,10 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared
 
 module PipelineRepository =
     open Errors
-    open Mappers
 
     type SearchFilters =
         {
@@ -48,30 +45,19 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! pipelineResults =
-                    db.QueryAsync<PipelineEntity>(
+                let! pipeline =
+                    db.QueryFirstOrDefaultAsync<Pipeline option>(
                         CommandDefinition(
-                            "SELECT * FROM pipelines WHERE id = @Id LIMIT 1",
+                            "SELECT * FROM pipelines WHERE id = @Id",
                             {| Id = id |},
                             cancellationToken = token
                         )
                     )
 
-                match pipelineResults |> Seq.tryHead with
-                | Some pipelineEntity ->
-                    let! stepResults =
-                        db.QueryAsync<PipelineStepEntity>(
-                            CommandDefinition(
-                                "SELECT * FROM pipeline_steps WHERE pipeline_details_id = @PipelineId ORDER BY \"order\"",
-                                {| PipelineId = id |},
-                                cancellationToken = token
-                            )
-                        )
-
-                    let pipeline = toPipeline pipelineEntity
-                    let steps = stepResults |> Seq.map (fun s -> toPipelineStep s (Some pipeline)) |> Seq.toList
-                    logger.LogDebug("Retrieved pipeline {Id} with {StepCount} steps", id, steps.Length)
-                    return Ok { pipeline with Steps = steps }
+                match pipeline with
+                | Some pipeline ->
+                    logger.LogDebug("Retrieved pipeline {Id}", id)
+                    return Ok pipeline
                 | None ->
                     logger.LogWarning("Pipeline {Id} not found", id)
                     return Result.Error(NotFound $"Pipeline with id {id}")
@@ -86,38 +72,12 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! pipelineResults =
-                    db.QueryAsync<PipelineEntity>(
+                let! pipelines =
+                    db.QueryAsync<Pipeline>(
                         CommandDefinition("SELECT * FROM pipelines ORDER BY id", cancellationToken = token)
                     )
 
-                let! stepResults =
-                    db.QueryAsync<PipelineStepEntity>(
-                        CommandDefinition(
-                            "SELECT * FROM pipeline_steps ORDER BY pipeline_details_id, \"order\"",
-                            cancellationToken = token
-                        )
-                    )
-
-                let stepsGrouped = stepResults |> Seq.groupBy _.PipelineDetailsId |> Map.ofSeq
-
-                let pipelines =
-                    pipelineResults
-                    |> Seq.map (fun pe ->
-                        let pipeline = toPipeline pe
-
-                        let steps =
-                            stepsGrouped
-                            |> Map.tryFind pe.Id
-                            |> Option.map (fun s ->
-                                s |> Seq.map (fun se -> toPipelineStep se (Some pipeline)) |> Seq.toList
-                            )
-                            |> Option.defaultValue []
-
-                        { pipeline with Steps = steps }
-                    )
-                    |> Seq.toList
-
+                let pipelines = pipelines |> Seq.toList
                 logger.LogDebug("Retrieved {Count} pipelines", pipelines.Length)
                 return Ok pipelines
             with ex ->
@@ -131,47 +91,15 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! pipelineResults =
-                    db.QueryAsync<PipelineEntity>(
+                let! pipelines =
+                    db.QueryAsync<Pipeline>(
                         CommandDefinition(
                             "SELECT * FROM pipelines WHERE enabled = true ORDER BY id",
                             cancellationToken = token
                         )
                     )
 
-                let pipelineIds = pipelineResults |> Seq.map _.Id |> Seq.toArray
-
-                let! stepResults =
-                    if pipelineIds.Length > 0 then
-                        db.QueryAsync<PipelineStepEntity>(
-                            CommandDefinition(
-                                "SELECT * FROM pipeline_steps WHERE pipeline_details_id = ANY(@Ids) ORDER BY pipeline_details_id, \"order\"",
-                                {| Ids = pipelineIds |},
-                                cancellationToken = token
-                            )
-                        )
-                    else
-                        Task.FromResult(Seq.empty<PipelineStepEntity>)
-
-                let stepsGrouped = stepResults |> Seq.groupBy _.PipelineDetailsId |> Map.ofSeq
-
-                let pipelines =
-                    pipelineResults
-                    |> Seq.map (fun pe ->
-                        let pipeline = toPipeline pe
-
-                        let steps =
-                            stepsGrouped
-                            |> Map.tryFind pe.Id
-                            |> Option.map (fun s ->
-                                s |> Seq.map (fun se -> toPipelineStep se (Some pipeline)) |> Seq.toList
-                            )
-                            |> Option.defaultValue []
-
-                        { pipeline with Steps = steps }
-                    )
-                    |> Seq.toList
-
+                let pipelines = pipelines |> Seq.toList
                 logger.LogDebug("Retrieved {Count} enabled pipelines", pipelines.Length)
                 return Ok pipelines
             with ex ->
@@ -190,23 +118,30 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let now = DateTime.UtcNow
-                let entity = fromPipeline { pipeline with CreatedAt = now; UpdatedAt = now }
-
                 let! result =
                     db.QuerySingleAsync<int>(
                         CommandDefinition(
                             """INSERT INTO pipelines
                            (name, symbol, market_type, enabled, execution_interval, last_executed_at, status, tags, created_at, updated_at)
-                           VALUES (@Name, @Symbol, @MarketType, @Enabled, @ExecutionInterval, @LastExecutedAt, @Status, @Tags::jsonb, @CreatedAt, @UpdatedAt)
+                           VALUES (@Name, @Symbol, @MarketType, @Enabled, @ExecutionInterval, @LastExecutedAt, @Status, @Tags::jsonb, now(), now())
                            RETURNING id""",
-                            entity,
+                            pipeline,
                             cancellationToken = token
                         )
                     )
 
                 logger.LogInformation("Created pipeline {Id} for symbol {Symbol}", result, pipeline.Symbol)
-                return Ok { pipeline with Id = result; CreatedAt = now; UpdatedAt = now }
+
+                let! pipeline =
+                    db.QuerySingleAsync<Pipeline>(
+                        CommandDefinition(
+                            "SELECT * FROM pipelines WHERE id = @Id",
+                            {| Id = result |},
+                            cancellationToken = token
+                        )
+                    )
+
+                return Ok pipeline
             with ex ->
                 logger.LogError(ex, "Failed to create pipeline for symbol {Symbol}", pipeline.Symbol)
                 return Result.Error(Unexpected ex)
@@ -223,9 +158,6 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let now = DateTime.UtcNow
-                let entity = fromPipeline { pipeline with UpdatedAt = now }
-
                 let! rowsAffected =
                     db.ExecuteAsync(
                         CommandDefinition(
@@ -233,16 +165,25 @@ module PipelineRepository =
                            SET name = @Name, symbol = @Symbol, market_type = @MarketType,
                                enabled = @Enabled, execution_interval = @ExecutionInterval,
                                last_executed_at = @LastExecutedAt, status = @Status, tags = @Tags::jsonb,
-                               updated_at = @UpdatedAt
+                               updated_at = now()
                            WHERE id = @Id""",
-                            entity,
+                            pipeline,
                             cancellationToken = cancellation
                         )
                     )
 
                 if rowsAffected > 0 then
+                    let! pipeline =
+                        db.QuerySingleAsync<Pipeline>(
+                            CommandDefinition(
+                                "SELECT * FROM pipelines WHERE id = @Id",
+                                {| Id = pipeline.Id |},
+                                cancellationToken = cancellation
+                            )
+                        )
+
                     logger.LogInformation("Updated pipeline {Id}", pipeline.Id)
-                    return Ok { pipeline with UpdatedAt = now }
+                    return Ok pipeline
                 else
                     logger.LogWarning("Pipeline {Id} not found for update", pipeline.Id)
                     return Result.Error(NotFound $"Pipeline with id {pipeline.Id}")
@@ -261,15 +202,6 @@ module PipelineRepository =
             try
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
-                let! _ =
-                    db.ExecuteAsync(
-                        CommandDefinition(
-                            "DELETE FROM pipeline_steps WHERE pipeline_details_id = @Id",
-                            {| Id = id |},
-                            cancellationToken = token
-                        )
-                    )
 
                 let! rowsAffected =
                     db.ExecuteAsync(
@@ -503,21 +435,18 @@ module PipelineRepository =
                 let finalSql = $"{baseSql} {whereClause} {orderClause}"
 
                 let! results =
-                    db.QueryAsync<PipelineEntity>(
-                        CommandDefinition(finalSql, parameters, cancellationToken = cancellation)
-                    )
+                    db.QueryAsync<Pipeline>(CommandDefinition(finalSql, parameters, cancellationToken = cancellation))
 
                 let pipelines = results |> Seq.toList
 
                 let filteredPipelines =
                     match filters.Tag with
                     | Some tag when not (String.IsNullOrEmpty tag) ->
-                        pipelines |> List.filter (fun p -> p.Tags.Contains tag)
+                        pipelines |> List.filter (fun p -> p.Tags |> List.contains tag)
                     | _ -> pipelines
 
-                let domainPipelines = filteredPipelines |> List.map toPipeline
-                logger.LogDebug("Search returned {Count} pipelines", domainPipelines.Length)
-                return Ok domainPipelines
+                logger.LogDebug("Search returned {Count} pipelines", filteredPipelines.Length)
+                return Ok filteredPipelines
             with ex ->
                 logger.LogError(ex, "Failed to search pipelines")
                 return Result.Error(Unexpected ex)

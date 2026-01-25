@@ -7,6 +7,7 @@ type PositionStatus =
     | Closed = 1
     | Cancelled = 2
 
+[<CLIMutable>]
 type Position =
     {
         Id: int

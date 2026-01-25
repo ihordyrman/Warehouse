@@ -29,11 +29,19 @@ module Data =
     let getPipelineDetails (scopeFactory: IServiceScopeFactory) (pipelineId: int) : Task<PipelineDetailsInfo option> =
         task {
             use scope = scopeFactory.CreateScope()
-            let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
-            let! result = repo.GetById pipelineId CancellationToken.None
+            let pipelineRepo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let stepsRepo = scope.ServiceProvider.GetRequiredService<PipelineStepRepository.T>()
+            let! pipeline = pipelineRepo.GetById pipelineId CancellationToken.None
 
-            match result with
+            match pipeline with
             | Ok pipeline ->
+                let! steps = stepsRepo.GetByPipelineId pipelineId CancellationToken.None
+
+                let count =
+                    match steps with
+                    | Error _ -> 0
+                    | Ok s -> s.Length
+
                 return
                     Some
                         {
@@ -44,7 +52,7 @@ module Data =
                             ExecutionInterval = pipeline.ExecutionInterval
                             Status = pipeline.Status
                             Tags = pipeline.Tags
-                            StepsCount = pipeline.Steps.Length
+                            StepsCount = count
                             CreatedAt = pipeline.CreatedAt
                             UpdatedAt = pipeline.UpdatedAt
                         }

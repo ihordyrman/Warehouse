@@ -8,13 +8,10 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared
 
 module PipelineStepRepository =
     open Errors
-    open Mappers
 
     type T =
         {
@@ -37,15 +34,12 @@ module PipelineStepRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<PipelineStepEntity>(
-                        "SELECT * FROM pipeline_steps WHERE id = @Id LIMIT 1",
-                        {| Id = id |}
-                    )
+                    db.QueryAsync<PipelineStep>("SELECT * FROM pipeline_steps WHERE id = @Id LIMIT 1", {| Id = id |})
 
                 match results |> Seq.tryHead with
                 | Some entity ->
                     logger.LogDebug("Retrieved step {Id}", id)
-                    return Ok(toPipelineStep entity None)
+                    return Ok(entity)
                 | None ->
                     logger.LogWarning("Step {Id} not found", id)
                     return Result.Error(NotFound $"Step with id {id}")
@@ -66,12 +60,12 @@ module PipelineStepRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<PipelineStepEntity>(
+                    db.QueryAsync<PipelineStep>(
                         "SELECT * FROM pipeline_steps WHERE pipeline_details_id = @PipelineId ORDER BY \"order\"",
                         {| PipelineId = pipelineId |}
                     )
 
-                let steps = results |> Seq.map (fun s -> toPipelineStep s None) |> Seq.toList
+                let steps = results |> Seq.toList
                 logger.LogDebug("Retrieved {Count} steps for pipeline {PipelineId}", steps.Length, pipelineId)
                 return Ok steps
             with ex ->
@@ -91,24 +85,23 @@ module PipelineStepRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let now = DateTime.UtcNow
-                let entity = fromPipelineStep { step with CreatedAt = now; UpdatedAt = now }
 
                 let! result =
                     db.QuerySingleAsync<int>(
                         CommandDefinition(
                             """INSERT INTO pipeline_steps
                            (pipeline_details_id, step_type_key, name, "order", is_enabled, parameters, created_at, updated_at)
-                           VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, @CreatedAt, @UpdatedAt)
+                           VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, now(), now())
                            RETURNING id""",
-                            entity,
+                            step,
                             cancellationToken = cancellation
                         )
                     )
 
-                logger.LogInformation("Created step {Id} for pipeline {PipelineId}", result, step.PipelineDetailsId)
+                logger.LogInformation("Created step {Id} for pipeline {PipelineId}", result, step.PipelineId)
                 return Ok { step with Id = result; CreatedAt = now; UpdatedAt = now }
             with ex ->
-                logger.LogError(ex, "Failed to create step for pipeline {PipelineId}", step.PipelineDetailsId)
+                logger.LogError(ex, "Failed to create step for pipeline {PipelineId}", step.PipelineId)
                 return Result.Error(Unexpected ex)
         }
 
@@ -123,24 +116,30 @@ module PipelineStepRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let now = DateTime.UtcNow
-                let entity = fromPipelineStep { step with UpdatedAt = now }
-
-                let! rowsAffected =
+                let! result =
                     db.ExecuteAsync(
                         CommandDefinition(
                             """UPDATE pipeline_steps
                            SET step_type_key = @StepTypeKey, name = @Name, "order" = @Order,
-                               is_enabled = @IsEnabled, parameters = @Parameters::jsonb, updated_at = @UpdatedAt
+                               is_enabled = @IsEnabled, parameters = @Parameters::jsonb, updated_at = now()
                            WHERE id = @Id""",
-                            entity,
+                            step,
                             cancellationToken = cancellation
                         )
                     )
 
-                if rowsAffected > 0 then
+                if result > 0 then
+                    let! step =
+                        db.QuerySingleAsync<PipelineStep>(
+                            CommandDefinition(
+                                "SELECT * FROM pipeline_steps WHERE id = @Id LIMIT 1",
+                                {| Id = step.Id |},
+                                cancellationToken = cancellation
+                            )
+                        )
+
                     logger.LogInformation("Updated step {Id}", step.Id)
-                    return Ok { step with UpdatedAt = now }
+                    return Ok step
                 else
                     logger.LogWarning("Step {Id} not found for update", step.Id)
                     return Result.Error(NotFound $"Step with id {step.Id}")

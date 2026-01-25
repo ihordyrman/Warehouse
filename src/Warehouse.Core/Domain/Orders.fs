@@ -14,6 +14,7 @@ type OrderStatus =
     | Cancelled = 4
     | Failed = 5
 
+[<CLIMutable>]
 type Order =
     {
         Id: int64

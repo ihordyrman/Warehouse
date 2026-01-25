@@ -52,87 +52,104 @@ module Executor =
             try
                 while not ct.IsCancellationRequested do
                     use scope = services.CreateScope()
-                    let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+                    let pipelineRepository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+                    let stepsRepository = scope.ServiceProvider.GetRequiredService<PipelineStepRepository.T>()
 
-                    match! loadPipeline repo pipelineId ct with
+                    match! loadPipeline pipelineRepository pipelineId ct with
                     | Option.None ->
                         logger.LogWarning("Pipeline {PipelineId} not found, stopping executor", pipelineId)
                         return ()
 
                     | Some pipeline ->
-                        let stepConfigs =
-                            pipeline.Steps
-                            |> List.map (fun step ->
-                                {
-                                    Builder.StepTypeKey = step.StepTypeKey
-                                    Builder.Order = step.Order
-                                    Builder.IsEnabled = step.IsEnabled
-                                    Builder.Parameters =
-                                        step.Parameters |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> Map.ofSeq
-                                }
+                        let! steps = stepsRepository.GetByPipelineId pipelineId ct
+
+                        match steps with
+                        | Error error ->
+                            logger.LogError(
+                                "Failed to load steps for pipeline {PipelineId}: {Error}",
+                                pipelineId,
+                                Errors.serviceMessage error
                             )
 
-                        match Builder.buildSteps registry scope.ServiceProvider stepConfigs with
-                        | Error errors ->
-                            for err in errors do
-                                logger.LogWarning(
-                                    "Pipeline {PipelineId} step {StepKey} validation failed: {Errors}",
-                                    pipelineId,
-                                    err.StepKey,
-                                    err.Errors
-                                )
-
                             do! Task.Delay(pipeline.ExecutionInterval, ct)
-
-                        | Ok steps when steps.IsEmpty ->
-                            logger.LogWarning("Pipeline {PipelineId} has no enabled steps, skipping", pipelineId)
-                            do! Task.Delay(pipeline.ExecutionInterval, ct)
-
                         | Ok steps ->
-                            let repository = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
-                            let! latestCandle = repository.GetLatest pipeline.Symbol pipeline.MarketType "1m" ct
-
-                            match latestCandle with
-                            | Error error ->
-                                logger.LogError(
-                                    "Failed to retrieve latest candlestick for {Symbol}: {Error}",
-                                    pipeline.Symbol,
-                                    Errors.serviceMessage error
+                            let stepConfigs =
+                                steps
+                                |> List.map (fun step ->
+                                    {
+                                        Builder.StepTypeKey = step.StepTypeKey
+                                        Builder.Order = step.Order
+                                        Builder.IsEnabled = step.IsEnabled
+                                        Builder.Parameters =
+                                            step.Parameters |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> Map.ofSeq
+                                    }
                                 )
+
+                            match Builder.buildSteps registry scope.ServiceProvider stepConfigs with
+                            | Error errors ->
+                                for err in errors do
+                                    logger.LogWarning(
+                                        "Pipeline {PipelineId} step {StepKey} validation failed: {Errors}",
+                                        pipelineId,
+                                        err.StepKey,
+                                        err.Errors
+                                    )
 
                                 do! Task.Delay(pipeline.ExecutionInterval, ct)
-                            | Ok latestCandle ->
+
+                            | Ok steps when steps.IsEmpty ->
+                                logger.LogWarning("Pipeline {PipelineId} has no enabled steps, skipping", pipelineId)
+                                do! Task.Delay(pipeline.ExecutionInterval, ct)
+
+                            | Ok steps ->
+                                let repository = scope.ServiceProvider.GetRequiredService<CandlestickRepository.T>()
+                                let! latestCandle = repository.GetLatest pipeline.Symbol pipeline.MarketType "1m" ct
+
                                 match latestCandle with
-                                | Option.None ->
-                                    logger.LogWarning(
-                                        "No candlestick data for {Symbol}, skipping execution",
-                                        pipeline.Symbol
+                                | Error error ->
+                                    logger.LogError(
+                                        "Failed to retrieve latest candlestick for {Symbol}: {Error}",
+                                        pipeline.Symbol,
+                                        Errors.serviceMessage error
                                     )
 
                                     do! Task.Delay(pipeline.ExecutionInterval, ct)
+                                | Ok latestCandle ->
+                                    match latestCandle with
+                                    | Option.None ->
+                                        logger.LogWarning(
+                                            "No candlestick data for {Symbol}, skipping execution",
+                                            pipeline.Symbol
+                                        )
 
-                                | Some candle ->
-                                    let liveDataStore = scope.ServiceProvider.GetRequiredService<LiveDataStore.T>()
-                                    let marketData = liveDataStore.Get pipeline.Symbol pipeline.MarketType
-                                    let context = createContext pipeline candle.Close marketData
+                                        do! Task.Delay(pipeline.ExecutionInterval, ct)
 
-                                    logger.LogDebug(
-                                        "Executing pipeline {PipelineId} with {StepCount} steps",
-                                        pipelineId,
-                                        steps.Length
-                                    )
+                                    | Some candle ->
+                                        let liveDataStore = scope.ServiceProvider.GetRequiredService<LiveDataStore.T>()
+                                        let marketData = liveDataStore.Get pipeline.Symbol pipeline.MarketType
+                                        let context = createContext pipeline candle.Close marketData
 
-                                    let! result = Runner.run steps context ct
+                                        logger.LogDebug(
+                                            "Executing pipeline {PipelineId} with {StepCount} steps",
+                                            pipelineId,
+                                            steps.Length
+                                        )
 
-                                    match result with
-                                    | Steps.Continue(_, msg) ->
-                                        logger.LogDebug("Pipeline {PipelineId} completed: {Message}", pipelineId, msg)
-                                    | Steps.Stop msg ->
-                                        logger.LogDebug("Pipeline {PipelineId} stopped: {Message}", pipelineId, msg)
-                                    | Steps.Fail err ->
-                                        logger.LogError("Pipeline {PipelineId} failed: {Error}", pipelineId, err)
+                                        let! result = Runner.run steps context ct
 
-                                    do! Task.Delay(pipeline.ExecutionInterval, ct)
+                                        match result with
+                                        | Steps.Continue(_, msg) ->
+                                            logger.LogDebug(
+                                                "Pipeline {PipelineId} completed: {Message}",
+                                                pipelineId,
+                                                msg
+                                            )
+                                        | Steps.Stop msg ->
+                                            logger.LogDebug("Pipeline {PipelineId} stopped: {Message}", pipelineId, msg)
+                                        | Steps.Fail err ->
+                                            logger.LogError("Pipeline {PipelineId} failed: {Error}", pipelineId, err)
+
+                                        do! Task.Delay(pipeline.ExecutionInterval, ct)
 
             with
             | :? OperationCanceledException -> ()

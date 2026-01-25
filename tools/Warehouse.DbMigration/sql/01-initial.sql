@@ -68,19 +68,19 @@ create index ix_candlesticks_timestamp on candlesticks (timestamp);
 
 create table pipeline_steps
 (
-    id                  serial primary key,
-    pipeline_details_id int references pipelines (id) on delete cascade,
-    step_type_key       varchar(100) not null,
-    name                varchar(200) not null,
-    "order"             int          not null,
-    is_enabled          boolean      not null default true,
-    parameters          jsonb        not null default '{}',
-    created_at          timestamp    not null,
-    updated_at          timestamp    not null
+    id            serial primary key,
+    pipeline_id   int references pipelines (id) on delete cascade,
+    step_type_key varchar(100) not null,
+    name          varchar(200) not null,
+    "order"       int          not null,
+    is_enabled    boolean      not null default true,
+    parameters    jsonb        not null default '{}',
+    created_at    timestamp    not null,
+    updated_at    timestamp    not null
 );
 
 create unique index ix_pipeline_steps_pipeline_order
-    on pipeline_steps (pipeline_details_id, "order");
+    on pipeline_steps (pipeline_id, "order");
 
 create table orders
 (

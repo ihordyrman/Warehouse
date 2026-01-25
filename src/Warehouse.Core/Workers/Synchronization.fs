@@ -16,7 +16,7 @@ module CandlestickSync =
 
     let toCandlestick (symbol: string) (timeframe: string) (c: OkxCandlestick) : Candlestick =
         {
-            Id = 0L
+            Id = 0
             Symbol = symbol
             MarketType = int MarketType.Okx
             Timestamp = c.Timestamp

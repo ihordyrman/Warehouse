@@ -13,6 +13,7 @@ type ConnectionState =
     | Connected = 2
     | Failed = 3
 
+[<CLIMutable>]
 type Market =
     {
         Id: int

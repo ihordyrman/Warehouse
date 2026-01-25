@@ -7,12 +7,9 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared.Errors
 
 module PositionRepository =
-    open Mappers
 
     type T = { GetOpenPosition: int -> CancellationToken -> Task<Result<Option<Position>, ServiceError>> }
 
@@ -27,8 +24,8 @@ module PositionRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! results =
-                    db.QueryAsync<PositionEntity>(
+                let! positions =
+                    db.QueryAsync<Position>(
                         CommandDefinition(
                             "SELECT *
                               FROM positions
@@ -39,13 +36,13 @@ module PositionRepository =
                         )
                     )
 
-                match results |> Seq.tryHead with
+                match positions |> Seq.tryHead with
                 | None ->
                     logger.LogDebug("No open position found for pipeline {PipelineId}", pipelineId)
                     return Ok None
-                | Some entity ->
+                | Some position ->
                     logger.LogDebug("Retrieved open position for pipeline {PipelineId}", pipelineId)
-                    return Ok(Some(toPosition entity))
+                    return Ok(Some(position))
             with ex ->
                 logger.LogError(ex, "Failed to get open position for pipeline {PipelineId}", pipelineId)
                 return Result.Error(Unexpected ex)

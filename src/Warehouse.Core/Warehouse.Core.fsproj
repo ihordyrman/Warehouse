@@ -14,10 +14,8 @@
 
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Settings.fs" />
-        <Compile Include="Infrastructure\Entities.fs" />
 
         <Compile Include="Shared\Errors.fs" />
-        <Compile Include="Shared\Mappers.fs" />
 
         <Compile Include="Repositories\PipelineRepository.fs" />
         <Compile Include="Repositories\PipelineStepRepository.fs" />

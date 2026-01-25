@@ -99,7 +99,6 @@ module Data =
                         ExecutionInterval = input.ExecutionInterval
                         LastExecutedAt = Nullable()
                         Status = PipelineStatus.Idle
-                        Steps = []
                         Tags = input.Tags
                         CreatedAt = DateTime.UtcNow
                         UpdatedAt = DateTime.UtcNow

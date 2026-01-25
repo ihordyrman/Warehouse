@@ -8,12 +8,9 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared.Errors
 
 module MarketRepository =
-    open Mappers
 
     type CreateMarketRequest =
         { Type: MarketType; ApiKey: string; SecretKey: string; Passphrase: string option; IsSandbox: bool }
@@ -49,8 +46,8 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! results =
-                    db.QueryAsync<MarketEntity>(
+                let! markets =
+                    db.QueryAsync<Market>(
                         CommandDefinition(
                             "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                          FROM markets WHERE id = @Id LIMIT 1",
@@ -59,13 +56,13 @@ module MarketRepository =
                         )
                     )
 
-                match results |> Seq.tryHead with
+                match markets |> Seq.tryHead with
                 | None ->
                     logger.LogWarning("Market {Id} not found", id)
                     return Result.Error(NotFound $"Market with id {id}")
                 | Some entity ->
                     logger.LogDebug("Retrieved market {Id}", id)
-                    return Ok(toMarket entity)
+                    return Ok(entity)
             with ex ->
                 logger.LogError(ex, "Failed to get market {Id}", id)
                 return Result.Error(Unexpected ex)
@@ -82,8 +79,8 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! results =
-                    db.QueryAsync<MarketEntity>(
+                let! markets =
+                    db.QueryAsync<Market>(
                         CommandDefinition(
                             "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                          FROM markets WHERE type = @Type LIMIT 1",
@@ -92,13 +89,13 @@ module MarketRepository =
                         )
                     )
 
-                match results |> Seq.tryHead with
+                match markets |> Seq.tryHead with
                 | None ->
                     logger.LogDebug("Market type {MarketType} not found", marketType)
                     return Ok None
                 | Some entity ->
                     logger.LogDebug("Retrieved market type {MarketType}", marketType)
-                    return Ok(Some(toMarket entity))
+                    return Ok(Some(entity))
             with ex ->
                 logger.LogError(ex, "Failed to get market type {MarketType}", marketType)
                 return Result.Error(Unexpected ex)
@@ -110,8 +107,8 @@ module MarketRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! results =
-                    db.QueryAsync<MarketEntity>(
+                let! markets =
+                    db.QueryAsync<Market>(
                         CommandDefinition(
                             "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                          FROM markets ORDER BY id",
@@ -119,7 +116,7 @@ module MarketRepository =
                         )
                     )
 
-                let markets = results |> Seq.map toMarket |> Seq.toList
+                let markets = markets |> Seq.toList
                 logger.LogDebug("Retrieved {Count} markets", markets.Length)
                 return Ok markets
             with ex ->
@@ -202,7 +199,7 @@ module MarketRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! existingResults =
-                    db.QueryAsync<MarketEntity>(
+                    db.QueryAsync<Market>(
                         CommandDefinition(
                             "SELECT id, type, api_key, secret_key, passphrase, is_sandbox, created_at, updated_at
                              FROM markets WHERE id = @Id LIMIT 1",
@@ -219,7 +216,7 @@ module MarketRepository =
                     let now = DateTime.UtcNow
                     let newApiKey = request.ApiKey |> Option.defaultValue existing.ApiKey
                     let newSecretKey = request.SecretKey |> Option.defaultValue existing.SecretKey
-                    let newPassphrase = request.Passphrase |> Option.defaultValue existing.Passphrase
+                    let newPassphrase = request.Passphrase
                     let newIsSandbox = request.IsSandbox |> Option.defaultValue existing.IsSandbox
 
                     let! _ =
@@ -246,10 +243,10 @@ module MarketRepository =
                     let updatedMarket: Market =
                         {
                             Id = marketId
-                            Type = enum<MarketType> existing.Type
+                            Type = existing.Type
                             ApiKey = newApiKey
                             SecretKey = newSecretKey
-                            Passphrase = if String.IsNullOrWhiteSpace(newPassphrase) then None else Some newPassphrase
+                            Passphrase = newPassphrase
                             IsSandbox = newIsSandbox
                             CreatedAt = existing.CreatedAt
                             UpdatedAt = now

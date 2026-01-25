@@ -8,13 +8,10 @@ open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
-open Warehouse.Core.Infrastructure.Entities
 open Warehouse.Core.Shared
 
 module CandlestickRepository =
     open Errors
-    open Mappers
 
     type T =
         {
@@ -49,8 +46,8 @@ module CandlestickRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let! results =
-                    db.QueryAsync<CandlestickEntity>(
+                let! canclestics =
+                    db.QueryAsync<Candlestick>(
                         CommandDefinition(
                             "SELECT * FROM candlesticks WHERE id = @Id LIMIT 1",
                             {| Id = id |},
@@ -58,10 +55,10 @@ module CandlestickRepository =
                         )
                     )
 
-                match results |> Seq.tryHead with
-                | Some entity ->
+                match canclestics |> Seq.tryHead with
+                | Some candle ->
                     logger.LogDebug("Retrieved candlestick {Id}", id)
-                    return Ok(toCandlestick entity)
+                    return Ok(candle)
                 | None ->
                     logger.LogWarning("Candlestick {Id} not found", id)
                     return Result.Error(NotFound $"Candlestick with id {id}")
@@ -84,7 +81,7 @@ module CandlestickRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! results =
-                    db.QueryAsync<CandlestickEntity>(
+                    db.QueryAsync<Candlestick>(
                         CommandDefinition(
                             """SELECT * FROM candlesticks
                            WHERE symbol = @Symbol AND market_type = @MarketType AND timeframe = @Timeframe
@@ -98,7 +95,7 @@ module CandlestickRepository =
                 match results |> Seq.tryHead with
                 | Some entity ->
                     logger.LogDebug("Retrieved latest candlestick for {Symbol}/{Timeframe}", symbol, timeframe)
-                    return Ok(Some(toCandlestick entity))
+                    return Ok(Some(entity))
                 | None ->
                     logger.LogDebug("No candlesticks found for {Symbol}/{Timeframe}", symbol, timeframe)
                     return Ok None
@@ -152,9 +149,8 @@ module CandlestickRepository =
                 let whereClause = String.Join(" ", conditions)
                 let finalSql = $"{baseSql} {whereClause} ORDER BY timestamp DESC {limitClause}"
 
-                let! results = db.QueryAsync<CandlestickEntity>(finalSql, parameters)
-
-                let candlesticks = results |> Seq.map toCandlestick |> Seq.toList
+                let! results = db.QueryAsync<Candlestick>(finalSql, parameters)
+                let candlesticks = results |> Seq.toList
 
                 logger.LogDebug(
                     "Retrieved {Count} candlesticks for {Symbol}/{Timeframe}",
@@ -183,8 +179,6 @@ module CandlestickRepository =
                     use scope = scopeFactory.CreateScope()
                     use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                    let entities = candlesticks |> List.map fromCandlestick
-
                     let! result =
                         db.ExecuteAsync(
                             """INSERT INTO candlesticks
@@ -193,7 +187,7 @@ module CandlestickRepository =
                                ON CONFLICT (symbol, market_type, timeframe, timestamp)
                                DO UPDATE SET open = @Open, high = @High, low = @Low, close = @Close,
                                              volume = @Volume, volume_quote = @VolumeQuote, is_completed = @IsCompleted""",
-                            entities
+                            candlesticks
                         )
 
                     logger.LogInformation("Saved {Count} candlesticks", result)
@@ -214,10 +208,8 @@ module CandlestickRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let entity = fromCandlestick candlestick
-
                 let! result =
-                    db.QuerySingleAsync<int64>(
+                    db.QuerySingleAsync<int>(
                         """INSERT INTO candlesticks
                            (symbol, market_type, timeframe, timestamp, open, high, low, close, volume, volume_quote, is_completed)
                            VALUES (@Symbol, @MarketType, @Timeframe, @Timestamp, @Open, @High, @Low, @Close, @Volume, @VolumeQuote, @IsCompleted)
@@ -225,7 +217,7 @@ module CandlestickRepository =
                            DO UPDATE SET open = @Open, high = @High, low = @Low, close = @Close,
                                          volume = @Volume, volume_quote = @VolumeQuote, is_completed = @IsCompleted
                            RETURNING id""",
-                        entity
+                        candlestick
                     )
 
                 return Ok { candlestick with Id = result }

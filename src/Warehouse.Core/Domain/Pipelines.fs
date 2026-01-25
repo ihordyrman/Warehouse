@@ -9,6 +9,7 @@ type PipelineStatus =
     | Paused = 2
     | Error = 3
 
+[<CLIMutable>]
 type Pipeline =
     {
         Id: int
@@ -19,7 +20,6 @@ type Pipeline =
         ExecutionInterval: TimeSpan
         LastExecutedAt: Nullable<DateTime>
         Status: PipelineStatus
-        Steps: PipelineStep list
         Tags: string list
         CreatedAt: DateTime
         UpdatedAt: DateTime
@@ -28,8 +28,7 @@ type Pipeline =
 and PipelineStep =
     {
         Id: int
-        PipelineDetailsId: int
-        Pipeline: Pipeline
+        PipelineId: int
         StepTypeKey: string
         Name: string
         Order: int

@@ -2,29 +2,19 @@ namespace Warehouse.Core.Pipelines.Orchestration
 
 open System
 open System.Collections.Concurrent
-open System.Data
 open System.Threading
-open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Infrastructure
 open Warehouse.Core.Pipelines.Core
 open Warehouse.Core.Pipelines.Trading
+open Warehouse.Core.Repositories
 
 module Orchestrator =
-    open Entities
-    open Mappers
 
     [<Literal>]
     let private SyncIntervalSeconds = 30
-
-    let private loadAllPipelines (db: IDbConnection) =
-        task {
-            let! pipelines = db.QueryAsync<PipelineEntity>("SELECT * FROM pipelines")
-            return Seq.map toPipeline pipelines |> Seq.toList
-        }
 
     let private shouldRun (pipeline: Pipeline) =
         pipeline.Enabled
@@ -71,30 +61,34 @@ module Orchestrator =
         let synchronize (services: IServiceProvider) (ct: CancellationToken) =
             task {
                 use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-                let! pipelines = loadAllPipelines db
+                let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+                let! result = repository.GetAll ct
 
-                logger.LogDebug("Synchronizing {Count} pipelines", pipelines.Length)
+                match result with
+                | Error err ->
+                    logger.LogError("Failed to load pipelines: {Error}", err)
+                | Ok pipelines ->
+                    logger.LogDebug("Synchronizing {Count} pipelines", pipelines.Length)
 
-                for pipeline in pipelines do
-                    let isRunning = executors.ContainsKey(pipeline.Id)
-                    let shouldBeRunning = shouldRun pipeline
+                    for pipeline in pipelines do
+                        let isRunning = executors.ContainsKey(pipeline.Id)
+                        let shouldBeRunning = shouldRun pipeline
 
-                    match shouldBeRunning, isRunning with
-                    | true, false ->
-                        let! _ = startExecutor services pipeline ct
-                        ()
-                    | false, true ->
-                        let! _ = stopExecutor pipeline.Id
-                        ()
-                    | _ -> ()
+                        match shouldBeRunning, isRunning with
+                        | true, false ->
+                            let! _ = startExecutor services pipeline ct
+                            ()
+                        | false, true ->
+                            let! _ = stopExecutor pipeline.Id
+                            ()
+                        | _ -> ()
 
-                let pipelineIds = pipelines |> List.map _.Id |> Set.ofList
+                    let pipelineIds = pipelines |> List.map _.Id |> Set.ofList
 
-                for executorId in executors.Keys |> Seq.toList do
-                    if not (pipelineIds.Contains executorId) then
-                        let! _ = stopExecutor executorId
-                        ()
+                    for executorId in executors.Keys |> Seq.toList do
+                        if not (pipelineIds.Contains executorId) then
+                            let! _ = stopExecutor executorId
+                            ()
             }
 
         override _.ExecuteAsync(stoppingToken: CancellationToken) =
@@ -134,20 +128,14 @@ module Orchestrator =
                     return false
                 else
                     use scope = scopeFactory.CreateScope()
-                    use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+                    let repository = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+                    let! result = repository.GetById pipelineId ct
 
-                    let! result =
-                        db.QuerySingleOrDefaultAsync<PipelineEntity>(
-                            "SELECT * FROM pipelines WHERE id = @Id",
-                            {| Id = pipelineId |}
-                        )
-
-                    match box result with
-                    | null ->
+                    match result with
+                    | Error _ ->
                         logger.LogWarning("Pipeline {PipelineId} not found", pipelineId)
                         return false
-                    | _ ->
-                        let pipeline = toPipeline result
+                    | Ok pipeline ->
                         return! startExecutor scope.ServiceProvider pipeline ct
             }
 

@@ -138,9 +138,10 @@ module Data =
     let getEditViewModel (scopeFactory: IServiceScopeFactory) (pipelineId: int) : Task<EditPipelineViewModel option> =
         task {
             use scope = scopeFactory.CreateScope()
-            let repo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let pipelinesRepo = scope.ServiceProvider.GetRequiredService<PipelineRepository.T>()
+            let stepsRepo = scope.ServiceProvider.GetRequiredService<PipelineStepRepository.T>()
             let registry = scope.ServiceProvider.GetRequiredService<Registry.T<TradingContext>>()
-            let! result = repo.GetById pipelineId CancellationToken.None
+            let! result = pipelinesRepo.GetById pipelineId CancellationToken.None
 
             match result with
             | Error err ->
@@ -155,7 +156,14 @@ module Data =
                 return Option.None
             | Ok pipeline ->
                 let allDefs = Registry.all registry
-                let existingKeys = pipeline.Steps |> List.map _.StepTypeKey |> Set.ofList
+                let! pipelineSteps = stepsRepo.GetByPipelineId pipelineId CancellationToken.None
+
+                let pipelineSteps =
+                    match pipelineSteps with
+                    | Error _ -> []
+                    | Ok steps -> steps
+
+                let existingKeys = pipelineSteps |> List.map _.StepTypeKey |> Set.ofList
 
                 let defs =
                     allDefs
@@ -170,7 +178,7 @@ module Data =
                         }
                     )
 
-                let sortedSteps = pipeline.Steps |> List.sortBy _.Order
+                let sortedSteps = pipelineSteps |> List.sortBy _.Order
                 let stepCount = sortedSteps.Length
 
                 let stepVms =
@@ -258,7 +266,7 @@ module Data =
 
             match result with
             | Error _ -> return Option.None
-            | Ok step when step.PipelineDetailsId <> pipelineId -> return Option.None
+            | Ok step when step.PipelineId <> pipelineId -> return Option.None
             | Ok step ->
                 match Registry.tryFind step.StepTypeKey registry with
                 | Option.None -> return Option.None
@@ -397,8 +405,7 @@ module Data =
                 let newStep: PipelineStep =
                     {
                         Id = 0
-                        PipelineDetailsId = pipelineId
-                        Pipeline = Unchecked.defaultof<Pipeline>
+                        PipelineId = pipelineId
                         StepTypeKey = stepTypeKey
                         Name = def.Name
                         Order = maxOrder + 1
@@ -428,7 +435,7 @@ module Data =
             let! result = repo.GetById stepId CancellationToken.None
 
             match result with
-            | Ok step when step.PipelineDetailsId <> pipelineId -> return Option.None
+            | Ok step when step.PipelineId <> pipelineId -> return Option.None
             | Ok step ->
                 let! _ = repo.SetEnabled stepId (not step.IsEnabled) CancellationToken.None
                 let! updatedResult = repo.GetById stepId CancellationToken.None
@@ -451,7 +458,7 @@ module Data =
 
             match stepResult with
             | Error _ -> return false
-            | Ok step when step.PipelineDetailsId <> pipelineId -> return false
+            | Ok step when step.PipelineId <> pipelineId -> return false
             | Ok _ ->
                 let! deleteResult = stepRepo.Delete stepId CancellationToken.None
                 return Result.isOk deleteResult
@@ -523,7 +530,7 @@ module Data =
                             Fields = []
                             Errors = [ "Step not found" ]
                         }
-            | Ok step when step.PipelineDetailsId <> pipelineId ->
+            | Ok step when step.PipelineId <> pipelineId ->
                 return
                     Error
                         {
