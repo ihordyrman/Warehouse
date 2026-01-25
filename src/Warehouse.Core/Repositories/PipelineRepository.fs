@@ -46,7 +46,7 @@ module PipelineRepository =
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
                 let! pipeline =
-                    db.QueryFirstOrDefaultAsync<Pipeline option>(
+                    db.QueryFirstOrDefaultAsync<Pipeline>(
                         CommandDefinition(
                             "SELECT * FROM pipelines WHERE id = @Id",
                             {| Id = id |},
@@ -54,13 +54,14 @@ module PipelineRepository =
                         )
                     )
 
-                match pipeline with
-                | Some pipeline ->
-                    logger.LogDebug("Retrieved pipeline {Id}", id)
-                    return Ok pipeline
-                | None ->
+                match box pipeline with
+                | null ->
                     logger.LogWarning("Pipeline {Id} not found", id)
                     return Result.Error(NotFound $"Pipeline with id {id}")
+                | _ ->
+                    logger.LogDebug("Retrieved pipeline {Id}", id)
+                    return Ok pipeline
+
             with ex ->
                 logger.LogError(ex, "Failed to get pipeline {Id}", id)
                 return Result.Error(Unexpected ex)

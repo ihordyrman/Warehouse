@@ -110,7 +110,6 @@ webapp.Services.AddHttpLogging(
 
 let app = webapp.Build()
 
-app.UseHttpLogging() |> ignore
 app.UseHttpsRedirection() |> ignore
 app.UseRouting() |> ignore
 app.UseDefaultFiles().UseStaticFiles() |> ignore

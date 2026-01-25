@@ -19,7 +19,7 @@ create table pipelines
     symbol             varchar(20)  not null,
     market_type        int          not null,
     enabled            boolean      not null default false,
-    execution_interval bigint       not null,
+    execution_interval interval     not null,
     last_executed_at   timestamp,
     status             int          not null,
     tags               jsonb        not null default '[]',

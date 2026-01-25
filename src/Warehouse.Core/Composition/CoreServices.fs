@@ -1,5 +1,7 @@
 namespace Warehouse.Core
 
+open System.Collections.Generic
+open System.Text.Json
 open Dapper
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
@@ -24,6 +26,27 @@ open Warehouse.Core.Repositories
 open Warehouse.Core.Workers
 
 module CoreServices =
+
+    type private StringListTypeHandler() =
+        inherit SqlMapper.TypeHandler<string list>()
+
+        override _.SetValue(parameter, value) = parameter.Value <- JsonSerializer.Serialize(value)
+
+        override _.Parse(value) =
+            match value with
+            | :? string as json when not (String.IsNullOrEmpty(json)) -> JsonSerializer.Deserialize<string list>(json)
+            | _ -> []
+
+    type private DictionaryStringStringTypeHandler() =
+        inherit SqlMapper.TypeHandler<Dictionary<string, string>>()
+
+        override _.SetValue(parameter, value) = parameter.Value <- JsonSerializer.Serialize(value)
+
+        override _.Parse(value) =
+            match value with
+            | :? string as json when not (String.IsNullOrEmpty(json)) ->
+                JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+            | _ -> Dictionary<string, string>()
 
     let private heartbeat (services: IServiceCollection) =
         services.AddSingleton<Heartbeat.T>(fun provider ->
@@ -154,9 +177,12 @@ module CoreServices =
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName))
         |> ignore
 
+        DefaultTypeMap.MatchNamesWithUnderscores <- true
+        SqlMapper.AddTypeHandler(StringListTypeHandler())
+        SqlMapper.AddTypeHandler(DictionaryStringStringTypeHandler())
+
         services.AddScoped<IDbConnection>(fun sp ->
             let settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value
-            DefaultTypeMap.MatchNamesWithUnderscores <- true
             new NpgsqlConnection(settings.ConnectionString)
         )
         |> ignore

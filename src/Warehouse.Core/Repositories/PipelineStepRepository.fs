@@ -61,7 +61,7 @@ module PipelineStepRepository =
 
                 let! results =
                     db.QueryAsync<PipelineStep>(
-                        "SELECT * FROM pipeline_steps WHERE pipeline_details_id = @PipelineId ORDER BY \"order\"",
+                        "SELECT * FROM pipeline_steps WHERE pipeline_id = @PipelineId ORDER BY \"order\"",
                         {| PipelineId = pipelineId |}
                     )
 
@@ -90,8 +90,8 @@ module PipelineStepRepository =
                     db.QuerySingleAsync<int>(
                         CommandDefinition(
                             """INSERT INTO pipeline_steps
-                           (pipeline_details_id, step_type_key, name, "order", is_enabled, parameters, created_at, updated_at)
-                           VALUES (@PipelineDetailsId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, now(), now())
+                           (pipeline_id, step_type_key, name, "order", is_enabled, parameters, created_at, updated_at)
+                           VALUES (@PipelineId, @StepTypeKey, @Name, @Order, @IsEnabled, @Parameters::jsonb, now(), now())
                            RETURNING id""",
                             step,
                             cancellationToken = cancellation
@@ -193,7 +193,7 @@ module PipelineStepRepository =
                 let! rowsAffected =
                     db.ExecuteAsync(
                         CommandDefinition(
-                            "DELETE FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
+                            "DELETE FROM pipeline_steps WHERE pipeline_id = @PipelineId",
                             {| PipelineId = pipelineId |},
                             cancellationToken = token
                         )
@@ -293,7 +293,7 @@ module PipelineStepRepository =
                     db.ExecuteAsync(
                         CommandDefinition(
                             // temp large offset
-                            "UPDATE pipeline_steps SET \"order\" = -\"order\" - 10000 WHERE pipeline_details_id = @PipelineId",
+                            "UPDATE pipeline_steps SET \"order\" = -\"order\" - 10000 WHERE pipeline_id = @PipelineId",
                             {| PipelineId = pipelineId |},
                             cancellationToken = cancellation
                         )
@@ -303,7 +303,7 @@ module PipelineStepRepository =
                     let! _ =
                         db.ExecuteAsync(
                             CommandDefinition(
-                                "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id AND pipeline_details_id = @PipelineId",
+                                "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id AND pipeline_id = @PipelineId",
                                 {| Order = i; UpdatedAt = now; Id = stepId; PipelineId = pipelineId |},
                                 cancellationToken = cancellation
                             )
@@ -332,7 +332,7 @@ module PipelineStepRepository =
                 let! result =
                     db.QuerySingleOrDefaultAsync<Nullable<int>>(
                         CommandDefinition(
-                            "SELECT MAX(\"order\") FROM pipeline_steps WHERE pipeline_details_id = @PipelineId",
+                            "SELECT MAX(\"order\") FROM pipeline_steps WHERE pipeline_id = @PipelineId",
                             {| PipelineId = pipelineId |},
                             cancellationToken = cancellation
                         )

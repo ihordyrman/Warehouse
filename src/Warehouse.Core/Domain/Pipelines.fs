@@ -25,7 +25,8 @@ type Pipeline =
         UpdatedAt: DateTime
     }
 
-and PipelineStep =
+[<CLIMutable>]
+type PipelineStep =
     {
         Id: int
         PipelineId: int

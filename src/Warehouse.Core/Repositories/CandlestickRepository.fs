@@ -190,7 +190,7 @@ module CandlestickRepository =
                             candlesticks
                         )
 
-                    logger.LogInformation("Saved {Count} candlesticks", result)
+                    logger.LogDebug("Saved {Count} candlesticks", result)
                     return Ok result
                 with ex ->
                     logger.LogError(ex, "Failed to save {Count} candlesticks", candlesticks.Length)
