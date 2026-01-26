@@ -22,7 +22,7 @@ module PipelineStepRepository =
             Delete: int -> CancellationToken -> Task<Result<unit, ServiceError>>
             DeleteByPipelineId: int -> CancellationToken -> Task<Result<int, ServiceError>>
             SetEnabled: int -> bool -> CancellationToken -> Task<Result<unit, ServiceError>>
-            UpdateOrder: int -> int -> CancellationToken -> Task<Result<unit, ServiceError>>
+            SwapOrders: PipelineStep -> PipelineStep -> CancellationToken -> Task<Result<unit, ServiceError>>
             ReorderSteps: int -> int list -> CancellationToken -> Task<Result<unit, ServiceError>>
             GetMaxOrder: int -> CancellationToken -> Task<Result<int, ServiceError>>
         }
@@ -240,11 +240,11 @@ module PipelineStepRepository =
                 return Result.Error(Unexpected ex)
         }
 
-    let private updateOrder
+    let private swapOrders
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
-        (stepId: int)
-        (order: int)
+        (step1: PipelineStep)
+        (step2: PipelineStep)
         (cancellation: CancellationToken)
         =
         task {
@@ -257,20 +257,32 @@ module PipelineStepRepository =
                 let! rowsAffected =
                     db.ExecuteAsync(
                         CommandDefinition(
-                            "UPDATE pipeline_steps SET \"order\" = @Order, updated_at = @UpdatedAt WHERE id = @Id",
-                            {| Order = order; UpdatedAt = now; Id = stepId |},
+                            """UPDATE pipeline_steps
+                               SET "order" = CASE
+                                   WHEN id = @Id1 THEN @Order2
+                                   WHEN id = @Id2 THEN @Order1
+                               END,
+                               updated_at = @UpdatedAt
+                               WHERE id IN (@Id1, @Id2)""",
+                            {|
+                                Id1 = step1.Id
+                                Order1 = step1.Order
+                                Id2 = step2.Id
+                                Order2 = step2.Order
+                                UpdatedAt = now
+                            |},
                             cancellationToken = cancellation
                         )
                     )
 
                 if rowsAffected > 0 then
-                    logger.LogDebug("Updated order for step {Id} to {Order}", stepId, order)
+                    logger.LogDebug("Swapped orders for steps {Id1} and {Id2}", step1.Id, step2.Id)
                     return Ok()
                 else
-                    logger.LogWarning("Step {Id} not found for order update", stepId)
-                    return Result.Error(NotFound $"Step with id {stepId}")
+                    logger.LogWarning("Steps {Id1} or {Id2} not found for order swap", step1.Id, step2.Id)
+                    return Result.Error(NotFound $"Steps with ids {step1.Id} or {step2.Id} not found")
             with ex ->
-                logger.LogError(ex, "Failed to update order for step {Id}", stepId)
+                logger.LogError(ex, "Failed to update order for steps {Id1} and {Id2}", step1.Id, step2.Id)
                 return Result.Error(Unexpected ex)
         }
 
@@ -358,7 +370,7 @@ module PipelineStepRepository =
             Delete = deleteStep scopeFactory logger
             DeleteByPipelineId = deleteByPipelineId scopeFactory logger
             SetEnabled = setEnabled scopeFactory logger
-            UpdateOrder = updateOrder scopeFactory logger
+            SwapOrders = swapOrders scopeFactory logger
             ReorderSteps = reorderSteps scopeFactory logger
             GetMaxOrder = getMaxOrder scopeFactory logger
         }

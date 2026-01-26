@@ -497,8 +497,7 @@ module Data =
                         let current = sortedSteps.[idx]
                         let target = sortedSteps.[tIdx]
 
-                        let! _ = repo.UpdateOrder current.Id target.Order CancellationToken.None
-                        let! _ = repo.UpdateOrder target.Id current.Order CancellationToken.None
+                        let! _ = repo.SwapOrders target current CancellationToken.None
 
                         return! getSteps scopeFactory pipelineId
         }

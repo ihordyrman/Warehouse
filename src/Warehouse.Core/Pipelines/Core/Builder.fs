@@ -38,9 +38,8 @@ module Builder =
                 | _ -> None
             )
 
-        if not (List.isEmpty errors) then
-            Error errors
-        else
+        match errors with
+        | [] ->
             Ok(
                 result
                 |> List.choose (
@@ -49,3 +48,4 @@ module Builder =
                     | _ -> None
                 )
             )
+        | _ -> Error errors

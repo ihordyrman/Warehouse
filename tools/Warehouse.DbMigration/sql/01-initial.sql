@@ -76,11 +76,12 @@ create table pipeline_steps
     is_enabled    boolean      not null default true,
     parameters    jsonb        not null default '{}',
     created_at    timestamp    not null,
-    updated_at    timestamp    not null
-);
+    updated_at    timestamp    not null,
 
-create unique index ix_pipeline_steps_pipeline_order
-    on pipeline_steps (pipeline_id, "order");
+    constraint uq_pipeline_steps_pipeline_order
+        unique (pipeline_id, "order")
+            deferrable initially immediate
+);
 
 create table orders
 (
