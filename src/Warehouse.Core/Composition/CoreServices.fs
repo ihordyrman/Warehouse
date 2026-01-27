@@ -56,12 +56,19 @@ module CoreServices =
         )
         |> ignore
 
+    let private orderRepository (services: IServiceCollection) =
+        services.AddScoped<OrderRepository.T>(fun provider ->
+            let scopeFactory = provider.GetRequiredService<IServiceScopeFactory>()
+            OrderRepository.create scopeFactory
+        )
+        |> ignore
+
     let private orderManager (services: IServiceCollection) =
         services.AddScoped<OrdersManager.T>(fun provider ->
             let logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("OrderManager")
-            let db = provider.GetRequiredService<IDbConnection>()
+            let orderRepo = provider.GetRequiredService<OrderRepository.T>()
             let okxExecutor = provider.GetRequiredService<OrderExecutor.T>()
-            OrdersManager.create db [ okxExecutor ] logger
+            OrdersManager.create orderRepo [ okxExecutor ] logger
         )
         |> ignore
 
@@ -244,6 +251,7 @@ module CoreServices =
             okxAdapter
             okxWorker
             orderExecutor
+            orderRepository
             orderManager
             pipelineOrchestrator
             webSocketClient
@@ -265,6 +273,7 @@ module CoreServices =
             httpClient
             okxAdapter
             orderExecutor
+            orderRepository
             orderManager
         ]
         |> List.iter (fun addService -> addService services)

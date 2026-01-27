@@ -1,13 +1,12 @@
 namespace Warehouse.Core.Markets.Services
 
 open System
-open System.Data
 open System.Threading
 open System.Threading.Tasks
-open Dapper.FSharp.PostgreSQL
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 open Warehouse.Core.Markets.Abstractions
+open Warehouse.Core.Repositories
 open Warehouse.Core.Shared
 
 [<CLIMutable>]
@@ -50,83 +49,13 @@ type UpdateOrderRequest =
 
 module OrdersManager =
     open Errors
-    let private orders = table'<Order> "orders"
-
-    let private findById (db: IDbConnection) (orderId: int64) : Task<Order option> =
-        task {
-            let! results =
-                select {
-                    for order in orders do
-                        where (order.Id = orderId)
-                        take 1
-                }
-                |> db.SelectAsync<Order>
-
-            return results |> Seq.tryHead
-        }
-
-    let private findByExchangeId
-        (db: IDbConnection)
-        (exchangeOrderId: string)
-        (market: MarketType)
-        : Task<Order option>
-        =
-        task {
-            let marketInt = int market
-
-            let! results =
-                select {
-                    for order in orders do
-                        where (order.ExchangeOrderId = exchangeOrderId && int order.MarketType = marketInt)
-                        take 1
-                }
-                |> db.SelectAsync<Order>
-
-            return results |> Seq.tryHead
-        }
-
-    let private insertOrder (db: IDbConnection) (order: Order) : Task<Order> =
-        task {
-            let! _ =
-                insert {
-                    into orders
-                    value order
-                }
-                |> db.InsertAsync
-
-            return order
-        }
-
-    let private updateOrder (db: IDbConnection) (order: Order) : Task<unit> =
-        task {
-            let! _ =
-                update {
-                    for o in orders do
-                        setColumn o.Status order.Status
-                        setColumn o.Quantity order.Quantity
-                        setColumn o.Price order.Price
-                        setColumn o.StopPrice order.StopPrice
-                        setColumn o.TakeProfit order.TakeProfit
-                        setColumn o.StopLoss order.StopLoss
-                        setColumn o.ExchangeOrderId order.ExchangeOrderId
-                        setColumn o.PlacedAt order.PlacedAt
-                        setColumn o.ExecutedAt order.ExecutedAt
-                        setColumn o.CancelledAt order.CancelledAt
-                        setColumn o.Fee order.Fee
-                        setColumn o.UpdatedAt DateTime.UtcNow
-                        where (o.Id = order.Id)
-                }
-                |> db.UpdateAsync
-
-            return ()
-        }
 
     let createOrder
-        (db: IDbConnection)
+        (repo: OrderRepository.T)
         (logger: ILogger)
         (request: CreateOrderRequest)
-        : Task<Result<Order, ServiceError>>
-        =
+        (token: CancellationToken)
+        : Task<Result<Order, ServiceError>> =
         task {
             try
                 let now = DateTime.UtcNow
@@ -136,7 +65,7 @@ module OrdersManager =
                         Id = 0L
                         PipelineId = request.PipelineId |> Option.toNullable
                         MarketType = request.MarketType
-                        ExchangeOrderId = null
+                        ExchangeOrderId = ""
                         Symbol = request.Symbol
                         Side = request.Side
                         Status = OrderStatus.Pending
@@ -153,7 +82,7 @@ module OrdersManager =
                         UpdatedAt = now
                     }
 
-                let! inserted = insertOrder db order
+                let! inserted = repo.Insert order token
 
                 logger.LogInformation(
                     "Created order {OrderId} for {Symbol} {Side} {Quantity}",
@@ -170,16 +99,15 @@ module OrdersManager =
         }
 
     let executeOrder
-        (db: IDbConnection)
+        (repo: OrderRepository.T)
         (providers: OrderExecutor.T list)
         (logger: ILogger)
         (orderId: int64)
-        (_: CancellationToken)
-        : Task<Result<Order, ServiceError>>
-        =
+        (token: CancellationToken)
+        : Task<Result<Order, ServiceError>> =
         task {
             try
-                match! findById db orderId with
+                match! repo.GetById orderId token with
                 | None -> return Error(NotFound $"Order {orderId}")
                 | Some order when order.Status <> OrderStatus.Pending ->
                     return Error(ApiError($"Cannot execute order in status {order.Status}", None))
@@ -188,12 +116,17 @@ module OrdersManager =
                     match OrderExecutor.tryFind order.MarketType providers with
                     | None -> return Error(NoProvider order.MarketType)
                     | Some provider ->
-                        let! result = OrderExecutor.executeOrder order CancellationToken.None provider
+                        let! result = OrderExecutor.executeOrder order token provider
 
                         match result with
                         | Error err ->
-                            let failedOrder = { order with Status = OrderStatus.Failed; UpdatedAt = DateTime.UtcNow }
-                            do! updateOrder db failedOrder
+                            let failedOrder =
+                                { order with
+                                    Status = OrderStatus.Failed
+                                    UpdatedAt = DateTime.UtcNow
+                                }
+
+                            do! repo.Update failedOrder token
                             return Error err
                         | Ok exchangeOrderId ->
                             let placedOrder =
@@ -204,7 +137,7 @@ module OrdersManager =
                                     UpdatedAt = DateTime.UtcNow
                                 }
 
-                            do! updateOrder db placedOrder
+                            do! repo.Update placedOrder token
 
                             logger.LogInformation(
                                 "Placed order {OrderId} on {Market} with exchange ID {ExchangeOrderId}",
@@ -220,24 +153,29 @@ module OrdersManager =
         }
 
     let updateOrderFields
-        (db: IDbConnection)
+        (repo: OrderRepository.T)
         (logger: ILogger)
         (orderId: int64)
         (request: UpdateOrderRequest)
-        : Task<Result<Order, ServiceError>>
-        =
+        (token: CancellationToken)
+        : Task<Result<Order, ServiceError>> =
         task {
             try
-                match! findById db orderId with
+                match! repo.GetById orderId token with
                 | None -> return Error(NotFound $"Order {orderId}")
-                | Some order when order.Status <> OrderStatus.Placed && order.Status <> OrderStatus.PartiallyFilled ->
+                | Some order when
+                    order.Status <> OrderStatus.Placed
+                    && order.Status <> OrderStatus.PartiallyFilled
+                    ->
                     return Error(ApiError($"Cannot update order in status {order.Status}", None))
                 | Some order ->
                     let updated =
                         { order with
                             Quantity = request.Quantity |> Option.defaultValue order.Quantity
                             Price =
-                                request.Price |> Option.toNullable |> (fun x -> if x.HasValue then x else order.Price)
+                                request.Price
+                                |> Option.toNullable
+                                |> (fun x -> if x.HasValue then x else order.Price)
                             StopPrice =
                                 request.StopPrice
                                 |> Option.toNullable
@@ -253,7 +191,7 @@ module OrdersManager =
                             UpdatedAt = DateTime.UtcNow
                         }
 
-                    do! updateOrder db updated
+                    do! repo.Update updated token
                     logger.LogInformation("Updated order {OrderId}", orderId)
                     return Ok updated
             with ex ->
@@ -262,15 +200,15 @@ module OrdersManager =
         }
 
     let cancelOrder
-        (db: IDbConnection)
+        (repo: OrderRepository.T)
         (logger: ILogger)
         (orderId: int64)
         (reason: string option)
-        : Task<Result<Order, ServiceError>>
-        =
+        (token: CancellationToken)
+        : Task<Result<Order, ServiceError>> =
         task {
             try
-                match! findById db orderId with
+                match! repo.GetById orderId token with
                 | None -> return Error(NotFound $"Order {orderId}")
                 | Some order when order.Status = OrderStatus.Cancelled || order.Status = OrderStatus.Filled ->
                     return Error(ApiError($"Cannot cancel order in status {order.Status}", None))
@@ -283,7 +221,7 @@ module OrdersManager =
                             UpdatedAt = DateTime.UtcNow
                         }
 
-                    do! updateOrder db cancelled
+                    do! repo.Update cancelled token
                     logger.LogInformation("Cancelled order {OrderId} with reason: {Reason}", orderId, reason)
                     return Ok cancelled
             with ex ->
@@ -291,127 +229,88 @@ module OrdersManager =
                 return Error(Unexpected ex)
         }
 
-    let getOrder (db: IDbConnection) (orderId: int64) : Task<Order option> = findById db orderId
+    let getOrder (repo: OrderRepository.T) (orderId: int64) (token: CancellationToken) : Task<Order option> =
+        repo.GetById orderId token
 
-    let getOrderByExchangeId (db: IDbConnection) (exchangeOrderId: string) (market: MarketType) : Task<Order option> =
-        findByExchangeId db exchangeOrderId market
+    let getOrderByExchangeId
+        (repo: OrderRepository.T)
+        (exchangeOrderId: string)
+        (market: MarketType)
+        (token: CancellationToken)
+        : Task<Order option> =
+        repo.GetByExchangeId exchangeOrderId market token
 
-    let getOrders (db: IDbConnection) (pipelineId: int) (status: OrderStatus option) : Task<Order list> =
-        task {
-            let! results =
-                match status with
-                | Some status ->
-                    select {
-                        for order in orders do
-                            where (order.PipelineId = Nullable pipelineId && order.Status = status)
-                            orderByDescending order.CreatedAt
-                    }
-                    |> db.SelectAsync<Order>
-                | None ->
-                    select {
-                        for order in orders do
-                            where (order.PipelineId = Nullable pipelineId)
-                            orderByDescending order.CreatedAt
-                    }
-                    |> db.SelectAsync<Order>
-
-            return results |> Seq.toList
-        }
+    let getOrders
+        (repo: OrderRepository.T)
+        (pipelineId: int)
+        (status: OrderStatus option)
+        (token: CancellationToken)
+        : Task<Order list> =
+        repo.GetByPipeline pipelineId status token
 
     let getOrderHistory
-        (db: IDbConnection)
+        (repo: OrderRepository.T)
         (skip: int)
         (take: int)
         (filter: OrderHistoryFilter option)
-        : Task<Order list>
-        =
+        (token: CancellationToken)
+        : Task<Order list> =
         task {
-            let! results =
-                match filter with
-                | None ->
-                    let skipCount = skip
-                    let takeCount = take
-
-                    select {
-                        for order in orders do
-                            orderByDescending order.CreatedAt
-                            skip skipCount
-                            take takeCount
-                    }
-                    |> db.SelectAsync<Order>
-
-                | Some filter ->
-                    select {
-                        for o in orders do
-                            orderByDescending o.CreatedAt
-                    }
-                    |> db.SelectAsync<Order>
+            let! orders = repo.GetHistory skip take token
 
             match filter with
-            | None -> return results |> Seq.toList
+            | None -> return orders
             | Some filter ->
                 return
-                    results
-                    |> Seq.filter (fun x ->
+                    orders
+                    |> List.filter (fun x ->
                         (filter.PipelineId
                          |> Option.map (fun id -> x.PipelineId = Nullable id)
                          |> Option.defaultValue true)
-                        && (filter.MarketType |> Option.map (fun y -> x.MarketType = y) |> Option.defaultValue true)
+                        && (filter.MarketType
+                            |> Option.map (fun y -> x.MarketType = y)
+                            |> Option.defaultValue true)
                         && (filter.Symbol |> Option.map (fun y -> x.Symbol = y) |> Option.defaultValue true)
                         && (filter.Status |> Option.map (fun y -> x.Status = y) |> Option.defaultValue true)
                         && (filter.Side |> Option.map (fun y -> x.Side = y) |> Option.defaultValue true)
-                        && (filter.FromDate |> Option.map (fun y -> x.CreatedAt >= y) |> Option.defaultValue true)
-                        && (filter.ToDate |> Option.map (fun y -> x.CreatedAt <= y) |> Option.defaultValue true)
+                        && (filter.FromDate
+                            |> Option.map (fun y -> x.CreatedAt >= y)
+                            |> Option.defaultValue true)
+                        && (filter.ToDate
+                            |> Option.map (fun y -> x.CreatedAt <= y)
+                            |> Option.defaultValue true)
                     )
-                    |> Seq.skip skip
-                    |> Seq.truncate take
-                    |> Seq.toList
         }
 
-    let getTotalExposure (db: IDbConnection) (market: MarketType option) : Task<decimal> =
-        task {
-            let! results =
-                select {
-                    for order in orders do
-                        where (
-                            order.Status = OrderStatus.Placed
-                            || order.Status = OrderStatus.PartiallyFilled
-                            || order.Status = OrderStatus.Filled
-                        )
-                }
-                |> db.SelectAsync<Order>
-
-            return
-                results
-                |> Seq.filter (fun x -> market |> Option.map (fun m -> x.MarketType = m) |> Option.defaultValue true)
-                |> Seq.sumBy (fun x ->
-                    let price = if x.Price.HasValue then x.Price.Value else 0m
-                    x.Quantity * price
-                )
-        }
+    let getTotalExposure
+        (repo: OrderRepository.T)
+        (market: MarketType option)
+        (token: CancellationToken)
+        : Task<decimal> =
+        repo.GetTotalExposure market token
 
     type T =
         {
-            createOrder: CreateOrderRequest -> Task<Result<Order, ServiceError>>
+            createOrder: CreateOrderRequest -> CancellationToken -> Task<Result<Order, ServiceError>>
             executeOrder: int64 -> CancellationToken -> Task<Result<Order, ServiceError>>
-            updateOrder: int64 -> UpdateOrderRequest -> Task<Result<Order, ServiceError>>
-            cancelOrder: int64 -> string option -> Task<Result<Order, ServiceError>>
-            getOrder: int64 -> Task<Order option>
-            getOrders: int -> OrderStatus option -> Task<Order list>
-            getOrderHistory: int -> int -> OrderHistoryFilter option -> Task<Order list>
-            getOrderByExchangeId: string -> MarketType -> Task<Order option>
-            getTotalExposure: MarketType option -> Task<decimal>
+            updateOrder: int64 -> UpdateOrderRequest -> CancellationToken -> Task<Result<Order, ServiceError>>
+            cancelOrder: int64 -> string option -> CancellationToken -> Task<Result<Order, ServiceError>>
+            getOrder: int64 -> CancellationToken -> Task<Order option>
+            getOrders: int -> OrderStatus option -> CancellationToken -> Task<Order list>
+            getOrderHistory: int -> int -> OrderHistoryFilter option -> CancellationToken -> Task<Order list>
+            getOrderByExchangeId: string -> MarketType -> CancellationToken -> Task<Order option>
+            getTotalExposure: MarketType option -> CancellationToken -> Task<decimal>
         }
 
-    let create (db: IDbConnection) (executors: OrderExecutor.T list) (logger: ILogger) : T =
+    let create (repo: OrderRepository.T) (executors: OrderExecutor.T list) (logger: ILogger) : T =
         {
-            createOrder = createOrder db logger
-            executeOrder = executeOrder db executors logger
-            updateOrder = updateOrderFields db logger
-            cancelOrder = cancelOrder db logger
-            getOrder = getOrder db
-            getOrders = getOrders db
-            getOrderHistory = getOrderHistory db
-            getOrderByExchangeId = getOrderByExchangeId db
-            getTotalExposure = getTotalExposure db
+            createOrder = createOrder repo logger
+            executeOrder = executeOrder repo executors logger
+            updateOrder = updateOrderFields repo logger
+            cancelOrder = cancelOrder repo logger
+            getOrder = getOrder repo
+            getOrders = getOrders repo
+            getOrderHistory = getOrderHistory repo
+            getOrderByExchangeId = getOrderByExchangeId repo
+            getTotalExposure = getTotalExposure repo
         }

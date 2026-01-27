@@ -22,6 +22,7 @@
         <Compile Include="Repositories\CandlestickRepository.fs" />
         <Compile Include="Repositories\MarketRepository.fs" />
         <Compile Include="Repositories\PositionRepository.fs" />
+        <Compile Include="Repositories\OrderRepository.fs" />
 
         <Compile Include="Markets\Abstractions\Types.fs" />
         <Compile Include="Markets\Abstractions\BalanceProvider.fs" />
@@ -51,6 +52,8 @@
         <Compile Include="Pipelines\Core\Runner.fs" />
 
         <Compile Include="Pipelines\Trading\Context.fs" />
+        <Compile Include="Pipelines\Trading\CheckPosition.fs" />
+        <Compile Include="Pipelines\Trading\EntryStep.fs" />
         <Compile Include="Pipelines\Trading\TradingSteps.fs" />
         <Compile Include="Pipelines\Orchestration\Executor.fs" />
         <Compile Include="Pipelines\Orchestration\Orchestrator.fs" />
