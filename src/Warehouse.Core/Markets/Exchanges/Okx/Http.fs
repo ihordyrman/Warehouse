@@ -108,11 +108,19 @@ module Http =
                     return Error(ApiError($"HTTP {int response.StatusCode}: {err}", Some(int response.StatusCode)))
                 else
                     let! json = response.Content.ReadAsStringAsync()
-                    let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T>>(json, jsonOpts)
 
-                    match okxResp.Data with
-                    | Some data -> return Ok data
-                    | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
+                    try
+                        let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T>>(json, jsonOpts)
+
+                        match okxResp.Data with
+                        | Some data -> return Ok data
+                        | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
+                    with _ ->
+                        let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T[]>>(json, jsonOpts)
+
+                        match okxResp.Data with
+                        | Some data -> return Ok(data |> Array.head)
+                        | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
             finally
                 clearAuthHeaders client
         }

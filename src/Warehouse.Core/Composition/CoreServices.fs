@@ -13,7 +13,6 @@ open System
 open System.Data
 open System.Net
 open System.Net.Http
-open Warehouse.Core.Domain
 open Warehouse.Core.Infrastructure
 open Warehouse.Core.Markets.Abstractions
 open Warehouse.Core.Markets.Exchanges.Okx
@@ -199,7 +198,7 @@ module CoreServices =
             .AddHttpClient("Okx")
             .ConfigureHttpClient(fun (client: HttpClient) ->
                 client.BaseAddress <- Uri("https://www.okx.com/")
-                client.Timeout <- TimeSpan.FromSeconds(30.0)
+                client.Timeout <- TimeSpan.FromSeconds(300.0)
                 client.DefaultRequestHeaders.Add("User-Agent", "Warehouse/1.0")
             )
             .ConfigurePrimaryHttpMessageHandler(

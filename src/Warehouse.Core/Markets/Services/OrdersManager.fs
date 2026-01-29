@@ -55,7 +55,8 @@ module OrdersManager =
         (logger: ILogger)
         (request: CreateOrderRequest)
         (token: CancellationToken)
-        : Task<Result<Order, ServiceError>> =
+        : Task<Result<Order, ServiceError>>
+        =
         task {
             try
                 let now = DateTime.UtcNow
@@ -83,6 +84,7 @@ module OrdersManager =
                     }
 
                 let! inserted = repo.Insert order token
+                let! order = repo.GetByPipeline inserted.PipelineId.Value (Some OrderStatus.Pending) token
 
                 logger.LogInformation(
                     "Created order {OrderId} for {Symbol} {Side} {Quantity}",
@@ -92,7 +94,7 @@ module OrdersManager =
                     inserted.Quantity
                 )
 
-                return Ok inserted
+                return Ok(order |> List.sortBy _.CreatedAt |> List.head)
             with ex ->
                 logger.LogError(ex, "Failed to create order")
                 return Error(Unexpected ex)
@@ -104,7 +106,8 @@ module OrdersManager =
         (logger: ILogger)
         (orderId: int64)
         (token: CancellationToken)
-        : Task<Result<Order, ServiceError>> =
+        : Task<Result<Order, ServiceError>>
+        =
         task {
             try
                 match! repo.GetById orderId token with
@@ -120,11 +123,7 @@ module OrdersManager =
 
                         match result with
                         | Error err ->
-                            let failedOrder =
-                                { order with
-                                    Status = OrderStatus.Failed
-                                    UpdatedAt = DateTime.UtcNow
-                                }
+                            let failedOrder = { order with Status = OrderStatus.Failed; UpdatedAt = DateTime.UtcNow }
 
                             do! repo.Update failedOrder token
                             return Error err
@@ -158,24 +157,20 @@ module OrdersManager =
         (orderId: int64)
         (request: UpdateOrderRequest)
         (token: CancellationToken)
-        : Task<Result<Order, ServiceError>> =
+        : Task<Result<Order, ServiceError>>
+        =
         task {
             try
                 match! repo.GetById orderId token with
                 | None -> return Error(NotFound $"Order {orderId}")
-                | Some order when
-                    order.Status <> OrderStatus.Placed
-                    && order.Status <> OrderStatus.PartiallyFilled
-                    ->
+                | Some order when order.Status <> OrderStatus.Placed && order.Status <> OrderStatus.PartiallyFilled ->
                     return Error(ApiError($"Cannot update order in status {order.Status}", None))
                 | Some order ->
                     let updated =
                         { order with
                             Quantity = request.Quantity |> Option.defaultValue order.Quantity
                             Price =
-                                request.Price
-                                |> Option.toNullable
-                                |> (fun x -> if x.HasValue then x else order.Price)
+                                request.Price |> Option.toNullable |> (fun x -> if x.HasValue then x else order.Price)
                             StopPrice =
                                 request.StopPrice
                                 |> Option.toNullable
@@ -205,7 +200,8 @@ module OrdersManager =
         (orderId: int64)
         (reason: string option)
         (token: CancellationToken)
-        : Task<Result<Order, ServiceError>> =
+        : Task<Result<Order, ServiceError>>
+        =
         task {
             try
                 match! repo.GetById orderId token with
@@ -237,7 +233,8 @@ module OrdersManager =
         (exchangeOrderId: string)
         (market: MarketType)
         (token: CancellationToken)
-        : Task<Order option> =
+        : Task<Order option>
+        =
         repo.GetByExchangeId exchangeOrderId market token
 
     let getOrders
@@ -245,7 +242,8 @@ module OrdersManager =
         (pipelineId: int)
         (status: OrderStatus option)
         (token: CancellationToken)
-        : Task<Order list> =
+        : Task<Order list>
+        =
         repo.GetByPipeline pipelineId status token
 
     let getOrderHistory
@@ -254,7 +252,8 @@ module OrdersManager =
         (take: int)
         (filter: OrderHistoryFilter option)
         (token: CancellationToken)
-        : Task<Order list> =
+        : Task<Order list>
+        =
         task {
             let! orders = repo.GetHistory skip take token
 
@@ -267,18 +266,12 @@ module OrdersManager =
                         (filter.PipelineId
                          |> Option.map (fun id -> x.PipelineId = Nullable id)
                          |> Option.defaultValue true)
-                        && (filter.MarketType
-                            |> Option.map (fun y -> x.MarketType = y)
-                            |> Option.defaultValue true)
+                        && (filter.MarketType |> Option.map (fun y -> x.MarketType = y) |> Option.defaultValue true)
                         && (filter.Symbol |> Option.map (fun y -> x.Symbol = y) |> Option.defaultValue true)
                         && (filter.Status |> Option.map (fun y -> x.Status = y) |> Option.defaultValue true)
                         && (filter.Side |> Option.map (fun y -> x.Side = y) |> Option.defaultValue true)
-                        && (filter.FromDate
-                            |> Option.map (fun y -> x.CreatedAt >= y)
-                            |> Option.defaultValue true)
-                        && (filter.ToDate
-                            |> Option.map (fun y -> x.CreatedAt <= y)
-                            |> Option.defaultValue true)
+                        && (filter.FromDate |> Option.map (fun y -> x.CreatedAt >= y) |> Option.defaultValue true)
+                        && (filter.ToDate |> Option.map (fun y -> x.CreatedAt <= y) |> Option.defaultValue true)
                     )
         }
 
@@ -286,7 +279,8 @@ module OrdersManager =
         (repo: OrderRepository.T)
         (market: MarketType option)
         (token: CancellationToken)
-        : Task<decimal> =
+        : Task<decimal>
+        =
         repo.GetTotalExposure market token
 
     type T =

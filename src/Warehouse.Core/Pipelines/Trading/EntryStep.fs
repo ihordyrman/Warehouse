@@ -12,7 +12,7 @@ open Warehouse.Core.Pipelines.Trading
 module EntryStep =
     let entryStep: StepDefinition<TradingContext> =
         let create (params': ValidatedParams) (services: IServiceProvider) : Step<TradingContext> =
-            let tradeAmount = params' |> ValidatedParams.getDecimal "tradeAmount" 100m
+            let tradeAmount = params' |> ValidatedParams.getDecimal "tradeAmount" 1000m
 
             fun ctx ct ->
                 task {
@@ -21,15 +21,13 @@ module EntryStep =
                         use scope = services.CreateScope()
                         let orderManager = scope.ServiceProvider.GetRequiredService<OrdersManager.T>()
 
-                        let quantity = tradeAmount / ctx.CurrentPrice
-
                         let request: CreateOrderRequest =
                             {
                                 PipelineId = Some ctx.PipelineId
                                 MarketType = ctx.MarketType
                                 Symbol = ctx.Symbol
                                 Side = OrderSide.Buy
-                                Quantity = quantity
+                                Quantity = tradeAmount
                                 Price = Option.None
                                 StopPrice = Option.None
                                 TakeProfit = Option.None
@@ -40,8 +38,17 @@ module EntryStep =
                         let! result = orderManager.createOrder request ct
 
                         match result with
-                        | Ok order -> return Continue(ctx, $"Order {order.Id} placed")
-                        | Error err -> return Fail $"Order failed: {err}"
+                        | Ok order ->
+                            // temporary
+                            let! _ = orderManager.executeOrder order.Id ct
+                            let ctx' = { ctx with ActiveOrderId = Some(order.Id.ToString()) }
+
+                            return
+                                Continue(
+                                    ctx',
+                                    $"Created order {order.Id} for {tradeAmount:F8} {ctx.Symbol} at approx. {ctx.CurrentPrice:F2} USDT"
+                                )
+                        | Error err -> return Fail $"Order creation failed: {err}"
                     | _ -> return Continue(ctx, "Already have an active order or action in progress")
                 }
 

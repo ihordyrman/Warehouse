@@ -26,9 +26,9 @@ module OrderExecutor =
             Size = order.Quantity.ToString(CultureInfo.InvariantCulture)
             Price = if isLimitOrder then Some(order.Price.Value.ToString(CultureInfo.InvariantCulture)) else None
             ClientOrderId = Some(order.Id.ToString(CultureInfo.InvariantCulture))
-            Tag = None
+            Tag = Some (order.Id.ToString())
             ReduceOnly = None
-            TargetCurrency = None
+            TargetCurrency =  None
         }
 
     let create (http: Http.T) (logger: ILogger) : OrderExecutor.T =
