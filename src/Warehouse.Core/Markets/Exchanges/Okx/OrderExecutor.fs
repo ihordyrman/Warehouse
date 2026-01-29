@@ -26,9 +26,9 @@ module OrderExecutor =
             Size = order.Quantity.ToString(CultureInfo.InvariantCulture)
             Price = if isLimitOrder then Some(order.Price.Value.ToString(CultureInfo.InvariantCulture)) else None
             ClientOrderId = Some(order.Id.ToString(CultureInfo.InvariantCulture))
-            Tag = Some (order.Id.ToString())
+            Tag = Some(order.Id.ToString())
             ReduceOnly = None
-            TargetCurrency =  None
+            TargetCurrency = None
         }
 
     let create (http: Http.T) (logger: ILogger) : OrderExecutor.T =
@@ -50,13 +50,16 @@ module OrderExecutor =
                 let! result = http.placeOrder request
 
                 match result with
-                | Ok response when response.IsSuccess ->
+                | Ok [| response |] when response.IsSuccess ->
                     logger.LogInformation("Order placed: {OrderId}", response.OrderId)
                     return Ok response.OrderId
-                | Ok response ->
+                | Ok [| response |] ->
                     logger.LogError("OKX rejected: {Message}", response.StatusMessage)
                     return Error(ApiError(response.StatusMessage, Some(int response.StatusCode)))
                 | Error err -> return Error err
+                | _ ->
+                    logger.LogError("Unexpected response from OKX when placing order")
+                    return Error(ApiError("Unexpected response from OKX", None))
             }
 
         OrderExecutor.Okx executeOrder

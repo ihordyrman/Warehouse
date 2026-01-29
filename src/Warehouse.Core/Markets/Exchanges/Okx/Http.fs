@@ -36,7 +36,7 @@ module Http =
             getAccountBalance: string option -> Task<Result<OkxAccountBalance[], ServiceError>>
             getAssetsValuation: string option -> Task<Result<OkxAssetsValuation[], ServiceError>>
             getCandlesticks: string -> CandlestickParams -> Task<Result<OkxCandlestick[], ServiceError>>
-            placeOrder: OkxPlaceOrderRequest -> Task<Result<OkxPlaceOrderResponse, ServiceError>>
+            placeOrder: OkxPlaceOrderRequest -> Task<Result<OkxPlaceOrderResponse[], ServiceError>>
         }
 
     let get endpoint = { Endpoint = endpoint; Method = Get; Parameters = Map.empty; Body = None }
@@ -108,19 +108,11 @@ module Http =
                     return Error(ApiError($"HTTP {int response.StatusCode}: {err}", Some(int response.StatusCode)))
                 else
                     let! json = response.Content.ReadAsStringAsync()
+                    let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T>>(json, jsonOpts)
 
-                    try
-                        let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T>>(json, jsonOpts)
-
-                        match okxResp.Data with
-                        | Some data -> return Ok data
-                        | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
-                    with _ ->
-                        let okxResp = JsonSerializer.Deserialize<OkxHttpResponse<'T[]>>(json, jsonOpts)
-
-                        match okxResp.Data with
-                        | Some data -> return Ok(data |> Array.head)
-                        | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
+                    match okxResp.Data with
+                    | Some data -> return Ok data
+                    | None -> return Error(ApiError($"No data: {okxResp.Message}", None))
             finally
                 clearAuthHeaders client
         }
