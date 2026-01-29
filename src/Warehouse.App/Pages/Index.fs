@@ -81,6 +81,13 @@ let private pipelinesSection =
         ]
     ]
 
+let private ordersSection =
+    _div [ _id_ "orders-container"; _class_ "mt-10"; Hx.get "/orders/grid"; Hx.trigger Load; Hx.swapInnerHtml ] [
+        _div [ _class_ "flex justify-center py-8" ] [
+            _i [ _class_ "fas fa-spinner fa-spin text-gray-400 text-2xl" ] []
+        ]
+    ]
+
 let get: HttpHandler =
     let html =
         _html [] [
@@ -101,7 +108,7 @@ let get: HttpHandler =
                 header
 
                 _div [ _id_ "main-content"; _class_ "max-w-[80%] mx-auto px-4 sm:px-6 lg:px-8 py-6" ] [
-                    _div [ _class_ "grid grid-cols-1 md:grid-cols-3 gap-6 mb-10" ] [
+                    _div [ _class_ "grid grid-cols-1 md:grid-cols-4 gap-6 mb-10" ] [
                         statsCard
                             "fa-shield-alt"
                             "Markets"
@@ -114,11 +121,18 @@ let get: HttpHandler =
                             "/pipelines/count"
                             "Total Pipelines"
                             "from-green-500 to-emerald-600"
+                        statsCard
+                            "fa-receipt"
+                            "Orders"
+                            "/orders/count"
+                            "Total Orders"
+                            "from-orange-500 to-amber-600"
                         statsCard "fa-wallet" "Balance" "/balance/total" "Total Portfolio" "from-purple-500 to-pink-600"
                     ]
 
                     marketsSection
                     pipelinesSection
+                    ordersSection
                 ]
 
                 _div [ _id_ "modal-container" ] []

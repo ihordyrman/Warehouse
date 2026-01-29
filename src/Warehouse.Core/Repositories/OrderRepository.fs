@@ -11,6 +11,21 @@ open Warehouse.Core.Domain
 
 module OrderRepository =
 
+    type SearchFilters =
+        {
+            SearchTerm: string option
+            Side: OrderSide option
+            Status: OrderStatus option
+            MarketType: MarketType option
+            SortBy: string
+        }
+
+    type SearchResult =
+        {
+            Orders: Order list
+            TotalCount: int
+        }
+
     type T =
         {
             GetById: int64 -> CancellationToken -> Task<Order option>
@@ -20,6 +35,8 @@ module OrderRepository =
             GetTotalExposure: MarketType option -> CancellationToken -> Task<decimal>
             Insert: Order -> CancellationToken -> Task<Order>
             Update: Order -> CancellationToken -> Task<unit>
+            Search: SearchFilters -> int -> int -> CancellationToken -> Task<SearchResult>
+            Count: CancellationToken -> Task<int>
         }
 
     let private getById
@@ -279,6 +296,108 @@ module OrderRepository =
             logger.LogDebug("Updated order {OrderId}", order.Id)
         }
 
+    let private search
+        (scopeFactory: IServiceScopeFactory)
+        (logger: ILogger)
+        (filters: SearchFilters)
+        (skip: int)
+        (take: int)
+        (token: CancellationToken)
+        =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let conditions = ResizeArray<string>()
+                let parameters = DynamicParameters()
+
+                match filters.SearchTerm with
+                | Some term when not (String.IsNullOrEmpty term) ->
+                    conditions.Add("symbol ILIKE @SearchTerm")
+                    parameters.Add("SearchTerm", $"%%{term}%%")
+                | _ -> ()
+
+                match filters.Side with
+                | Some side ->
+                    conditions.Add("side = @Side")
+                    parameters.Add("Side", int side)
+                | None -> ()
+
+                match filters.Status with
+                | Some status ->
+                    conditions.Add("status = @Status")
+                    parameters.Add("Status", int status)
+                | None -> ()
+
+                match filters.MarketType with
+                | Some marketType ->
+                    conditions.Add("market_type = @MarketType")
+                    parameters.Add("MarketType", int marketType)
+                | None -> ()
+
+                let whereClause =
+                    if conditions.Count > 0 then
+                        "WHERE " + String.Join(" AND ", conditions)
+                    else
+                        ""
+
+                let orderClause =
+                    match filters.SortBy with
+                    | "symbol" -> "ORDER BY symbol ASC"
+                    | "symbol-desc" -> "ORDER BY symbol DESC"
+                    | "status" -> "ORDER BY status ASC"
+                    | "status-desc" -> "ORDER BY status DESC"
+                    | "side" -> "ORDER BY side ASC"
+                    | "side-desc" -> "ORDER BY side DESC"
+                    | "quantity" -> "ORDER BY quantity ASC"
+                    | "quantity-desc" -> "ORDER BY quantity DESC"
+                    | "created-desc" -> "ORDER BY created_at DESC"
+                    | "created" -> "ORDER BY created_at ASC"
+                    | _ -> "ORDER BY created_at DESC"
+
+                parameters.Add("Skip", skip)
+                parameters.Add("Take", take)
+
+                let countSql = $"SELECT COUNT(1) FROM orders {whereClause}"
+                let dataSql = $"SELECT * FROM orders {whereClause} {orderClause} OFFSET @Skip LIMIT @Take"
+
+                let! totalCount =
+                    db.QuerySingleAsync<int>(CommandDefinition(countSql, parameters, cancellationToken = token))
+
+                let! orders =
+                    db.QueryAsync<Order>(CommandDefinition(dataSql, parameters, cancellationToken = token))
+
+                logger.LogDebug("Search returned {Count} orders out of {Total}", Seq.length orders, totalCount)
+
+                return
+                    {
+                        Orders = orders |> Seq.toList
+                        TotalCount = totalCount
+                    }
+            with ex ->
+                logger.LogError(ex, "Failed to search orders")
+                return { Orders = []; TotalCount = 0 }
+        }
+
+    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (token: CancellationToken) =
+        task {
+            try
+                use scope = scopeFactory.CreateScope()
+                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+
+                let! result =
+                    db.QuerySingleAsync<int>(
+                        CommandDefinition("SELECT COUNT(1) FROM orders", cancellationToken = token)
+                    )
+
+                logger.LogDebug("Order count: {Count}", result)
+                return result
+            with ex ->
+                logger.LogError(ex, "Failed to count orders")
+                return 0
+        }
+
     let create (scopeFactory: IServiceScopeFactory) : T =
         let loggerFactory =
             scopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILoggerFactory>()
@@ -293,4 +412,6 @@ module OrderRepository =
             GetTotalExposure = getTotalExposure scopeFactory logger
             Insert = insert scopeFactory logger
             Update = update scopeFactory logger
+            Search = search scopeFactory logger
+            Count = count scopeFactory logger
         }

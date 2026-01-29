@@ -22,6 +22,12 @@ module PipelineRepository =
             SortBy: string
         }
 
+    type SearchResult =
+        {
+            Pipelines: Pipeline list
+            TotalCount: int
+        }
+
     type T =
         {
             GetById: int -> CancellationToken -> Task<Result<Pipeline, ServiceError>>
@@ -36,7 +42,7 @@ module PipelineRepository =
             Count: CancellationToken -> Task<Result<int, ServiceError>>
             CountEnabled: CancellationToken -> Task<Result<int, ServiceError>>
             GetAllTags: CancellationToken -> Task<Result<string list, ServiceError>>
-            Search: SearchFilters -> CancellationToken -> Task<Result<Pipeline list, ServiceError>>
+            Search: SearchFilters -> int -> int -> CancellationToken -> Task<Result<SearchResult, ServiceError>>
         }
 
     let private getById (scopeFactory: IServiceScopeFactory) (logger: ILogger) (id: int) (token: CancellationToken) =
@@ -391,6 +397,8 @@ module PipelineRepository =
         (scopeFactory: IServiceScopeFactory)
         (logger: ILogger)
         (filters: SearchFilters)
+        (skip: int)
+        (take: int)
         (cancellation: CancellationToken)
         =
         task {
@@ -398,7 +406,6 @@ module PipelineRepository =
                 use scope = scopeFactory.CreateScope()
                 use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
 
-                let baseSql = "SELECT * FROM pipelines WHERE 1=1"
                 let conditions = ResizeArray<string>()
                 let parameters = DynamicParameters()
 
@@ -433,21 +440,36 @@ module PipelineRepository =
                     | _ -> "ORDER BY symbol ASC"
 
                 let whereClause = String.Join(" ", conditions)
-                let finalSql = $"{baseSql} {whereClause} {orderClause}"
+
+                parameters.Add("Skip", skip)
+                parameters.Add("Take", take)
+
+                let countSql = $"SELECT COUNT(1) FROM pipelines WHERE 1=1 {whereClause}"
+                let dataSql = $"SELECT * FROM pipelines WHERE 1=1 {whereClause} {orderClause} OFFSET @Skip LIMIT @Take"
+
+                let! totalCount =
+                    db.QuerySingleAsync<int>(CommandDefinition(countSql, parameters, cancellationToken = cancellation))
 
                 let! results =
-                    db.QueryAsync<Pipeline>(CommandDefinition(finalSql, parameters, cancellationToken = cancellation))
+                    db.QueryAsync<Pipeline>(CommandDefinition(dataSql, parameters, cancellationToken = cancellation))
 
                 let pipelines = results |> Seq.toList
 
+                // Apply tag filter in memory (tags are stored as JSON)
                 let filteredPipelines =
                     match filters.Tag with
                     | Some tag when not (String.IsNullOrEmpty tag) ->
                         pipelines |> List.filter (fun p -> p.Tags |> List.contains tag)
                     | _ -> pipelines
 
-                logger.LogDebug("Search returned {Count} pipelines", filteredPipelines.Length)
-                return Ok filteredPipelines
+                logger.LogDebug("Search returned {Count} pipelines out of {Total}", filteredPipelines.Length, totalCount)
+
+                return
+                    Ok
+                        {
+                            Pipelines = filteredPipelines
+                            TotalCount = totalCount
+                        }
             with ex ->
                 logger.LogError(ex, "Failed to search pipelines")
                 return Result.Error(Unexpected ex)

@@ -30,6 +30,13 @@ let accounts =
         mapDelete "/accounts/{id:int}" _.GetInt("id") AccountEdit.Handler.delete
     ]
 
+let orders =
+    [
+        get "/orders/count" Orders.Handler.count
+        get "/orders/grid" Orders.Handler.grid
+        get "/orders/table" Orders.Handler.table
+    ]
+
 let pipelines =
     [
         get "/pipelines/count" Pipeline.Handler.count
@@ -113,4 +120,4 @@ let app = webapp.Build()
 app.UseHttpsRedirection() |> ignore
 app.UseRouting() |> ignore
 app.UseDefaultFiles().UseStaticFiles() |> ignore
-app.UseFalco(general @ balances @ markets @ accounts @ pipelines).Run(Response.ofPlainText "Not found")
+app.UseFalco(general @ balances @ markets @ accounts @ pipelines @ orders).Run(Response.ofPlainText "Not found")
