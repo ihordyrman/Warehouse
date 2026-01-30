@@ -1,14 +1,14 @@
 namespace Warehouse.Core.Pipelines.Trading
 
-
 open System
-open Warehouse.Core.Markets.Services
 open Warehouse.Core.Pipelines.Core.Parameters
 open Warehouse.Core.Pipelines.Core.Steps
 open Microsoft.Extensions.DependencyInjection
 open Warehouse.Core.Domain
 open Warehouse.Core.Pipelines.Trading
+open Warehouse.Core.Repositories
 
+/// Initial step to create an entry order based on the trading action.
 module EntryStep =
     let entryStep: StepDefinition<TradingContext> =
         let create (params': ValidatedParams) (services: IServiceProvider) : Step<TradingContext> =
@@ -19,36 +19,29 @@ module EntryStep =
                     match (ctx.ActiveOrderId, ctx.Action) with
                     | Option.None, TradingAction.None ->
                         use scope = services.CreateScope()
-                        let orderManager = scope.ServiceProvider.GetRequiredService<OrdersManager.T>()
+                        let repo = scope.ServiceProvider.GetRequiredService<PositionRepository.T>()
+                        let! position = repo.GetOpen ctx.PipelineId ct
 
-                        let request: CreateOrderRequest =
-                            {
-                                PipelineId = Some ctx.PipelineId
-                                MarketType = ctx.MarketType
-                                Symbol = ctx.Symbol
-                                Side = OrderSide.Buy
-                                Quantity = tradeAmount
-                                Price = Option.None
-                                StopPrice = Option.None
-                                TakeProfit = Option.None
-                                StopLoss = Option.None
-                                ExpireTime = Option.None
-                            }
-
-                        let! result = orderManager.createOrder request ct
-
-                        match result with
-                        | Ok order ->
-                            // temporary
-                            let! _ = orderManager.executeOrder order.Id ct
-                            let ctx' = { ctx with ActiveOrderId = Some(order.Id.ToString()) }
-
-                            return
-                                Continue(
-                                    ctx',
-                                    $"Created order {order.Id} for {tradeAmount:F8} {ctx.Symbol} at approx. {ctx.CurrentPrice:F2} USDT"
-                                )
-                        | Error err -> return Fail $"Order creation failed: {err}"
+                        match position with
+                        | Error err -> return Stop $"Error retrieving position: {err}"
+                        | Ok position ->
+                            match position with
+                            | Some position when position.Status = PositionStatus.Open ->
+                                return
+                                    Continue(
+                                        { ctx with
+                                            ActiveOrderId = Some position.BuyOrderId
+                                            Action = TradingAction.Hold
+                                        },
+                                        "Open position exists, setting action to Hold"
+                                    )
+                            | _ ->
+                                return
+                                    Continue(
+                                        // do I really need to set Quantity here?
+                                        { ctx with Action = TradingAction.None; Quantity = Some tradeAmount },
+                                        $"No active orders or positions, ready to place entry order for {tradeAmount} USDT"
+                                    )
                     | _ -> return Continue(ctx, "Already have an active order or action in progress")
                 }
 

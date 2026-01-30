@@ -63,7 +63,7 @@ module OrdersManager =
 
                 let order: Order =
                     {
-                        Id = 0L
+                        Id = 0
                         PipelineId = request.PipelineId |> Option.toNullable
                         MarketType = request.MarketType
                         ExchangeOrderId = ""
@@ -104,7 +104,7 @@ module OrdersManager =
         (repo: OrderRepository.T)
         (providers: OrderExecutor.T list)
         (logger: ILogger)
-        (orderId: int64)
+        (orderId: int)
         (token: CancellationToken)
         : Task<Result<Order, ServiceError>>
         =
@@ -154,7 +154,7 @@ module OrdersManager =
     let updateOrderFields
         (repo: OrderRepository.T)
         (logger: ILogger)
-        (orderId: int64)
+        (orderId: int)
         (request: UpdateOrderRequest)
         (token: CancellationToken)
         : Task<Result<Order, ServiceError>>
@@ -197,7 +197,7 @@ module OrdersManager =
     let cancelOrder
         (repo: OrderRepository.T)
         (logger: ILogger)
-        (orderId: int64)
+        (orderId: int)
         (reason: string option)
         (token: CancellationToken)
         : Task<Result<Order, ServiceError>>
@@ -225,7 +225,7 @@ module OrdersManager =
                 return Error(Unexpected ex)
         }
 
-    let getOrder (repo: OrderRepository.T) (orderId: int64) (token: CancellationToken) : Task<Order option> =
+    let getOrder (repo: OrderRepository.T) (orderId: int) (token: CancellationToken) : Task<Order option> =
         repo.GetById orderId token
 
     let getOrderByExchangeId
@@ -286,10 +286,10 @@ module OrdersManager =
     type T =
         {
             createOrder: CreateOrderRequest -> CancellationToken -> Task<Result<Order, ServiceError>>
-            executeOrder: int64 -> CancellationToken -> Task<Result<Order, ServiceError>>
-            updateOrder: int64 -> UpdateOrderRequest -> CancellationToken -> Task<Result<Order, ServiceError>>
-            cancelOrder: int64 -> string option -> CancellationToken -> Task<Result<Order, ServiceError>>
-            getOrder: int64 -> CancellationToken -> Task<Order option>
+            executeOrder: int -> CancellationToken -> Task<Result<Order, ServiceError>>
+            updateOrder: int -> UpdateOrderRequest -> CancellationToken -> Task<Result<Order, ServiceError>>
+            cancelOrder: int -> string option -> CancellationToken -> Task<Result<Order, ServiceError>>
+            getOrder: int -> CancellationToken -> Task<Order option>
             getOrders: int -> OrderStatus option -> CancellationToken -> Task<Order list>
             getOrderHistory: int -> int -> OrderHistoryFilter option -> CancellationToken -> Task<Order list>
             getOrderByExchangeId: string -> MarketType -> CancellationToken -> Task<Order option>

@@ -20,7 +20,7 @@ type TradingContext =
         Action: TradingAction
         BuyPrice: decimal option
         Quantity: decimal option
-        ActiveOrderId: string option
+        ActiveOrderId: int option
 
         Data: Map<string, obj>
     }

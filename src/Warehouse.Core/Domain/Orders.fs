@@ -17,7 +17,7 @@ type OrderStatus =
 [<CLIMutable>]
 type Order =
     {
-        Id: int64
+        Id: int
         PipelineId: Nullable<int>
         MarketType: MarketType
         ExchangeOrderId: string

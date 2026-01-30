@@ -15,8 +15,8 @@ type Position =
         Symbol: string
         EntryPrice: decimal
         Quantity: decimal
-        BuyOrderId: string
-        SellOrderId: string
+        BuyOrderId: int
+        SellOrderId: int
         Status: PositionStatus
         ExitPrice: Nullable<decimal>
         ClosedAt: Nullable<DateTime>
