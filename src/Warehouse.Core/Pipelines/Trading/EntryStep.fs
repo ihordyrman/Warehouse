@@ -1,6 +1,8 @@
 namespace Warehouse.Core.Pipelines.Trading
 
 open System
+open System.Threading
+open Warehouse.Core.Infrastructure
 open Warehouse.Core.Pipelines.Core.Parameters
 open Warehouse.Core.Pipelines.Core.Steps
 open Microsoft.Extensions.DependencyInjection
@@ -8,47 +10,60 @@ open Warehouse.Core.Domain
 open Warehouse.Core.Pipelines.Trading
 open Warehouse.Core.Repositories
 
-/// Initial step to create an entry order based on the trading action.
 module EntryStep =
+    let private buy (services: IServiceProvider) (ctx: TradingContext) (ct: CancellationToken) : TradingContext =
+        // order placement and execution logic goes here
+        task {
+            let orderRepo = services.GetRequiredService<OrderRepository.T>()
+            let positionRepo = services.GetRequiredService<PositionRepository.T>()
+
+            let! order =
+                orderRepo.Create
+                    {
+                        PipelineId = ctx.PipelineId
+                        Symbol = failwith "todo"
+                        MarketType = failwith "todo"
+                        Quantity = failwith "todo"
+                        Side = failwith "todo"
+                        Price = failwith "todo"
+                    }
+
+            let! result = Transaction.execute services (fun db txn -> task {
+
+                return Ok ()
+
+            })
+
+            return { ctx with ActiveOrderId = Some order.Id }
+        }
+
+
+
+    let private sell (services: IServiceProvider) (ctx: TradingContext) (ct: CancellationToken) : TradingContext =
+        // order placement and execution logic goes here
+        failwith "Not implemented"
+
     let entryStep: StepDefinition<TradingContext> =
         let create (params': ValidatedParams) (services: IServiceProvider) : Step<TradingContext> =
-            let tradeAmount = params' |> ValidatedParams.getDecimal "tradeAmount" 1000m
+            let tradeAmount = params' |> ValidatedParams.getDecimal "tradeAmount" 100m
 
             fun ctx ct ->
                 task {
+                    // order placement and execution logic goes here
                     match (ctx.ActiveOrderId, ctx.Action) with
-                    | Option.None, TradingAction.None ->
-                        use scope = services.CreateScope()
-                        let repo = scope.ServiceProvider.GetRequiredService<PositionRepository.T>()
-                        let! position = repo.GetOpen ctx.PipelineId ct
-
-                        match position with
-                        | Error err -> return Stop $"Error retrieving position: {err}"
-                        | Ok position ->
-                            match position with
-                            | Some position when position.Status = PositionStatus.Open ->
-                                return
-                                    Continue(
-                                        { ctx with
-                                            ActiveOrderId = Some position.BuyOrderId
-                                            Action = TradingAction.Hold
-                                        },
-                                        "Open position exists, setting action to Hold"
-                                    )
-                            | _ ->
-                                return
-                                    Continue(
-                                        // do I really need to set Quantity here?
-                                        { ctx with Action = TradingAction.None; Quantity = Some tradeAmount },
-                                        $"No active orders or positions, ready to place entry order for {tradeAmount} USDT"
-                                    )
-                    | _ -> return Continue(ctx, "Already have an active order or action in progress")
+                    | Option.None, TradingAction.Buy ->
+                        let ctx = buy services ctx ct
+                        return Continue(ctx, $"Placed buy order for {tradeAmount} USDT.")
+                    | Some orderId, TradingAction.Sell ->
+                        let ctx = sell services ctx ct
+                        return Continue(ctx, $"Placed sell order for order ID {orderId}.")
+                    | _ -> return Continue(ctx, "No action taken.")
                 }
 
         {
             Key = "entry-step"
             Name = "Entry Step"
-            Description = "Executes the entry trade based on the defined trading action."
+            Description = "Places an entry trade based on the defined strategy."
             Category = StepCategory.Execution
             Icon = "fa-sign-in-alt"
             ParameterSchema =

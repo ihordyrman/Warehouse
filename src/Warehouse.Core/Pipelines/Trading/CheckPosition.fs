@@ -15,7 +15,7 @@ module CheckPosition =
                 task {
                     use scope = services.CreateScope()
                     let repo = scope.ServiceProvider.GetRequiredService<PositionRepository.T>()
-                    let! position = repo.GetOpenPosition ctx.PipelineId ct
+                    let! position = repo.GetOpen ctx.PipelineId ct
 
                     match position with
                     | Error err -> return Fail $"Error retrieving position: {err}"

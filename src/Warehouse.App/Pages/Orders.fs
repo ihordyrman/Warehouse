@@ -1,6 +1,7 @@
 namespace Warehouse.App.Pages.Orders
 
 open System
+open System.Data
 open System.Threading
 open System.Threading.Tasks
 open Falco
@@ -10,7 +11,6 @@ open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
-open Warehouse.Core.Repositories
 open Warehouse.Core.Repositories.OrderRepository
 
 type OrderListItem =
@@ -36,13 +36,7 @@ type OrdersGridData =
         PageSize: int
     }
 
-    static member Empty =
-        {
-            Orders = []
-            TotalCount = 0
-            Page = 1
-            PageSize = 20
-        }
+    static member Empty = { Orders = []; TotalCount = 0; Page = 1; PageSize = 20 }
 
 type OrderFilters =
     {
@@ -70,14 +64,17 @@ module Data =
     let getCount (scopeFactory: IServiceScopeFactory) : Task<int> =
         task {
             use scope = scopeFactory.CreateScope()
-            let repository = scope.ServiceProvider.GetRequiredService<OrderRepository.T>()
-            return! repository.Count CancellationToken.None
+            let db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+            let logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("OrdersData")
+            return! count db logger CancellationToken.None
         }
 
     let getFilteredOrders (scopeFactory: IServiceScopeFactory) (filters: OrderFilters) : Task<OrdersGridData> =
         task {
             use scope = scopeFactory.CreateScope()
-            let repository = scope.ServiceProvider.GetRequiredService<OrderRepository.T>()
+            let db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+            let logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("OrdersData")
+            let search = search db logger
 
             let parseSide =
                 match filters.Side with
@@ -113,7 +110,7 @@ module Data =
                 }
 
             let skip = (filters.Page - 1) * filters.PageSize
-            let! result = repository.Search searchFilters skip filters.PageSize CancellationToken.None
+            let! result = search searchFilters skip filters.PageSize CancellationToken.None
 
             let orderItems =
                 result.Orders
@@ -187,29 +184,23 @@ module View =
                         ]
                     ]
                     filterSelect "filterSide" "Side" [ ("buy", "Buy"); ("sell", "Sell") ]
-                    filterSelect
-                        "filterStatus"
-                        "Status"
-                        [
-                            ("pending", "Pending")
-                            ("placed", "Placed")
-                            ("partially-filled", "Partially Filled")
-                            ("filled", "Filled")
-                            ("cancelled", "Cancelled")
-                            ("failed", "Failed")
-                        ]
-                    filterSelect
-                        "sortBy"
-                        "Sort By"
-                        [
-                            ("created-desc", "Newest First")
-                            ("created", "Oldest First")
-                            ("symbol", "Symbol A-Z")
-                            ("symbol-desc", "Symbol Z-A")
-                            ("quantity-desc", "Quantity High")
-                            ("quantity", "Quantity Low")
-                            ("status", "Status")
-                        ]
+                    filterSelect "filterStatus" "Status" [
+                        ("pending", "Pending")
+                        ("placed", "Placed")
+                        ("partially-filled", "Partially Filled")
+                        ("filled", "Filled")
+                        ("cancelled", "Cancelled")
+                        ("failed", "Failed")
+                    ]
+                    filterSelect "sortBy" "Sort By" [
+                        ("created-desc", "Newest First")
+                        ("created", "Oldest First")
+                        ("symbol", "Symbol A-Z")
+                        ("symbol-desc", "Symbol Z-A")
+                        ("quantity-desc", "Quantity High")
+                        ("quantity", "Quantity Low")
+                        ("status", "Status")
+                    ]
                 ]
             ]
         ]
@@ -269,9 +260,7 @@ module View =
 
     let orderRow (order: OrderListItem) =
         _tr [ _id_ $"order-{order.Id}"; _class_ "hover:bg-gray-50" ] [
-            _td [ _class_ "px-6 py-4 whitespace-nowrap text-sm text-gray-500" ] [
-                Text.raw (string order.Id)
-            ]
+            _td [ _class_ "px-6 py-4 whitespace-nowrap text-sm text-gray-500" ] [ Text.raw (string order.Id) ]
             _td [ _class_ "px-6 py-4 whitespace-nowrap text-sm text-gray-500" ] [
                 Text.raw (formatPipelineId order.PipelineId)
             ]
@@ -341,9 +330,7 @@ module View =
                     else
                         Attr.create "disabled" "disabled"
                 ] [ Text.raw "Previous" ]
-                _span [ _class_ "px-3 py-1 text-sm text-gray-700" ] [
-                    Text.raw $"Page {data.Page} of {totalPages}"
-                ]
+                _span [ _class_ "px-3 py-1 text-sm text-gray-700" ] [ Text.raw $"Page {data.Page} of {totalPages}" ]
                 _button [
                     _type_ "button"
                     _class_ $"px-3 py-1 text-sm font-medium rounded-md {nextBtnClass}"
@@ -376,12 +363,7 @@ module View =
 
     let private ordersTable =
         _div [ _class_ "card overflow-hidden" ] [
-            _div [
-                _id_ "orders-table-container"
-                Hx.get "/orders/table"
-                Hx.trigger "load"
-                Hx.swapOuterHtml
-            ] [
+            _div [ _id_ "orders-table-container"; Hx.get "/orders/table"; Hx.trigger "load"; Hx.swapOuterHtml ] [
                 _div [ _class_ "overflow-x-auto" ] [
                     _table [ _class_ "min-w-full divide-y divide-gray-200" ] [
                         tableHeader
@@ -446,8 +428,7 @@ module Handler =
                             Status = tryGetQueryStringValue ctx.Request.Query "filterStatus"
                             MarketType = tryGetQueryStringValue ctx.Request.Query "filterMarketType"
                             SortBy =
-                                tryGetQueryStringValue ctx.Request.Query "sortBy"
-                                |> Option.defaultValue "created-desc"
+                                tryGetQueryStringValue ctx.Request.Query "sortBy" |> Option.defaultValue "created-desc"
                             Page = tryGetQueryStringInt ctx.Request.Query "page" 1
                             PageSize = tryGetQueryStringInt ctx.Request.Query "pageSize" 20
                         }

@@ -6,6 +6,9 @@
     <Folder Name="/docker/">
         <File Path="docker\docker-compose.yaml" />
     </Folder>
+    <Folder Name="/docs/">
+        <File Path="docs\index.md" />
+    </Folder>
     <Folder Name="/items/">
         <File Path="README.md" />
         <File Path=".gitignore" />

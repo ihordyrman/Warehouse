@@ -3,13 +3,57 @@ namespace Warehouse.Core.Repositories
 open System
 open System.Data
 open System.Threading
-open System.Threading.Tasks
 open Dapper
-open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
 
+
+// type OrderSide =
+//     | Buy = 0
+//     | Sell = 1
+//
+// type OrderStatus =
+//     | Pending = 0
+//     | Placed = 1
+//     | PartiallyFilled = 2
+//     | Filled = 3
+//     | Cancelled = 4
+//     | Failed = 5
+//
+// [<CLIMutable>]
+// type Order =
+//     {
+//         Id: int
+//         PipelineId: Nullable<int>
+//         MarketType: MarketType
+//         ExchangeOrderId: string
+//         Symbol: string
+//         Side: OrderSide
+//         Status: OrderStatus
+//         Quantity: decimal
+//         Price: Nullable<decimal>
+//         StopPrice: Nullable<decimal>
+//         Fee: Nullable<decimal>
+//         PlacedAt: Nullable<DateTime>
+//         ExecutedAt: Nullable<DateTime>
+//         CancelledAt: Nullable<DateTime>
+//         TakeProfit: Nullable<decimal>
+//         StopLoss: Nullable<decimal>
+//         CreatedAt: DateTime
+//         UpdatedAt: DateTime
+//     }
+
 module OrderRepository =
+
+    type CreateOrderRequest =
+        {
+            PipelineId: int
+            MarketType: MarketType
+            Symbol: string
+            Side: OrderSide
+            Quantity: decimal
+            Price: decimal
+        }
 
     type SearchFilters =
         {
@@ -22,17 +66,9 @@ module OrderRepository =
 
     type SearchResult = { Orders: Order list; TotalCount: int }
 
-    let private getById
-        (scopeFactory: IServiceScopeFactory)
-        (logger: ILogger)
-        (orderId: int)
-        (token: CancellationToken)
-        =
+    let getById (db: IDbConnection) (logger: ILogger) (orderId: int) (token: CancellationToken) =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let! order =
                     db.QueryFirstOrDefaultAsync<Order>(
                         CommandDefinition(
@@ -50,8 +86,8 @@ module OrderRepository =
                 return None
         }
 
-    let private getByExchangeId
-        (scopeFactory: IServiceScopeFactory)
+    let getByExchangeId
+        (db: IDbConnection)
         (logger: ILogger)
         (exchangeOrderId: string)
         (market: MarketType)
@@ -59,9 +95,6 @@ module OrderRepository =
         =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let! order =
                     db.QueryFirstOrDefaultAsync<Order>(
                         CommandDefinition(
@@ -79,8 +112,8 @@ module OrderRepository =
                 return None
         }
 
-    let private getByPipeline
-        (scopeFactory: IServiceScopeFactory)
+    let getByPipeline
+        (db: IDbConnection)
         (logger: ILogger)
         (pipelineId: int)
         (status: OrderStatus option)
@@ -88,9 +121,6 @@ module OrderRepository =
         =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let query =
                     match status with
                     | Some s ->
@@ -109,18 +139,9 @@ module OrderRepository =
                 return []
         }
 
-    let private getHistory
-        (scopeFactory: IServiceScopeFactory)
-        (logger: ILogger)
-        (skip: int)
-        (take: int)
-        (token: CancellationToken)
-        =
+    let getHistory (db: IDbConnection) (logger: ILogger) (skip: int) (take: int) (token: CancellationToken) =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let! orders =
                     db.QueryAsync<Order>(
                         CommandDefinition(
@@ -136,17 +157,9 @@ module OrderRepository =
                 return []
         }
 
-    let private getTotalExposure
-        (scopeFactory: IServiceScopeFactory)
-        (logger: ILogger)
-        (market: MarketType option)
-        (token: CancellationToken)
-        =
+    let getTotalExposure (db: IDbConnection) (logger: ILogger) (market: MarketType option) (token: CancellationToken) =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let sql, parameters =
                     match market with
                     | Some m ->
@@ -181,60 +194,46 @@ module OrderRepository =
                 return 0m
         }
 
-    let private insert
-        (scopeFactory: IServiceScopeFactory)
+    let insert
+        (db: IDbConnection)
+        (txn: IDbTransaction)
         (logger: ILogger)
-        (order: Order)
+        (order: CreateOrderRequest)
         (token: CancellationToken)
         =
         task {
-            use scope = scopeFactory.CreateScope()
-            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
+            let marketTypeInt = int order.MarketType
+            let sideInt = int order.Side
+            let statusInt = int OrderStatus.Pending
 
-            let! id =
-                db.QuerySingleAsync<int>(
+            let! order =
+                db.QuerySingleAsync<Order>(
                     CommandDefinition(
                         """INSERT INTO orders
-                           (pipeline_id, market_type, exchange_order_id, symbol, side, status, quantity, price, stop_price, fee, placed_at, executed_at, cancelled_at, take_profit, stop_loss, created_at, updated_at)
-                           VALUES (@PipelineId, @MarketType, @ExchangeOrderId, @Symbol, @Side, @Status, @Quantity, @Price, @StopPrice, @Fee, @PlacedAt, @ExecutedAt, @CancelledAt, @TakeProfit, @StopLoss, @CreatedAt, @UpdatedAt)
-                           RETURNING id""",
+                           (pipeline_id, market_type, exchange_order_id, symbol, side, status, quantity, price, created_at, updated_at)
+                           VALUES (@PipelineId, @MarketType, @ExchangeOrderId, @Symbol, @Side, @Status, @Quantity, @Price, now(), now())
+                           RETURNING *""",
                         {|
                             PipelineId = order.PipelineId
-                            MarketType = int order.MarketType
-                            ExchangeOrderId = order.ExchangeOrderId
+                            MarketType = marketTypeInt
+                            ExchangeOrderId = ""
                             Symbol = order.Symbol
-                            Side = int order.Side
-                            Status = int order.Status
+                            Side = sideInt
+                            Status = statusInt
                             Quantity = order.Quantity
                             Price = order.Price
-                            StopPrice = order.StopPrice
-                            Fee = order.Fee
-                            PlacedAt = order.PlacedAt
-                            ExecutedAt = order.ExecutedAt
-                            CancelledAt = order.CancelledAt
-                            TakeProfit = order.TakeProfit
-                            StopLoss = order.StopLoss
-                            CreatedAt = order.CreatedAt
-                            UpdatedAt = order.UpdatedAt
                         |},
-                        cancellationToken = token
+                        cancellationToken = token,
+                        transaction = txn
                     )
                 )
 
-            logger.LogDebug("Inserted order {OrderId}", id)
-            return { order with Id = id }
+            logger.LogDebug("Inserted order {OrderId}", order.Id)
+            return order
         }
 
-    let private update
-        (scopeFactory: IServiceScopeFactory)
-        (logger: ILogger)
-        (order: Order)
-        (token: CancellationToken)
-        =
+    let update (db: IDbConnection) (txn: IDbTransaction) (logger: ILogger) (order: Order) (token: CancellationToken) =
         task {
-            use scope = scopeFactory.CreateScope()
-            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
             let! _ =
                 db.ExecuteAsync(
                     CommandDefinition(
@@ -259,15 +258,16 @@ module OrderRepository =
                             Fee = order.Fee
                             UpdatedAt = order.UpdatedAt
                         |},
-                        cancellationToken = token
+                        cancellationToken = token,
+                        transaction = txn
                     )
                 )
 
             logger.LogDebug("Updated order {OrderId}", order.Id)
         }
 
-    let private search
-        (scopeFactory: IServiceScopeFactory)
+    let search
+        (db: IDbConnection)
         (logger: ILogger)
         (filters: SearchFilters)
         (skip: int)
@@ -276,9 +276,6 @@ module OrderRepository =
         =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let conditions = ResizeArray<string>()
                 let parameters = DynamicParameters()
 
@@ -341,12 +338,9 @@ module OrderRepository =
                 return { Orders = []; TotalCount = 0 }
         }
 
-    let private count (scopeFactory: IServiceScopeFactory) (logger: ILogger) (token: CancellationToken) =
+    let count (db: IDbConnection) (logger: ILogger) (token: CancellationToken) =
         task {
             try
-                use scope = scopeFactory.CreateScope()
-                use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-
                 let! result =
                     db.QuerySingleAsync<int>(
                         CommandDefinition("SELECT COUNT(1) FROM orders", cancellationToken = token)
@@ -357,34 +351,4 @@ module OrderRepository =
             with ex ->
                 logger.LogError(ex, "Failed to count orders")
                 return 0
-        }
-
-    type T =
-        {
-            GetById: int -> CancellationToken -> Task<Order option>
-            GetByExchangeId: string -> MarketType -> CancellationToken -> Task<Order option>
-            GetByPipeline: int -> OrderStatus option -> CancellationToken -> Task<Order list>
-            GetHistory: int -> int -> CancellationToken -> Task<Order list>
-            GetTotalExposure: MarketType option -> CancellationToken -> Task<decimal>
-            Insert: Order -> CancellationToken -> Task<Order>
-            Update: Order -> CancellationToken -> Task<unit>
-            Search: SearchFilters -> int -> int -> CancellationToken -> Task<SearchResult>
-            Count: CancellationToken -> Task<int>
-        }
-
-    let create (scopeFactory: IServiceScopeFactory) : T =
-        let loggerFactory = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILoggerFactory>()
-
-        let logger = loggerFactory.CreateLogger("OrderRepository")
-
-        {
-            GetById = getById scopeFactory logger
-            GetByExchangeId = getByExchangeId scopeFactory logger
-            GetByPipeline = getByPipeline scopeFactory logger
-            GetHistory = getHistory scopeFactory logger
-            GetTotalExposure = getTotalExposure scopeFactory logger
-            Insert = insert scopeFactory logger
-            Update = update scopeFactory logger
-            Search = search scopeFactory logger
-            Count = count scopeFactory logger
         }

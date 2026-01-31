@@ -14,6 +14,7 @@
 
         <Compile Include="Infrastructure\WebSockets.fs" />
         <Compile Include="Infrastructure\Settings.fs" />
+        <Compile Include="Infrastructure\Transaction.fs" />
 
         <Compile Include="Shared\Errors.fs" />
 
@@ -42,7 +43,6 @@
         <Compile Include="Markets\Exchanges\Okx\Adapter.fs" />
 
         <Compile Include="Markets\Services\BalanceManager.fs" />
-        <Compile Include="Markets\Services\OrdersManager.fs" />
         <Compile Include="Markets\Services\ConnectionManager.fs" />
 
         <Compile Include="Pipelines\Core\Parameters.fs" />
@@ -53,6 +53,7 @@
 
         <Compile Include="Pipelines\Trading\Context.fs" />
         <Compile Include="Pipelines\Trading\CheckPosition.fs" />
+        <Compile Include="Pipelines\Trading\PositionGateStep.fs" />
         <Compile Include="Pipelines\Trading\EntryStep.fs" />
         <Compile Include="Pipelines\Trading\TradingSteps.fs" />
         <Compile Include="Pipelines\Orchestration\Executor.fs" />

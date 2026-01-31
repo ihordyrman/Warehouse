@@ -1,9 +1,7 @@
 namespace Warehouse.Core.Queries
 
-open System.Data
 open System.Threading
 open System.Threading.Tasks
-open Dapper
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Warehouse.Core.Domain
@@ -12,13 +10,6 @@ open Warehouse.Core.Repositories
 
 module DashboardQueries =
     type T = { TotalBalanceUsdt: unit -> Task<decimal> }
-
-    let private queryInt (scopeFactory: IServiceScopeFactory) (sql: string) =
-        task {
-            use scope = scopeFactory.CreateScope()
-            use db = scope.ServiceProvider.GetRequiredService<IDbConnection>()
-            return! db.QuerySingleAsync<int>(sql)
-        }
 
     let private getTotalBalanceUsdt (scopeFactory: IServiceScopeFactory) =
         task {
